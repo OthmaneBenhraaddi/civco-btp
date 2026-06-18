@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+vendor/
+
+# environment & secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# frontend build
+frontend/dist/
+frontend/dist-ssr/
+
+# laravel runtime & cache
+backend/public/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/pail
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+
+# logs
+*.log
+backend/storage/logs/*.log
+
+# obsolete duplicate app (not used by the project)
+backend/frontend/
+
+# os / editor / ide
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+*.local
+
+# php tooling
+.phpunit.result.cache
+.phpunit.cache
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+auth.json
