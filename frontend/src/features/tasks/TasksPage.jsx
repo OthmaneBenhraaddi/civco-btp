@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import SearchInput from '../../components/SearchInput'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as projectsApi from '../../api/projects'
-import { appendTask, readTasks } from './taskStore'
+import * as workspaceTasksApi from '../../api/workspaceTasks'
+import { extractErrorMessage } from '../../utils/apiHelpers'
 import { STATUT_FILTER_MAP } from './types'
 import TaskCalendarView from './components/TaskCalendarView'
 import TaskCreateModal from './components/TaskCreateModal'
@@ -33,8 +34,11 @@ export default function TasksPage() {
   const [activeView, setActiveView] = useState(VIEWS.spreadsheet)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [tasks, setTasks] = useState(() => readTasks())
+  const [tasks, setTasks] = useState([])
+  const [tasksLoading, setTasksLoading] = useState(false)
+  const [tasksError, setTasksError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
 
   useEffect(() => {
     projectsApi.fetchProjects({ per_page: 100 })
@@ -42,6 +46,34 @@ export default function TasksPage() {
       .catch(() => setProjects([]))
       .finally(() => setProjectsLoading(false))
   }, [])
+
+  const loadTasks = useCallback(async (projectId) => {
+    if (!projectId) {
+      setTasks([])
+      return
+    }
+
+    setTasksLoading(true)
+    setTasksError('')
+
+    try {
+      const items = await workspaceTasksApi.fetchWorkspaceTasks({ project_id: projectId })
+      setTasks(items)
+    } catch (err) {
+      setTasks([])
+      setTasksError(extractErrorMessage(err, t('tasks.loadError')))
+    } finally {
+      setTasksLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      loadTasks(selectedProjectId)
+    } else {
+      setTasks([])
+    }
+  }, [selectedProjectId, loadTasks])
 
   const selectedProject = useMemo(
     () => projects.find((project) => String(project.id) === String(selectedProjectId)) ?? null,
@@ -63,25 +95,33 @@ export default function TasksPage() {
 
     const statutValue = STATUT_FILTER_MAP[statusFilter]
     const query = search.trim().toLowerCase()
-    const projectKey = String(selectedProjectId)
 
     return tasks.filter((task) => {
-      if (String(task.projectId) !== projectKey) {
-        return false
-      }
-
       const matchesStatus = !statutValue || task.statut === statutValue
       const matchesSearch = !query
         || task.nom.toLowerCase().includes(query)
         || task.responsable.name.toLowerCase().includes(query)
-        || task.notes.toLowerCase().includes(query)
+        || (task.notes ?? '').toLowerCase().includes(query)
 
       return matchesStatus && matchesSearch
     })
-  }, [hasProjectSelected, search, selectedProjectId, statusFilter, tasks])
+  }, [hasProjectSelected, search, statusFilter, tasks])
 
   function handleTaskCreated(task) {
-    setTasks(appendTask(task))
+    setTasks((current) => [task, ...current])
+  }
+
+  function handleTaskUpdated(task) {
+    setTasks((current) => current.map((item) => (item.id === task.id ? task : item)))
+  }
+
+  async function handleTaskDeleted(taskId) {
+    try {
+      await workspaceTasksApi.deleteWorkspaceTask(taskId)
+      setTasks((current) => current.filter((task) => task.id !== String(taskId)))
+    } catch (err) {
+      setTasksError(extractErrorMessage(err, t('tasks.deleteError')))
+    }
   }
 
   function handleProjectChange(event) {
@@ -89,6 +129,7 @@ export default function TasksPage() {
     setSelectedProjectId(value === '' ? null : value)
     setSearch('')
     setStatusFilter('')
+    setTasksError('')
   }
 
   return (
@@ -147,16 +188,32 @@ export default function TasksPage() {
               </select>
             </div>
 
+            {tasksError ? (
+              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {tasksError}
+              </p>
+            ) : null}
+
+            {tasksLoading ? (
+              <p className="text-sm text-slate-400">{t('common.loading')}</p>
+            ) : null}
+
             <div className="tasks-view-panel">
-              {activeView === VIEWS.spreadsheet && (
-                <TaskTableView tasks={filteredTasks} locale={locale} t={t} />
+              {activeView === VIEWS.spreadsheet && !tasksLoading && (
+                <TaskTableView
+                  tasks={filteredTasks}
+                  locale={locale}
+                  t={t}
+                  onEdit={setEditingTask}
+                  onDelete={handleTaskDeleted}
+                />
               )}
 
-              {activeView === VIEWS.dashboard && (
+              {activeView === VIEWS.dashboard && !tasksLoading && (
                 <TaskDashboardView tasks={filteredTasks} t={t} />
               )}
 
-              {activeView === VIEWS.calendar && (
+              {activeView === VIEWS.calendar && !tasksLoading && (
                 <TaskCalendarView tasks={filteredTasks} locale={locale} t={t} />
               )}
             </div>
@@ -170,6 +227,15 @@ export default function TasksPage() {
         onCreated={handleTaskCreated}
         defaultProjectId={selectedProjectId}
         defaultProjectName={selectedProject?.title ?? ''}
+      />
+
+      <TaskCreateModal
+        open={editingTask !== null}
+        onClose={() => setEditingTask(null)}
+        onUpdated={handleTaskUpdated}
+        task={editingTask}
+        defaultProjectId={selectedProjectId}
+        defaultProjectName={selectedProject?.title ?? editingTask?.projectName ?? ''}
       />
     </div>
   )

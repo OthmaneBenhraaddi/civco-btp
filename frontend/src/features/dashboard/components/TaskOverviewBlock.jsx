@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { useTranslation } from '../../../i18n/LanguageContext'
-import { readTasks } from '../../tasks/taskStore'
+import * as workspaceTasksApi from '../../../api/workspaceTasks'
 import { buildTaskChartSeries } from '../dashboardChartData'
 import {
   CHART_AXIS_TICK,
@@ -28,9 +28,15 @@ const INTERVALS = ['monthly', 'weekly', 'daily']
 export default function TaskOverviewBlock() {
   const { t, locale } = useTranslation()
   const [interval, setInterval] = useState('monthly')
+  const [tasks, setTasks] = useState([])
+
+  useEffect(() => {
+    workspaceTasksApi.fetchWorkspaceTasks()
+      .then(setTasks)
+      .catch(() => setTasks([]))
+  }, [])
 
   const { totalTasks, chartData } = useMemo(() => {
-    const tasks = readTasks()
     const inProgressCount = tasks.filter((task) => task.statut === 'en_cours' || task.statut === 'bloque').length
     const completedCount = tasks.filter((task) => task.statut === 'termine').length
     const totals = { inProgress: inProgressCount, completed: completedCount }
@@ -39,7 +45,7 @@ export default function TaskOverviewBlock() {
       totalTasks: tasks.length,
       chartData: buildTaskChartSeries(interval, locale, totals),
     }
-  }, [interval, locale])
+  }, [interval, locale, tasks])
 
   return (
     <article className={`col-span-12 p-6 lg:col-span-8 ${DASHBOARD_CARD_CLASS}`}>

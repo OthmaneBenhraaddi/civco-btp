@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatMoney } from '../../../utils/currency'
 import { PRIORITE_I18N_KEY, STATUT_I18N_KEY, STATUT_STRIP_COLORS } from '../types'
+import { formatLastUpdatedAt } from '../utils/taskUtils'
 import DocumentPreviewDrawer from './DocumentPreviewDrawer'
 import TaskDocumentsIndicator from './TaskDocumentsIndicator'
 import TaskPriorityBadge from './TaskPriorityBadge'
@@ -22,7 +23,7 @@ function ProjectBadge({ name }) {
   )
 }
 
-export default function TaskTableView({ tasks, locale, t }) {
+export default function TaskTableView({ tasks, locale, t, onEdit, onDelete }) {
   const [previewState, setPreviewState] = useState({ open: false, files: [] })
 
   function openPreview(files) {
@@ -58,6 +59,7 @@ export default function TaskTableView({ tasks, locale, t }) {
                 <th className="px-4 py-4">{t('tasks.columns.files')}</th>
                 <th className="px-4 py-4">{t('tasks.columns.notes')}</th>
                 <th className="px-4 py-4">{t('tasks.columns.lastUpdated')}</th>
+                <th className="px-4 py-4 text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -110,7 +112,31 @@ export default function TaskTableView({ tasks, locale, t }) {
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     <p className="text-slate-300">{task.lastUpdatedBy}</p>
-                    <p className="text-xs text-slate-500">{task.lastUpdatedAt}</p>
+                    <p className="text-xs text-slate-500">
+                      {task.lastUpdatedAt ? formatLastUpdatedAt(task.lastUpdatedAt, locale) : ''}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(task)}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                      >
+                        {t('common.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(t('tasks.confirmDelete'))) {
+                            onDelete?.(task.id)
+                          }
+                        }}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                      >
+                        {t('common.delete')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

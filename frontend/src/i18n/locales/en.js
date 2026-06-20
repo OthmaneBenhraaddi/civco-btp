@@ -87,6 +87,7 @@ export default {
     noPermission: 'You do not have permission to perform this action.',
     back: 'Back',
     retry: 'Retry',
+    apiUnavailable: 'Unable to reach the API. Start the backend on port 8000.',
   },
   auth: {
     title: 'BTP PFA',
@@ -539,6 +540,11 @@ export default {
     search: 'Search tasks...',
     allStatuses: 'All statuses',
     empty: 'No tasks match your filters.',
+    confirmDelete: 'Delete this task?',
+    loadError: 'Unable to load tasks.',
+    createError: 'Unable to create task.',
+    updateError: 'Unable to update task.',
+    deleteError: 'Unable to delete task.',
     noProjectSelected: 'No project selected',
     noProjectSelectedHint: 'Choose a project from the menu above to manage its tasks.',
     projectSelector: {
@@ -607,6 +613,7 @@ export default {
     },
     form: {
       title: 'New task',
+      editTitle: 'Edit task',
       project: 'Associated project',
       selectProject: 'Select a project',
       create: 'Create task',

@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'company' => \App\Http\Middleware\EnsureCompanyContext::class,
+            'demo.admin' => \App\Http\Middleware\EnsureDemoAdmin::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })

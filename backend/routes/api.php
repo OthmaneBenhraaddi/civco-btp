@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ProjectProgressController;
 use App\Http\Controllers\Api\V1\ProjectTeamController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\WorkspaceTaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -27,11 +28,8 @@ Route::prefix('v1')->group(function (): void {
         'service' => 'btp-backend',
     ]));
 
-    Route::post('/login', [AuthController::class, 'login']);
-
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware('demo.admin')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
@@ -80,6 +78,15 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:project.update');
             Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
                 ->middleware('permission:project.update');
+
+            Route::get('/workspace-tasks', [WorkspaceTaskController::class, 'index'])
+                ->middleware('permission:task.view_all');
+            Route::post('/workspace-tasks', [WorkspaceTaskController::class, 'store'])
+                ->middleware('permission:task.update');
+            Route::put('/workspace-tasks/{workspaceTask}', [WorkspaceTaskController::class, 'update'])
+                ->middleware('permission:task.update');
+            Route::delete('/workspace-tasks/{workspaceTask}', [WorkspaceTaskController::class, 'destroy'])
+                ->middleware('permission:task.update');
 
             Route::post('/projects/{project}/team', [ProjectTeamController::class, 'store'])
                 ->middleware('permission:project.update');

@@ -67,6 +67,11 @@ class Project extends Model
         return $this->hasMany(ProjectPhase::class)->orderBy('sort_order');
     }
 
+    public function workspaceTasks(): HasMany
+    {
+        return $this->hasMany(WorkspaceTask::class);
+    }
+
     public function teamMembers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_user')
