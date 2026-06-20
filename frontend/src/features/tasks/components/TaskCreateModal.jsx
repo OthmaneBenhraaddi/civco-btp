@@ -3,9 +3,9 @@ import Modal from '../../../components/Modal'
 import { useAuth } from '../../../context/AuthContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as projectsApi from '../../../api/projects'
-import { unwrapResource } from '../../../utils/apiHelpers'
+import * as workspaceTasksApi from '../../../api/workspaceTasks'
+import { extractErrorMessage, unwrapResource } from '../../../utils/apiHelpers'
 import { TASK_PRIORITES, TASK_STATUTS } from '../types'
-import { buildAvatarUrl, createTaskId, formatLastUpdatedAt } from '../utils/taskUtils'
 
 const emptyForm = {
   projectId: '',
@@ -22,17 +22,21 @@ export default function TaskCreateModal({
   open,
   onClose,
   onCreated,
+  onUpdated,
+  task = null,
   defaultProjectId = null,
   defaultProjectName = '',
 }) {
   const { user } = useAuth()
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
+  const isEditing = task !== null
   const [projects, setProjects] = useState([])
   const [users, setUsers] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [fileNames, setFileNames] = useState([])
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const lockedProjectId = defaultProjectId ? String(defaultProjectId) : null
 
@@ -57,12 +61,26 @@ export default function TaskCreateModal({
         const projectId = lockedProjectId
           ?? (projectList[0]?.id ? String(projectList[0].id) : '')
 
-        setForm({
-          ...emptyForm,
-          projectId,
-          responsableName: defaultUserName,
-        })
-        setFileNames([])
+        if (isEditing) {
+          setForm({
+            projectId: String(task.projectId),
+            nom: task.nom,
+            responsableName: task.responsable.name,
+            statut: task.statut,
+            priorite: task.priorite,
+            echeance: task.echeance ?? '',
+            budget: String(task.budget ?? 0),
+            notes: task.notes ?? '',
+          })
+          setFileNames(task.fichiers ?? [])
+        } else {
+          setForm({
+            ...emptyForm,
+            projectId,
+            responsableName: defaultUserName,
+          })
+          setFileNames([])
+        }
       })
       .catch(() => {
         setProjects([])
@@ -75,11 +93,12 @@ export default function TaskCreateModal({
         setFileNames([])
       })
       .finally(() => setLoading(false))
-  }, [open, user?.full_name, lockedProjectId])
+  }, [open, user?.full_name, lockedProjectId, isEditing, task])
 
   function handleFileChange(event) {
     const names = Array.from(event.target.files ?? []).map((file) => file.name)
-    setFileNames(names)
+    setFileNames((current) => [...current, ...names])
+    event.target.value = ''
   }
 
   function handleSubmit(event) {
@@ -96,36 +115,45 @@ export default function TaskCreateModal({
     }
 
     setSaving(true)
+    setError('')
 
     const responsableName = form.responsableName.trim()
-    const now = new Date()
 
-    const task = {
-      id: createTaskId(),
-      projectId: String(selectedProject.id),
-      projectName: selectedProject.title,
+    const payload = {
       nom: form.nom.trim(),
-      responsable: {
-        name: responsableName,
-        avatarUrl: buildAvatarUrl(responsableName),
-      },
+      responsable_name: responsableName,
       statut: form.statut,
-      echeance: form.echeance,
       priorite: form.priorite,
+      echeance: form.echeance,
       budget: form.budget === '' ? 0 : Number(form.budget),
-      fichiers: fileNames,
       notes: form.notes.trim(),
-      lastUpdatedBy: user?.full_name ?? responsableName,
-      lastUpdatedAt: formatLastUpdatedAt(now, locale),
+      fichiers: fileNames,
     }
 
-    onCreated(task)
-    setSaving(false)
-    onClose()
+    const request = isEditing
+      ? workspaceTasksApi.updateWorkspaceTask(task.id, payload)
+      : workspaceTasksApi.createWorkspaceTask({
+        ...payload,
+        project_id: Number(selectedProject.id),
+      })
+
+    request
+      .then((savedTask) => {
+        if (isEditing) {
+          onUpdated?.(savedTask)
+        } else {
+          onCreated?.(savedTask)
+        }
+        onClose()
+      })
+      .catch((err) => {
+        setError(extractErrorMessage(err, t(isEditing ? 'tasks.updateError' : 'tasks.createError')))
+      })
+      .finally(() => setSaving(false))
   }
 
   return (
-    <Modal title={t('tasks.form.title')} open={open} onClose={onClose}>
+    <Modal title={t(isEditing ? 'tasks.form.editTitle' : 'tasks.form.title')} open={open} onClose={onClose}>
       {loading ? (
         <p className="text-sm text-slate-400">{t('common.loading')}</p>
       ) : (
@@ -260,9 +288,13 @@ export default function TaskCreateModal({
             ) : null}
           </label>
 
-          <button type="submit" disabled={saving || (!lockedProjectId && projects.length === 0)}>
-            {saving ? t('common.saving') : t('tasks.form.create')}
+          <button type="submit" disabled={saving || (!lockedProjectId && !isEditing && projects.length === 0)}>
+            {saving ? t('common.saving') : t(isEditing ? 'common.save' : 'tasks.form.create')}
           </button>
+
+          {error ? (
+            <p className="text-sm text-red-300">{error}</p>
+          ) : null}
         </form>
       )}
     </Modal>

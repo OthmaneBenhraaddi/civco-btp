@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, bootstrapError, retryBootstrap } = useAuth()
+  const { isReady, loading, bootstrapError, retryBootstrap } = useAuth()
   const { t } = useTranslation()
 
   if (loading) {
@@ -14,12 +14,12 @@ export default function ProtectedRoute() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isReady) {
     return (
       <div className="flex h-full items-center justify-center overflow-hidden bg-[#111827] px-4">
         <div className="max-w-md rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 text-center shadow-xl">
           <p className="text-sm text-slate-300">
-            {bootstrapError || t('auth.sessionError')}
+            {bootstrapError || t('common.apiUnavailable')}
           </p>
           <button
             type="button"

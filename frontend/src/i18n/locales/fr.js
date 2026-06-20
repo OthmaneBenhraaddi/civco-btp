@@ -87,6 +87,7 @@ export default {
     noPermission: "Vous n'avez pas la permission pour cette action.",
     back: 'Retour',
     retry: 'Réessayer',
+    apiUnavailable: "Impossible de joindre l'API. Démarrez le backend sur le port 8000.",
   },
   auth: {
     title: 'BTP PFA',
@@ -539,6 +540,11 @@ export default {
     search: 'Rechercher des tâches...',
     allStatuses: 'Tous les statuts',
     empty: 'Aucune tâche ne correspond aux filtres.',
+    confirmDelete: 'Supprimer cette tâche ?',
+    loadError: 'Impossible de charger les tâches.',
+    createError: 'Impossible de créer la tâche.',
+    updateError: 'Impossible de modifier la tâche.',
+    deleteError: 'Impossible de supprimer la tâche.',
     noProjectSelected: 'Aucun projet sélectionné',
     noProjectSelectedHint: 'Choisissez un projet dans le menu ci-dessus pour gérer ses tâches spécifiques.',
     projectSelector: {
@@ -607,6 +613,7 @@ export default {
     },
     form: {
       title: 'Nouvelle tâche',
+      editTitle: 'Modifier la tâche',
       project: 'Projet associé',
       selectProject: 'Sélectionner un projet',
       create: 'Créer la tâche',

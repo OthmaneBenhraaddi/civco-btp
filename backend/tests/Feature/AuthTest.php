@@ -9,42 +9,23 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_login_and_fetch_profile(): void
+    public function test_demo_admin_context_is_available_without_login(): void
     {
         $this->seed();
 
-        $response = $this->withHeaders([
-            'Origin' => 'http://localhost:5173',
-            'Accept' => 'application/json',
-        ])->post('/api/v1/login', [
-            'email' => 'admin@btpdemo.fr',
-            'password' => 'password',
-        ]);
-
-        $response->assertOk()
-            ->assertJsonPath('user.email', 'admin@btpdemo.fr')
-            ->assertJsonPath('company.name', 'BTP Groupe');
-
-        $this->withHeaders([
-            'Origin' => 'http://localhost:5173',
-            'Accept' => 'application/json',
-        ])->getJson('/api/v1/me')
+        $this->getJson('/api/v1/me')
             ->assertOk()
+            ->assertJsonPath('user.email', 'admin@btpdemo.fr')
+            ->assertJsonPath('company.name', 'BTP Groupe')
             ->assertJsonPath('permissions', fn ($permissions) => in_array('dashboard.view', $permissions, true));
     }
 
-    public function test_inactive_user_cannot_login(): void
+    public function test_demo_admin_context_fails_when_seeded_user_is_inactive(): void
     {
         $this->seed();
 
         \App\Models\User::query()->where('email', 'admin@btpdemo.fr')->update(['is_active' => false]);
 
-        $this->withHeaders([
-            'Origin' => 'http://localhost:5173',
-            'Accept' => 'application/json',
-        ])->post('/api/v1/login', [
-            'email' => 'admin@btpdemo.fr',
-            'password' => 'password',
-        ])->assertUnprocessable();
+        $this->getJson('/api/v1/me')->assertStatus(503);
     }
 }

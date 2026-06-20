@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Console\Commands\ServeCommand;
+use Illuminate\Foundation\Console\ServeCommand as BaseServeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->app->forgetInstance(BaseServeCommand::class);
+        $this->app->singleton(BaseServeCommand::class, fn () => new ServeCommand);
     }
 }

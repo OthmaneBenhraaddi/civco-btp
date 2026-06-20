@@ -4,19 +4,6 @@ import { setActiveCompanyId } from '../api/client'
 
 const AuthContext = createContext(null)
 
-const DEMO_CREDENTIALS = {
-  email: import.meta.env.VITE_DEMO_EMAIL ?? 'admin@btpdemo.fr',
-  password: import.meta.env.VITE_DEMO_PASSWORD ?? 'password',
-}
-
-const EMPTY_CONTEXT = {
-  user: null,
-  company: null,
-  companies: [],
-  roles: [],
-  permissions: [],
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [company, setCompany] = useState(null)
@@ -35,11 +22,7 @@ export function AuthProvider({ children }) {
     setActiveCompanyId(context.company?.id ?? null)
   }, [])
 
-  const clearContext = useCallback(() => {
-    applyContext(EMPTY_CONTEXT)
-  }, [applyContext])
-
-  const bootstrapSession = useCallback(async () => {
+  const loadContext = useCallback(async () => {
     setBootstrapError('')
 
     try {
@@ -48,23 +31,19 @@ export function AuthProvider({ children }) {
         applyContext(context)
         return context
       }
-    } catch {
-    }
 
-    try {
-      await authApi.login(DEMO_CREDENTIALS)
-      const context = await authApi.fetchMe()
-      if (!context?.user) {
-        throw new Error('Session not established')
-      }
-      applyContext(context)
-      return context
+      throw new Error('Demo context unavailable')
     } catch {
-      clearContext()
-      setBootstrapError('Unable to start the application session. Ensure the API is running on port 8000.')
+      setUser(null)
+      setCompany(null)
+      setCompanies([])
+      setRoles([])
+      setPermissions([])
+      setActiveCompanyId(null)
+      setBootstrapError('Unable to reach the API. Start the backend on port 8000.')
       return null
     }
-  }, [applyContext, clearContext])
+  }, [applyContext])
 
   const refresh = useCallback(async (companyId) => {
     const context = await authApi.fetchMe(companyId)
@@ -75,41 +54,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    bootstrapSession()
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      })
-
-    const onUnauthorized = () => {
-      bootstrapSession()
-    }
-
-    window.addEventListener('auth:unauthorized', onUnauthorized)
+    loadContext().finally(() => {
+      if (!cancelled) {
+        setLoading(false)
+      }
+    })
 
     return () => {
       cancelled = true
-      window.removeEventListener('auth:unauthorized', onUnauthorized)
     }
-  }, [bootstrapSession])
-
-  const login = useCallback(async (credentials) => {
-    const context = await authApi.login(credentials)
-    applyContext(context)
-    setBootstrapError('')
-    return context
-  }, [applyContext])
-
-  const logout = useCallback(async () => {
-    try {
-      await authApi.logout()
-    } catch {
-    }
-
-    const context = await bootstrapSession()
-    return context
-  }, [bootstrapSession])
+  }, [loadContext])
 
   const hasPermission = useCallback(
     (permission) => permissions.includes(permission),
@@ -118,9 +72,9 @@ export function AuthProvider({ children }) {
 
   const retryBootstrap = useCallback(async () => {
     setLoading(true)
-    await bootstrapSession()
+    await loadContext()
     setLoading(false)
-  }, [bootstrapSession])
+  }, [loadContext])
 
   const value = useMemo(
     () => ({
@@ -131,9 +85,7 @@ export function AuthProvider({ children }) {
       permissions,
       loading,
       bootstrapError,
-      isAuthenticated: Boolean(user),
-      login,
-      logout,
+      isReady: Boolean(user),
       refresh,
       hasPermission,
       retryBootstrap,
@@ -146,8 +98,6 @@ export function AuthProvider({ children }) {
       permissions,
       loading,
       bootstrapError,
-      login,
-      logout,
       refresh,
       hasPermission,
       retryBootstrap,

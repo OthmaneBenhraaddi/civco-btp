@@ -49,13 +49,7 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && !error.config.url?.includes('/login')) {
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
-    }
-
-    return Promise.reject(error)
-  },
+  (error) => Promise.reject(error),
 )
 
 export async function ensureCsrfCookie() {
