@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\InvoiceStatus;
+use App\Models\Concerns\BelongsToCompany;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+
+class Invoice extends Model
+{
+    use BelongsToCompany;
+
+    protected $fillable = [
+        'company_id',
+        'client_id',
+        'project_id',
+        'quote_id',
+        'reference',
+        'status',
+        'issued_at',
+        'due_date',
+        'notes',
+        'total_ht',
+        'total_tax',
+        'total_ttc',
+        'amount_paid',
+        'balance_due',
+        'print_count',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => InvoiceStatus::class,
+            'issued_at' => 'date',
+            'due_date' => 'date',
+            'total_ht' => 'decimal:2',
+            'total_tax' => 'decimal:2',
+            'total_ttc' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
+            'balance_due' => 'decimal:2',
+            'print_count' => 'integer',
+        ];
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function quote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class);
+    }
+
+    public function lines(): HasMany
+    {
+        return $this->hasMany(InvoiceLine::class)->orderBy('sort_order');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function documents(): MorphMany
+    {
+        return $this->morphMany(Document::class, 'documentable');
+    }
+}
