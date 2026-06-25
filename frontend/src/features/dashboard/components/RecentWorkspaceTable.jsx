@@ -31,7 +31,7 @@ export default function RecentWorkspaceTable({ projects }) {
   const { t, locale } = useTranslation()
 
   return (
-    <article className={`col-span-12 p-6 lg:col-span-8 ${DASHBOARD_CARD_CLASS}`}>
+    <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
       <div className="mb-5 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-white">{t('dashboard.recentUpdates')}</h2>
         <Link

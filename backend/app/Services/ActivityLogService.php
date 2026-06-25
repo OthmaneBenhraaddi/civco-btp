@@ -6,6 +6,8 @@ use App\Enums\ProjectStatus;
 use App\Enums\TaskStatus;
 use App\Models\ActivityLog;
 use App\Models\Notification;
+use App\Models\Client;
+use App\Models\Document;
 use App\Models\Project;
 use App\Models\ProjectPhase;
 use App\Models\Task;
@@ -52,7 +54,6 @@ class ActivityLogService
             $project->company_id,
             'Nouveau projet',
             "{$actor} a créé le projet « {$project->title} ».",
-            Auth::id(),
         );
     }
 
@@ -79,7 +80,6 @@ class ActivityLogService
                 $project->company_id,
                 'Statut projet modifié',
                 $description,
-                Auth::id(),
             );
         }
 
@@ -101,7 +101,6 @@ class ActivityLogService
             $project->company_id,
             'Projet supprimé',
             "{$actor} a supprimé le projet « {$project->title} ».",
-            Auth::id(),
         );
     }
 
@@ -142,6 +141,14 @@ class ActivityLogService
         }
 
         $this->log($companyId, $projectId, 'updated', $description);
+
+        if ($task->wasChanged('status') && $task->status === TaskStatus::Done) {
+            $this->notifyCompanyAdmins(
+                $companyId,
+                'Tâche terminée',
+                $description,
+            );
+        }
 
         if ($task->wasChanged('status') && $task->status === TaskStatus::Done && $phase !== null) {
             $this->maybeNotifyPhaseCompleted($phase, $projectTitle);
@@ -216,7 +223,42 @@ class ActivityLogService
             $phase->project->company_id,
             'Phase terminée',
             "{$actor} a complété la phase « {$phase->name} » du projet « {$projectTitle} ».",
-            Auth::id(),
+        );
+    }
+
+    public function logClientCreated(Client $client): void
+    {
+        $actor = $this->actorLabel();
+
+        $this->log(
+            $client->company_id,
+            null,
+            'created',
+            "{$actor} a créé le client « {$client->name} ».",
+        );
+
+        $this->notifyCompanyAdmins(
+            $client->company_id,
+            'Nouveau client',
+            "{$actor} a créé le client « {$client->name} ».",
+        );
+    }
+
+    public function logDocumentUploaded(Project $project, Document $document): void
+    {
+        $actor = $this->actorLabel();
+
+        $this->log(
+            $project->company_id,
+            $project->id,
+            'created',
+            "{$actor} a ajouté le document « {$document->original_filename} » au projet « {$project->title} ».",
+        );
+
+        $this->notifyCompanyAdmins(
+            $project->company_id,
+            'Document ajouté',
+            "{$actor} a ajouté « {$document->original_filename} » au projet « {$project->title} ».",
         );
     }
 

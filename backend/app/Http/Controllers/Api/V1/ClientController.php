@@ -9,6 +9,7 @@ use App\Http\Requests\Client\UpdateClientRequest;
 use App\Http\Resources\ClientResource;
 use App\Models\Badge;
 use App\Models\Client;
+use App\Services\ActivityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -16,6 +17,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class ClientController extends Controller
 {
     use ResolvesCompanyContext;
+
+    public function __construct(
+        private readonly ActivityLogService $activityLogService,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -60,6 +65,8 @@ class ClientController extends Controller
         } elseif ($request->has('badge_ids')) {
             $this->syncClientBadges($request, $client, []);
         }
+
+        $this->activityLogService->logClientCreated($client->fresh());
 
         return (new ClientResource($client->load('badges')))
             ->response()

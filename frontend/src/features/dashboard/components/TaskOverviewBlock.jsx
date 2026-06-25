@@ -44,7 +44,7 @@ export default function TaskOverviewBlock() {
   }, [interval, locale])
 
   return (
-    <article className={`col-span-12 p-6 lg:col-span-8 ${DASHBOARD_CARD_CLASS}`}>
+    <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-white">{t('dashboard.taskTracking')}</h2>

@@ -34,7 +34,7 @@ export default function FinancialActivityBlock({ financial }) {
   )
 
   return (
-    <article className={`col-span-12 p-6 lg:col-span-8 ${DASHBOARD_CARD_CLASS}`}>
+    <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
       <h2 className="mb-6 text-base font-semibold text-white">{t('dashboard.financialActivity')}</h2>
 
       <div className="h-72 w-full">

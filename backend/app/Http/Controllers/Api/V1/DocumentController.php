@@ -8,6 +8,7 @@ use App\Http\Requests\Document\StoreDocumentRequest;
 use App\Http\Resources\DocumentResource;
 use App\Models\Document;
 use App\Models\Project;
+use App\Services\ActivityLogService;
 use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class DocumentController extends Controller
 
     public function __construct(
         private readonly DocumentService $documentService,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function index(Request $request, Project $project): AnonymousResourceCollection
@@ -53,7 +55,10 @@ class DocumentController extends Controller
             $request->integer('document_type_id'),
         );
 
-        return (new DocumentResource($document->load(['uploadedBy', 'documentType'])))
+        $document->load(['uploadedBy', 'documentType']);
+        $this->activityLogService->logDocumentUploaded($project, $document);
+
+        return (new DocumentResource($document))
             ->response()
             ->setStatusCode(201);
     }
