@@ -1,37 +1,39 @@
-export const DASHBOARD_CARD_CLASS =
-  'rounded-2xl border border-gray-700/50 bg-[#1f2937] shadow-sm'
+import { BENTO_CARD_CLASS } from '../../theme/designTokens'
 
-export const CHART_AXIS_TICK = { fill: '#9ca3af', fontSize: 12 }
+export const DASHBOARD_CARD_CLASS = `${BENTO_CARD_CLASS} shadow-2xl shadow-black/40`
+
+export const CHART_AXIS_TICK = { fill: '#64748b', fontSize: 11 }
 
 export const CHART_GRID_PROPS = {
   strokeDasharray: '3 3',
   vertical: false,
-  stroke: '#374151',
+  stroke: 'rgba(255,255,255,0.06)',
 }
 
 export const CHART_TOOLTIP_STYLE = {
   borderRadius: '12px',
-  border: '1px solid rgba(55, 65, 81, 0.9)',
-  backgroundColor: '#1f2937',
+  border: '1px solid rgba(255,255,255,0.08)',
+  backgroundColor: 'rgba(15, 17, 23, 0.95)',
   color: '#f9fafb',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.45)',
+  backdropFilter: 'blur(12px)',
 }
 
-export const CHART_TOOLTIP_LABEL_STYLE = { color: '#9ca3af' }
+export const CHART_TOOLTIP_LABEL_STYLE = { color: '#94a3b8' }
 
 export const CHART_LEGEND_STYLE = {
-  fontSize: '12px',
+  fontSize: '11px',
   paddingTop: '12px',
-  color: '#9ca3af',
+  color: '#94a3b8',
 }
 
 export const INTERVAL_CAPSULE_CLASS =
-  'dashboard-interval-tabs flex items-center gap-1 rounded-xl border border-gray-700/60 bg-[#1f2937] p-1'
+  'dashboard-interval-tabs flex items-center gap-1 rounded-xl border border-white/[0.06] bg-[#121316] p-1'
 
 export function intervalTabClass(isActive) {
   if (isActive) {
-    return 'dashboard-interval-tab rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all'
+    return 'dashboard-interval-tab rounded-lg bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-white transition-all'
   }
 
-  return 'dashboard-interval-tab rounded-lg bg-transparent px-3 py-1.5 text-xs font-medium text-gray-400 transition-all hover:text-slate-200'
+  return 'dashboard-interval-tab rounded-lg bg-transparent px-3 py-1.5 text-xs font-medium text-slate-500 transition-all hover:text-slate-300'
 }

@@ -6,10 +6,19 @@ import { applyThemeColorsToDocument } from '../utils/colorUtils'
 
 const ThemeContext = createContext(null)
 
+function applyDarkDocumentClass() {
+  document.documentElement.classList.add('dark')
+  document.documentElement.classList.remove('light')
+}
+
 export function ThemeProvider({ children }) {
   const { company, isAuthenticated } = useAuth()
   const [colors, setColors] = useState(THEME_COLOR_DEFAULTS)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    applyDarkDocumentClass()
+  }, [])
 
   const loadColors = useCallback(async () => {
     if (!company?.id) {

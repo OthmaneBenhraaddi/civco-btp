@@ -62,7 +62,7 @@ export default function LanguageSwitcher({ variant = 'default' }) {
   const triggerClasses = isHeader
     ? [
         'language-switcher-trigger-header',
-        'inline-flex items-center gap-1.5 rounded-lg p-2 text-sm font-medium text-slate-400',
+        'inline-flex items-center gap-1.5 rounded-lg p-2 text-sm font-medium text-slate-200',
         'transition-colors hover:bg-white/[0.04] hover:text-white',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20',
       ].join(' ')
@@ -87,7 +87,7 @@ export default function LanguageSwitcher({ variant = 'default' }) {
         >
           <span>{t(current.labelKey)}</span>
           <svg
-            className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            className={`h-3.5 w-3.5 shrink-0 text-slate-300 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden

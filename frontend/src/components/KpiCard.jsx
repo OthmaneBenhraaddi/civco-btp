@@ -1,9 +1,11 @@
+import { BENTO_CARD_CLASS } from '../theme/designTokens'
+
 const DOT_COLORS = {
-  purple: 'bg-violet-500',
-  cyan: 'bg-cyan-400',
-  green: 'bg-emerald-500',
-  orange: 'bg-amber-500',
-  red: 'bg-red-500',
+  purple: 'bg-indigo-400',
+  cyan: 'bg-sky-400',
+  green: 'bg-emerald-400',
+  orange: 'bg-amber-400',
+  red: 'bg-rose-400',
 }
 
 const VARIANT_DOT = {
@@ -27,27 +29,29 @@ export default function KpiCard({
   const isMoney = moneyAmount !== undefined && moneyAmount !== null
 
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-2xl border border-slate-800/80 bg-[#1f2937] p-5 shadow-lg">
+    <article
+      className={`relative min-w-0 overflow-hidden ${BENTO_CARD_CLASS} bg-[#121316] p-5 transition-colors duration-200 hover:bg-[#16171b]`}
+    >
       <span
-        className={`absolute right-5 top-5 h-2 w-2 rounded-full ${dot}`}
+        className={`absolute right-5 top-5 h-1.5 w-1.5 rounded-full ${dot}`}
         aria-hidden
       />
 
-      <p className="pr-4 text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="pr-4 text-[11px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
 
       {isMoney ? (
         <p className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-1.5 leading-tight">
-          <span className="text-xl font-extrabold tracking-tight text-white">{moneyAmount}</span>
+          <span className="text-2xl font-semibold tracking-tight text-white">{moneyAmount}</span>
           {moneyCurrency ? (
-            <span className="text-xs font-semibold uppercase text-slate-400">{moneyCurrency}</span>
+            <span className="text-[11px] font-medium uppercase text-slate-500">{moneyCurrency}</span>
           ) : null}
         </p>
       ) : (
-        <p className="mt-2 text-xl font-extrabold tracking-tight text-white">{value}</p>
+        <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{value}</p>
       )}
 
       {hint ? (
-        <p className="mt-1 text-xs text-slate-500">{hint}</p>
+        <p className="mt-1.5 text-xs text-slate-500">{hint}</p>
       ) : null}
     </article>
   )

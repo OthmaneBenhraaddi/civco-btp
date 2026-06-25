@@ -17,3 +17,13 @@ export async function markNotificationAsRead(notificationId) {
     unreadCount: data.meta?.unread_count ?? 0,
   }
 }
+
+export async function markAllNotificationsAsRead() {
+  const { items } = await fetchUnreadNotifications()
+  if (items.length === 0) {
+    return { unreadCount: 0 }
+  }
+
+  await Promise.all(items.map((item) => markNotificationAsRead(item.id)))
+  return { unreadCount: 0 }
+}

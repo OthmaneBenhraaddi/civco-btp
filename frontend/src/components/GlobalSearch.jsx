@@ -91,7 +91,7 @@ const ROUTE_ICONS = {
 }
 
 const ROW_BASE =
-  'command-palette-row flex w-full items-center gap-4 rounded-xl border border-transparent p-3 text-left text-slate-200 transition-colors mb-1.5 cursor-pointer'
+  'command-palette-row flex w-full items-center gap-4 rounded-xl border border-white/[0.06] bg-[#16171b] p-3 text-left text-white transition-colors mb-1.5 cursor-pointer'
 
 const ROW_ACTIVE = 'is-active'
 
@@ -300,7 +300,7 @@ export default function GlobalSearch() {
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-xl rounded-2xl border border-slate-700/60 bg-[#1f2937] p-4 shadow-2xl"
+        className="relative w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#0b0c0e]/95 p-4 shadow-2xl backdrop-blur-md"
         role="dialog"
         aria-modal="true"
         aria-label={t('layout.commandSearch')}
@@ -320,7 +320,7 @@ export default function GlobalSearch() {
             aria-activedescendant={
               activeIndex >= 0 ? `global-search-option-${activeIndex}` : undefined
             }
-            className="command-palette-input min-w-0 flex-1 border-none bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
+            className="command-palette-input min-w-0 flex-1 border-none bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
           />
           <kbd className="ml-auto shrink-0 rounded-md border border-gray-700 px-1.5 py-0.5 font-mono text-xs text-gray-500 shadow-sm">
             Esc
@@ -355,7 +355,7 @@ export default function GlobalSearch() {
                       <ResultIcon result={result} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-slate-200">{result.label}</span>
+                      <span className="block truncate text-sm font-medium text-white">{result.label}</span>
                       {result.subtitle ? (
                         <span className="block truncate text-xs text-slate-500">{result.subtitle}</span>
                       ) : null}

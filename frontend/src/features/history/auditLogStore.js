@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'btp-audit-logs'
 const STORAGE_VERSION_KEY = 'btp-audit-logs-version'
-const CURRENT_VERSION = '1'
+const CURRENT_VERSION = '3'
 export const AUDIT_LOG_EVENT = 'btp-audit-log-updated'
 export const TOAST_EVENT = 'btp-action-toast'
 
@@ -20,23 +20,37 @@ export const SEED_AUDIT_LOGS = [
   {
     id: 'log-seed-001',
     action: 'creation',
-    actor: 'Admin / Gérant BTP',
-    message: 'A créé un nouveau projet VRD: Construction d\'une route de liaison (Commune de Médiouna)',
-    timestamp: '2026-06-17T14:24:00.000Z',
+    actor: 'Administrateur Système',
+    message: 'A créé le projet « Aménagement du Boulevard Panoramique (VRD) ».',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 240).toISOString(),
   },
   {
     id: 'log-seed-002',
     action: 'creation',
-    actor: 'Secrétaire',
-    message: 'A généré une facture pour le client Commune de Médiouna (Montant: 450.000 MAD)',
-    timestamp: '2026-06-17T11:05:00.000Z',
+    actor: 'Yassine Mansouri',
+    message: 'A planifié la réunion de coordination — Société Al Omrane Casablanca.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
   },
   {
     id: 'log-seed-003',
     action: 'modification',
-    actor: 'Ingénieur',
-    message: 'A mis à jour l\'avancement technique du projet R+4 à \'8 MOIS DE SUIVI\'',
-    timestamp: '2026-06-17T09:30:00.000Z',
+    actor: 'Amine Alami',
+    message: 'A mis à jour l\'avancement du chantier Villa California — lotissement California.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
+  },
+  {
+    id: 'log-seed-004',
+    action: 'creation',
+    actor: 'Administrateur Système',
+    message: 'A créé le projet « Promenade & VRD Corniche Malabata — Extension Littorale (VRD) ».',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 120).toISOString(),
+  },
+  {
+    id: 'log-seed-005',
+    action: 'modification',
+    actor: 'Amine Alami',
+    message: 'A validé le coulage dalle RDC — club house Palmeraie Golf, Marrakech.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
   },
 ]
 
@@ -131,18 +145,18 @@ export const ACTION_BADGE_CLASS = {
 
 export const ACTION_TOAST_CLASS = {
   creation: {
-    container: 'border-emerald-500/30 bg-[#1f2937]/95',
+    container: 'border border-emerald-500/20 bg-slate-900/75 backdrop-blur-md',
     icon: 'text-emerald-400',
-    title: 'text-emerald-300',
+    title: 'text-emerald-400',
   },
   modification: {
-    container: 'border-amber-500/30 bg-[#1f2937]/95',
+    container: 'border border-amber-500/20 bg-slate-900/75 backdrop-blur-md',
     icon: 'text-amber-400',
-    title: 'text-amber-300',
+    title: 'text-amber-400',
   },
   suppression: {
-    container: 'border-red-500/30 bg-[#1f2937]/95',
+    container: 'border border-red-500/20 bg-slate-900/75 backdrop-blur-md',
     icon: 'text-red-400',
-    title: 'text-red-300',
+    title: 'text-red-400',
   },
 }

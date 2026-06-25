@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useDragAutoScroll } from '../../hooks/useDragAutoScroll'
 import KpiCard from '../../components/KpiCard'
+import { BENTO_CARD_CLASS } from '../../theme/designTokens'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { LIVE_SYNC_INTERVAL_MS, useAutoRefresh } from '../../hooks/useAutoRefresh'
@@ -14,6 +16,7 @@ import TaskOverviewBlock from './components/TaskOverviewBlock'
 import WorkspaceCalendar from './components/WorkspaceCalendar'
 import DashboardWidgetShell from './DashboardWidgetShell'
 import {
+  packDashboardLayout,
   readDashboardLayout,
   reorderDashboardLayout,
   saveDashboardLayout,
@@ -58,6 +61,9 @@ export default function DashboardPage() {
   useAutoRefresh(fetchSummary, [fetchSummary], LIVE_SYNC_INTERVAL_MS)
 
   const activeOrder = editMode ? draftOrder : layoutOrder
+  const packedWidgets = useMemo(() => packDashboardLayout(activeOrder), [activeOrder])
+
+  useDragAutoScroll(editMode && Boolean(draggingId))
 
   function enterEditMode() {
     setDraftOrder(layoutOrder)
@@ -80,7 +86,9 @@ export default function DashboardPage() {
     setEditMode(false)
   }
 
-  function handleDragStart(widgetId) {
+  function handleDragStart(event, widgetId) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', widgetId)
     setDraggingId(widgetId)
   }
 
@@ -121,7 +129,8 @@ export default function DashboardPage() {
 
     return {
       kpis: (
-        <section className="kpi-grid grid gap-4">
+        <section className={`${BENTO_CARD_CLASS} p-6`}>
+          <div className="kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <KpiCard
             label={t('dashboard.kpi.totalProjects')}
             value={projects.total ?? 0}
@@ -152,6 +161,7 @@ export default function DashboardPage() {
             moneyCurrency={expensesParts.currency}
             variant="expense"
           />
+          </div>
         </section>
       ),
       taskOverview: <TaskOverviewBlock />,
@@ -212,8 +222,8 @@ export default function DashboardPage() {
         ) : null}
       </header>
 
-      <div className="grid grid-cols-12 gap-6">
-        {activeOrder.map((widgetId) => {
+      <div className={`dashboard-grid grid grid-cols-12 gap-6 ${editMode ? 'dashboard-grid--edit' : ''}`}>
+        {packedWidgets.map(({ id: widgetId, colSpan }) => {
           const content = widgetRenderers[widgetId]
           if (!content) {
             return null
@@ -223,10 +233,11 @@ export default function DashboardPage() {
             <DashboardWidgetShell
               key={widgetId}
               widgetId={widgetId}
+              colSpan={editMode ? 12 : colSpan}
               editMode={editMode}
               isDragging={draggingId === widgetId}
               isDropTarget={dropTargetId === widgetId}
-              onDragStart={() => handleDragStart(widgetId)}
+              onDragStart={(event) => handleDragStart(event, widgetId)}
               onDragOver={(event) => handleDragOver(event, widgetId)}
               onDragLeave={() => setDropTargetId(null)}
               onDrop={(event) => handleDrop(event, widgetId)}

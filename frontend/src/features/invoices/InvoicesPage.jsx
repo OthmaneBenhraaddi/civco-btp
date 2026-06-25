@@ -159,17 +159,17 @@ export default function InvoicesPage() {
       {loading ? (
         <p>{t('common.loading')}</p>
       ) : (
-        <div className="table-wrap overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#16171B] dark:shadow-black/30">
-          <table className="w-full text-left text-sm text-gray-900 dark:text-slate-200">
+        <div className="table-wrap">
+          <table>
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.reference')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.client')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.status')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.totalTtc')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.balanceDue')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.dueDate')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('common.actions')}</th>
+              <tr>
+                <th>{t('invoices.reference')}</th>
+                <th>{t('invoices.client')}</th>
+                <th>{t('invoices.status')}</th>
+                <th>{t('invoices.totalTtc')}</th>
+                <th>{t('invoices.balanceDue')}</th>
+                <th>{t('invoices.dueDate')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -179,16 +179,16 @@ export default function InvoicesPage() {
                 </tr>
               ) : (
                 invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
+                  <tr key={invoice.id}>
+                    <td>
                       <Link to={`/invoices/${invoice.id}`}>{invoice.reference}</Link>
                     </td>
-                    <td className="px-4 py-3">{invoice.client?.name ?? '—'}</td>
-                    <td className="px-4 py-3"><StatusBadge status={invoice.status} /></td>
-                    <td className="px-4 py-3">{formatMoney(invoice.total_ttc, locale)}</td>
-                    <td className="px-4 py-3">{formatMoney(invoice.balance_due, locale)}</td>
-                    <td className="px-4 py-3">{invoice.due_date ?? '—'}</td>
-                    <td className="actions px-4 py-3">
+                    <td>{invoice.client?.name ?? '—'}</td>
+                    <td><StatusBadge status={invoice.status} /></td>
+                    <td>{formatMoney(invoice.total_ttc, locale)}</td>
+                    <td>{formatMoney(invoice.balance_due, locale)}</td>
+                    <td>{invoice.due_date ?? '—'}</td>
+                    <td className="actions">
                       <Link to={`/invoices/${invoice.id}`} className="btn-action">{t('invoices.open')}</Link>
                       {hasPermission('invoice.manage') && invoice.status === 'draft' ? (
                         <button type="button" className="ghost danger" onClick={() => handleDelete(invoice)}>

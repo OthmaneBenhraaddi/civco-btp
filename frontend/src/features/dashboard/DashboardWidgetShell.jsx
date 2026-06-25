@@ -1,5 +1,5 @@
 import { useTranslation } from '../../i18n/LanguageContext'
-import { DASHBOARD_WIDGET_LAYOUT } from './dashboardLayoutStore'
+import { getWidgetColSpanClass } from './dashboardLayoutStore'
 
 function DragHandleIcon({ className }) {
   return (
@@ -11,6 +11,7 @@ function DragHandleIcon({ className }) {
 
 export default function DashboardWidgetShell({
   widgetId,
+  colSpan = 12,
   editMode,
   isDragging,
   isDropTarget,
@@ -22,13 +23,12 @@ export default function DashboardWidgetShell({
   children,
 }) {
   const { t } = useTranslation()
-  const layout = DASHBOARD_WIDGET_LAYOUT[widgetId]
   const label = t(`dashboard.widgets.${widgetId}`)
 
   return (
     <div
       className={[
-        layout?.colSpan ?? 'col-span-12',
+        getWidgetColSpanClass(colSpan),
         'dashboard-widget min-w-0 transition-shadow duration-200',
         editMode ? 'dashboard-widget--edit rounded-2xl' : '',
         isDragging ? 'dashboard-widget--dragging opacity-60' : '',

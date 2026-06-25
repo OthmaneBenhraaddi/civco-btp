@@ -21,17 +21,17 @@ class NotificationSeeder extends Seeder
         $samples = [
             [
                 'title' => 'Nouveau projet assigné',
-                'message' => 'Le chantier « Construction d\'une Résidence R+4 » (client Adam Zakin) vous a été assigné en tant que conducteur de travaux.',
-                'created_at' => now()->subMinutes(12),
+                'message' => 'Le chantier « Aménagement du Boulevard Panoramique (VRD) » vous a été assigné en tant que conducteur de travaux.',
+                'created_at' => now()->subMinutes(18),
             ],
             [
-                'title' => 'Retard signalé — lot Gros Œuvre',
-                'message' => 'La tâche « Élévation des murs R+1 à R+4 » du projet PRJ-2026-001 accuse 5 jours de retard sur le planning.',
-                'created_at' => now()->subHours(3),
+                'title' => 'Visite chantier planifiée',
+                'message' => 'Amine Alami est attendu à 09:00 sur le lotissement California — villa Al Omrane.',
+                'created_at' => now()->subHours(2),
             ],
             [
-                'title' => 'Devis en attente de validation',
-                'message' => 'Le devis DEVIS-2026-002 (Direction des Routes — VRD Médiouna) attend validation du maître d\'ouvrage.',
+                'title' => 'Devis en attente',
+                'message' => 'Le devis DEVIS-2026-004 (SJL Maghreb Transport) attend signature client.',
                 'created_at' => now()->subDay(),
             ],
         ];

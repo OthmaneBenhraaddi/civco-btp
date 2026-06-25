@@ -51,7 +51,7 @@ function ToastStack({ toasts, onDismiss }) {
           <div
             key={toast.id}
             className={[
-              'action-toast pointer-events-auto flex gap-3 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-sm',
+              'action-toast pointer-events-auto flex gap-3 rounded-xl px-4 py-3 shadow-lg',
               'animate-[toast-in_0.28s_ease-out]',
               styles.container,
             ].join(' ')}
@@ -64,7 +64,7 @@ function ToastStack({ toasts, onDismiss }) {
               <p className={['text-sm font-semibold', styles.title].join(' ')}>
                 {t(`toast.titles.${toast.action}`)}
               </p>
-              <p className="mt-0.5 text-sm leading-snug text-slate-300">{toast.message}</p>
+              <p className="mt-0.5 text-sm leading-snug text-slate-400">{toast.message}</p>
             </div>
             <button
               type="button"

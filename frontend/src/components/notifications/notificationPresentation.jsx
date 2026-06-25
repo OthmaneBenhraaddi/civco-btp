@@ -41,7 +41,7 @@ export function renderHighlightedMessage(message = '') {
       )
     }
 
-    return <span key={`${part}-${index}`}>{part}</span>
+    return <span key={`${part}-${index}`} className="text-slate-300">{part}</span>
   })
 }
 

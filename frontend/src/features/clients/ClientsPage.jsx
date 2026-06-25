@@ -9,11 +9,14 @@ import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
 import * as badgesApi from '../../api/badges'
-import { extractErrorMessage } from '../../utils/apiHelpers'
+import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import ClientContactsPanel from './ClientContactsPanel'
 import ClientBadgesPanel, { isBadgeSelected, normalizeBadgeIds } from './ClientBadgesPanel'
 import { getClientRoleId, setClientRoleId } from '../roles/clientRoleStore'
 import { getAllRoles, getRoleById, getRoleLabel } from '../roles/rolesStore'
+import * as clientContactsApi from '../../api/clientContacts'
+import { extractErrorMessage } from '../../utils/apiHelpers'
+import NewClientModal from './components/NewClientModal'
 import {
   logClientCreated,
   logClientDeleted,
@@ -74,14 +77,14 @@ function DetailField({ label, value }) {
 
 function clientCardClasses(isSelected) {
   const base = [
-    'client-list-item flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left',
-    'transition-all duration-150 ease-in-out',
+    'client-list-item flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left',
+    'bg-[#16171b] text-white transition-all duration-150 ease-in-out',
   ]
 
   if (isSelected) {
-    base.push('border-slate-700/40 bg-white/[0.06] text-white')
+    base.push('border-white/[0.12] ring-1 ring-white/[0.06]')
   } else {
-    base.push('border-transparent bg-transparent hover:bg-white/[0.03]')
+    base.push('border-white/[0.06] hover:border-white/10')
   }
 
   return base.join(' ')
@@ -96,7 +99,8 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -194,9 +198,7 @@ export default function ClientsPage() {
   }
 
   function openCreate() {
-    setEditing(null)
-    setForm(emptyForm)
-    setModalOpen(true)
+    setCreateModalOpen(true)
   }
 
   async function openEdit(client) {
@@ -228,11 +230,45 @@ export default function ClientsPage() {
       role_id: getClientRoleId(source.id),
       badge_ids: normalizeBadgeIds((source.badges ?? []).map((badge) => badge.id)),
     })
-    setModalOpen(true)
+    setEditModalOpen(true)
   }
 
-  async function handleSubmit(event) {
+  async function handleCreateClient({ form: wizardForm, extraContacts }) {
+    setSaving(true)
+    setError('')
+
+    try {
+      const { role_id, ...payload } = wizardForm
+      payload.badge_ids = normalizeBadgeIds(payload.badge_ids)
+
+      const actor = resolveActorLabel(user, roles, t('layout.profileFallbackName'))
+      const created = await clientsApi.createClient(payload)
+      const createdId = created?.data?.id ?? created?.id
+
+      if (createdId) {
+        setClientRoleId(createdId, role_id)
+        setSelectedClientId(createdId)
+
+        for (const contact of extraContacts) {
+          await clientContactsApi.createClientContact(createdId, contact)
+        }
+      }
+
+      logClientCreated({ actor, name: payload.name })
+      setRoleMapVersion((value) => value + 1)
+      setCreateModalOpen(false)
+      await loadClients(meta?.current_page ?? 1)
+    } catch (err) {
+      setError(extractErrorMessage(err, t('clients.saveError')))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleEditSubmit(event) {
     event.preventDefault()
+    if (!editing) return
+
     setSaving(true)
     setError('')
 
@@ -241,26 +277,14 @@ export default function ClientsPage() {
       payload.badge_ids = normalizeBadgeIds(payload.badge_ids)
 
       const actor = resolveActorLabel(user, roles, t('layout.profileFallbackName'))
-
-      if (editing) {
-        await clientsApi.updateClient(editing.id, payload)
-        setClientRoleId(editing.id, role_id)
-        logClientUpdated({ actor, name: payload.name || editing.name })
-      } else {
-        const created = await clientsApi.createClient(payload)
-        if (created?.id) {
-          setClientRoleId(created.id, role_id)
-          setSelectedClientId(created.id)
-        }
-        logClientCreated({ actor, name: payload.name })
-      }
+      await clientsApi.updateClient(editing.id, payload)
+      setClientRoleId(editing.id, role_id)
+      logClientUpdated({ actor, name: payload.name || editing.name })
 
       setRoleMapVersion((value) => value + 1)
-      setModalOpen(false)
+      setEditModalOpen(false)
       await loadClients(meta?.current_page ?? 1)
-      if (editing?.id) {
-        await loadClientDetail(editing.id)
-      }
+      await loadClientDetail(editing.id)
     } catch (err) {
       setError(extractErrorMessage(err, t('clients.saveError')))
     } finally {
@@ -312,10 +336,10 @@ export default function ClientsPage() {
       {error ? <p className="error">{error}</p> : null}
 
       {loading ? (
-        <p>{t('common.loading')}</p>
+        <p className="text-sm text-slate-400">{t('common.loading')}</p>
       ) : (
         <div className="mt-6 flex w-full flex-col items-start gap-6 lg:flex-row">
-          <aside className="w-full space-y-1 rounded-xl border border-slate-800/80 bg-[#0f1013] p-2 lg:w-1/3">
+          <aside className="w-full space-y-1 rounded-2xl border border-white/[0.06] bg-[#16171b] p-2 lg:w-1/3">
             {clients.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-slate-500">{t('clients.empty')}</p>
             ) : (
@@ -332,7 +356,7 @@ export default function ClientsPage() {
                   >
                     <ClientAvatar name={client.name} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-slate-200">{client.name}</span>
+                      <span className="block truncate text-sm font-medium text-white">{client.name}</span>
                       <span className="mt-1.5 flex flex-wrap items-center gap-1">
                         <RoleBadge label={getRoleLabel(role, t)} tone={role.badgeTone} />
                         <ClientBadgeList badges={client.badges} />
@@ -344,7 +368,7 @@ export default function ClientsPage() {
             )}
           </aside>
 
-          <section className="flex min-h-[400px] w-full flex-col rounded-xl border border-slate-800/80 bg-[#0f1013] p-6 lg:w-2/3">
+          <section className="flex min-h-[400px] w-full flex-col rounded-2xl border border-white/[0.06] bg-[#16171b] p-6 lg:w-2/3">
             {!selectedClient ? (
               <p className="m-auto text-center text-xs text-slate-500">{t('clients.selectPrompt')}</p>
             ) : (
@@ -475,42 +499,54 @@ export default function ClientsPage() {
         </div>
       ) : null}
 
-      <Modal title={editing ? t('clients.edit') : t('clients.new')} open={modalOpen} onClose={() => setModalOpen(false)}>
-        <form className="stack" onSubmit={handleSubmit}>
+      <NewClientModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        availableBadges={availableBadges}
+        onSubmit={handleCreateClient}
+        saving={saving}
+      />
+
+      <Modal title={t('clients.edit')} open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+        <form className="stack" onSubmit={handleEditSubmit}>
           <label>
-            {t('clients.name')} *
+            <span className={LABEL_CLASS}>{t('clients.name')} *</span>
             <input
+              className={FIELD_CLASS}
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
               required
             />
           </label>
           <label>
-            {t('clients.contactName')}
+            <span className={LABEL_CLASS}>{t('clients.contactName')}</span>
             <input
+              className={FIELD_CLASS}
               value={form.contact_name}
               onChange={(event) => setForm({ ...form, contact_name: event.target.value })}
             />
           </label>
           <label>
-            {t('clients.email')}
+            <span className={LABEL_CLASS}>{t('clients.email')}</span>
             <input
               type="email"
+              className={FIELD_CLASS}
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
             />
           </label>
           <label>
-            {t('clients.phone')}
+            <span className={LABEL_CLASS}>{t('clients.phone')}</span>
             <input
+              className={FIELD_CLASS}
               value={form.phone}
               onChange={(event) => setForm({ ...form, phone: event.target.value })}
             />
           </label>
           <label>
-            {t('clients.assignedRole')}
+            <span className={LABEL_CLASS}>{t('clients.assignedRole')}</span>
             <select
-              className="filter-select w-full"
+              className={`${FIELD_CLASS} w-full`}
               value={form.role_id}
               onChange={(event) => setForm({ ...form, role_id: event.target.value })}
             >
@@ -522,13 +558,13 @@ export default function ClientsPage() {
             </select>
           </label>
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-300">{t('clients.assignBadges')}</p>
+            <p className={LABEL_CLASS}>{t('clients.assignBadges')}</p>
             {availableBadges.length === 0 ? (
-              <p className="text-xs text-slate-500">{t('clients.noBadgesAvailable')}</p>
+              <p className="text-xs text-slate-400">{t('clients.noBadgesAvailable')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {availableBadges.map((badge) => (
-                  <label key={badge.id} className="checkbox flex items-center gap-2">
+                  <label key={badge.id} className="checkbox flex items-center gap-2 text-slate-300">
                     <input
                       type="checkbox"
                       checked={isBadgeSelected(form.badge_ids, badge.id)}
@@ -547,37 +583,41 @@ export default function ClientsPage() {
             )}
           </div>
           <label>
-            {t('clients.address')}
+            <span className={LABEL_CLASS}>{t('clients.address')}</span>
             <input
+              className={FIELD_CLASS}
               value={form.address_line1}
               onChange={(event) => setForm({ ...form, address_line1: event.target.value })}
             />
           </label>
           <div className="form-row">
             <label>
-              {t('clients.city')}
+              <span className={LABEL_CLASS}>{t('clients.city')}</span>
               <input
+                className={FIELD_CLASS}
                 value={form.city}
                 onChange={(event) => setForm({ ...form, city: event.target.value })}
               />
             </label>
             <label>
-              {t('clients.postalCode')}
+              <span className={LABEL_CLASS}>{t('clients.postalCode')}</span>
               <input
+                className={FIELD_CLASS}
                 value={form.postal_code}
                 onChange={(event) => setForm({ ...form, postal_code: event.target.value })}
               />
             </label>
           </div>
           <label>
-            {t('clients.notes')}
+            <span className={LABEL_CLASS}>{t('clients.notes')}</span>
             <textarea
               rows={3}
+              className={FIELD_CLASS}
               value={form.notes}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
             />
           </label>
-          <label className="checkbox">
+          <label className="checkbox text-slate-300">
             <input
               type="checkbox"
               checked={form.is_active}
@@ -585,8 +625,8 @@ export default function ClientsPage() {
             />
             {t('common.active')}
           </label>
-          <button type="submit" disabled={saving}>
-            {saving ? t('common.saving') : editing ? t('clients.update') : t('clients.create')}
+          <button type="submit" disabled={saving} className={BTN_PRIMARY}>
+            {saving ? t('common.saving') : t('clients.update')}
           </button>
         </form>
       </Modal>

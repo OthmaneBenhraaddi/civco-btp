@@ -3,7 +3,8 @@ import { useTheme } from '../context/ThemeContext'
 import { STATUS_COLOR_KEYS } from '../theme/themeColorDefaults'
 import { buildToneBadgeStyle } from '../utils/colorUtils'
 
-const BASE_CLASSES = 'inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset'
+const BASE_CLASSES =
+  'inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium'
 
 export default function StatusBadge({ status }) {
   const { t } = useTranslation()
@@ -14,6 +15,11 @@ export default function StatusBadge({ status }) {
 
   return (
     <span className={BASE_CLASSES} style={buildToneBadgeStyle(color)}>
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      />
       {label === `status.${status}` ? status : label}
     </span>
   )

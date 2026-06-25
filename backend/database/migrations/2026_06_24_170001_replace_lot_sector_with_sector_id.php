@@ -51,9 +51,19 @@ return new class extends Migration
 
         DB::table('lots')->whereNull('sector_id')->delete();
 
-        Schema::table('lots', function (Blueprint $table): void {
-            $table->dropForeign(['sector_id']);
-        });
+        $hasSectorForeignKey = collect(DB::select(
+            "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'lots'
+               AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+               AND CONSTRAINT_NAME LIKE '%sector_id%'",
+        ))->isNotEmpty();
+
+        if ($hasSectorForeignKey) {
+            Schema::table('lots', function (Blueprint $table): void {
+                $table->dropForeign(['sector_id']);
+            });
+        }
 
         Schema::table('lots', function (Blueprint $table): void {
             $table->unsignedBigInteger('sector_id')->nullable(false)->change();

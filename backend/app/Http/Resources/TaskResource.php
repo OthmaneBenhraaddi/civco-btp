@@ -18,10 +18,12 @@ class TaskResource extends JsonResource
             'status' => $this->status->value,
             'progress_percent' => (float) $this->progress_percent,
             'assigned_to_user_id' => $this->assigned_to_user_id,
-            'assigned_to' => $this->whenLoaded('assignedTo', fn () => [
-                'id' => $this->assignedTo->id,
-                'full_name' => $this->assignedTo->full_name,
-            ]),
+            'assigned_to' => $this->whenLoaded('assignedTo', fn () => $this->assignedTo === null
+                ? null
+                : [
+                    'id' => $this->assignedTo->id,
+                    'full_name' => $this->assignedTo->full_name,
+                ]),
             'due_date' => $this->due_date?->toDateString(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'sort_order' => $this->sort_order,

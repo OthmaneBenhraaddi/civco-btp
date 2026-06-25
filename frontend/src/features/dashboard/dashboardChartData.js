@@ -44,21 +44,28 @@ export function buildTaskChartSeries(interval, locale, totals) {
 
 /**
  * @param {string} locale
- * @param {{ totalRevenue: number, totalExpenses: number }} financial
+ * @param {{ activitySeries?: Array<{ month: string, revenue: number, chantiers: number }> }} options
  */
-export function buildFinancialActivitySeries(locale, financial) {
+export function buildFinancialActivitySeries(locale, { activitySeries = [] } = {}) {
   const monthLabels = locale === 'fr' ? MONTH_LABELS_FR : MONTH_LABELS_EN
-  const revenueBase = Math.max(financial.totalRevenue, 120000)
-  const expenseBase = Math.max(financial.totalExpenses, 45000)
 
-  return monthLabels.slice(0, 10).map((label, index) => {
-    const progress = index / 9
-    return {
-      label,
-      revenue: Math.round(revenueBase * (0.35 + progress * 0.65) * (0.92 + Math.sin(index) * 0.08)),
-      chantiers: Math.round(expenseBase * (0.4 + progress * 0.55) * (0.88 + Math.cos(index * 1.2) * 0.1)),
-    }
-  })
+  if (activitySeries.length > 0) {
+    return activitySeries.map((point) => {
+      const monthIndex = Number(point.month?.split('-')[1] ?? 1) - 1
+
+      return {
+        label: monthLabels[monthIndex] ?? point.month,
+        revenue: Number(point.revenue ?? 0),
+        chantiers: Number(point.chantiers ?? 0),
+      }
+    })
+  }
+
+  return monthLabels.slice(0, 10).map((label) => ({
+    label,
+    revenue: 0,
+    chantiers: 0,
+  }))
 }
 
 /** @param {Record<string, number>} byStatus @param {string[]} palette */
@@ -83,34 +90,3 @@ export function buildChantierDistribution(byStatus, palette = []) {
     color: defaultPalette[index % defaultPalette.length],
   }))
 }
-
-export const DAILY_SCHEDULE_EVENTS = [
-  {
-    id: 'evt-1',
-    time: '08:30',
-    titleKey: 'dashboard.schedule.coordination',
-    tagKey: 'dashboard.schedule.tags.chantier',
-    tagColor: 'bg-teal-500/20 text-teal-300',
-  },
-  {
-    id: 'evt-2',
-    time: '10:15',
-    titleKey: 'dashboard.schedule.architect',
-    tagKey: 'dashboard.schedule.tags.validation',
-    tagColor: 'bg-violet-500/20 text-violet-300',
-  },
-  {
-    id: 'evt-3',
-    time: '14:00',
-    titleKey: 'dashboard.schedule.siteVisit',
-    tagKey: 'dashboard.schedule.tags.inspection',
-    tagColor: 'bg-blue-500/20 text-blue-300',
-  },
-  {
-    id: 'evt-4',
-    time: '16:45',
-    titleKey: 'dashboard.schedule.invoice',
-    tagKey: 'dashboard.schedule.tags.finance',
-    tagColor: 'bg-amber-500/20 text-amber-300',
-  },
-]

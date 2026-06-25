@@ -31,14 +31,16 @@ class DemoSeeder extends Seeder
         );
 
         $adminRole = Role::query()->where('slug', 'admin')->whereNull('company_id')->firstOrFail();
+        $projectManagerRole = Role::query()->where('slug', 'project_manager')->whereNull('company_id')->firstOrFail();
         $collaboratorRole = Role::query()->where('slug', 'collaborator')->whereNull('company_id')->firstOrFail();
+        $conducteurRole = Role::query()->where('slug', 'conducteur_travaux')->whereNull('company_id')->firstOrFail();
 
         $admin = User::query()->updateOrCreate(
             ['email' => 'admin@btpdemo.fr'],
             [
                 'first_name' => 'Administrateur',
                 'last_name' => 'Système',
-                'phone' => '0600000000',
+                'phone' => '+212 661 000 101',
                 'is_active' => true,
                 'role' => 'admin',
                 'password' => Hash::make('password'),
@@ -46,12 +48,12 @@ class DemoSeeder extends Seeder
             ],
         );
 
-        $teamMember = User::query()->updateOrCreate(
-            ['email' => 'user@btpdemo.fr'],
+        $yassine = User::query()->updateOrCreate(
+            ['email' => 'yassine.mansouri@civco-btp.ma'],
             [
-                'first_name' => 'Membre',
-                'last_name' => 'Équipe',
-                'phone' => '0600000001',
+                'first_name' => 'Yassine',
+                'last_name' => 'Mansouri',
+                'phone' => '+212 661 482 730',
                 'is_active' => true,
                 'role' => 'user',
                 'password' => Hash::make('password'),
@@ -59,22 +61,46 @@ class DemoSeeder extends Seeder
             ],
         );
 
-        $company->users()->syncWithoutDetaching([
+        $amine = User::query()->updateOrCreate(
+            ['email' => 'amine.alami@civco-btp.ma'],
+            [
+                'first_name' => 'Amine',
+                'last_name' => 'Alami',
+                'phone' => '+212 662 918 445',
+                'is_active' => true,
+                'role' => 'user',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ],
+        );
+
+        User::query()->where('email', 'user@btpdemo.fr')->update(['is_active' => false]);
+
+        $company->users()->sync([
             $admin->id => [
                 'is_primary' => true,
-                'joined_at' => now()->toDateString(),
+                'joined_at' => now()->subYears(2)->toDateString(),
             ],
-            $teamMember->id => [
+            $yassine->id => [
                 'is_primary' => true,
-                'joined_at' => now()->toDateString(),
+                'joined_at' => now()->subYear()->toDateString(),
+            ],
+            $amine->id => [
+                'is_primary' => true,
+                'joined_at' => now()->subMonths(8)->toDateString(),
             ],
         ]);
 
-        $admin->roles()->syncWithoutDetaching([
+        $admin->roles()->sync([
             $adminRole->id => ['company_id' => $company->id],
         ]);
 
-        $teamMember->roles()->syncWithoutDetaching([
+        $yassine->roles()->sync([
+            $projectManagerRole->id => ['company_id' => $company->id],
+            $conducteurRole->id => ['company_id' => $company->id],
+        ]);
+
+        $amine->roles()->sync([
             $collaboratorRole->id => ['company_id' => $company->id],
         ]);
 

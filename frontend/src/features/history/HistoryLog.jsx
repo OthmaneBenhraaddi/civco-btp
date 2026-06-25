@@ -106,19 +106,22 @@ export default function HistoryLog() {
 
   if (!isAdmin) {
     return (
-      <article className="w-full rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 text-white shadow-xl">
+      <article className="w-full py-2">
         <p className="text-sm text-slate-500">{t('history.restricted')}</p>
       </article>
     )
   }
 
   return (
-    <article className="w-full rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 text-white shadow-xl">
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold tracking-tight text-white">
-          {t('history.title')}
-        </h2>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-400">
+    <article className="w-full">
+      <header className="mb-8 flex flex-col gap-4 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            {t('history.title')}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">{t('history.subtitle')}</p>
+        </div>
+        <span className="inline-flex w-fit items-center gap-1.5 text-xs text-emerald-400">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -127,9 +130,9 @@ export default function HistoryLog() {
         </span>
       </header>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <label className="text-xs text-slate-400">
-          <span className="mb-1 block font-semibold uppercase tracking-wider">{t('history.filters.user')}</span>
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <label className="text-xs text-slate-500">
+          <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.user')}</span>
           <select
             className="filter-select w-full"
             value={filters.user_id}
@@ -144,8 +147,8 @@ export default function HistoryLog() {
           </select>
         </label>
 
-        <label className="text-xs text-slate-400">
-          <span className="mb-1 block font-semibold uppercase tracking-wider">{t('history.filters.project')}</span>
+        <label className="text-xs text-slate-500">
+          <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.project')}</span>
           <select
             className="filter-select w-full"
             value={filters.project_id}
@@ -160,8 +163,8 @@ export default function HistoryLog() {
           </select>
         </label>
 
-        <label className="text-xs text-slate-400">
-          <span className="mb-1 block font-semibold uppercase tracking-wider">{t('history.filters.action')}</span>
+        <label className="text-xs text-slate-500">
+          <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.action')}</span>
           <select
             className="filter-select w-full"
             value={filters.action_type}
@@ -177,7 +180,7 @@ export default function HistoryLog() {
         </label>
       </div>
 
-      {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="mb-6 text-sm text-red-400">{error}</p> : null}
 
       {loading && logs.length === 0 ? (
         <p className="text-sm text-slate-500">{t('common.loading')}</p>
@@ -186,54 +189,64 @@ export default function HistoryLog() {
       {!loading && logs.length === 0 ? (
         <p className="text-sm text-slate-500">{t('history.empty')}</p>
       ) : (
-        <ul className="max-h-[min(32rem,70vh)] overflow-y-auto pr-1 custom-scrollbar">
-          {logs.map((log) => (
-            <li
-              key={log.id}
-              className="relative border-l border-slate-800 pb-6 pl-6 last:pb-0"
-            >
-              <span
-                className={[
-                  'absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full ring-4',
-                  ACTION_DOT_CLASS[log.action] ?? ACTION_DOT_CLASS.modification,
-                ].join(' ')}
-                aria-hidden
-              />
+        <div className="relative">
+          <div
+            className="pointer-events-none absolute bottom-0 left-[5px] top-0 w-px bg-gradient-to-b from-white/[0.08] via-white/[0.06] to-transparent"
+            aria-hidden
+          />
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-200">{log.actor}</span>
-                    <span className="text-xs tabular-nums text-slate-500">
+          <ul className="m-0 max-h-[min(36rem,70vh)] list-none overflow-y-auto p-0 pr-1 custom-scrollbar">
+            {logs.map((log, index) => (
+              <li
+                key={log.id}
+                className={[
+                  'relative grid grid-cols-[12px_1fr] gap-x-4 pb-8',
+                  index === logs.length - 1 ? 'pb-0' : '',
+                ].join(' ')}
+              >
+                <div className="relative flex justify-center pt-1.5">
+                  <span
+                    className={[
+                      'relative z-[1] h-2.5 w-2.5 rounded-full ring-2 ring-[#0b0c0e]',
+                      ACTION_DOT_CLASS[log.action] ?? ACTION_DOT_CLASS.modification,
+                    ].join(' ')}
+                    aria-hidden
+                  />
+                </div>
+
+                <div className="min-w-0 border-b border-white/[0.04] pb-6 last:border-b-0">
+                  <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-sm font-medium text-white">{log.actor}</span>
+                    <time className="text-xs tabular-nums text-slate-500">
                       {formatAuditTime(log.timestamp ?? log.created_at, locale)}
-                    </span>
+                    </time>
                     <span
                       className={[
-                        'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                        'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
                         ACTION_BADGE_CLASS[log.action] ?? ACTION_BADGE_CLASS.modification,
                       ].join(' ')}
                     >
                       {actionBadgeLabel(log.action, t)}
                     </span>
                     {log.project_title ? (
-                      <span className="rounded-md bg-slate-800/80 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                      <span className="text-[11px] text-slate-500">
                         {log.project_reference ? `${log.project_reference} · ` : ''}{log.project_title}
                       </span>
                     ) : null}
                   </div>
-                  <p className="text-sm leading-relaxed text-slate-300">{log.message ?? log.description}</p>
+                  <p className="text-sm leading-relaxed text-slate-400">{log.message ?? log.description}</p>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {lastPage > 1 ? (
-        <div className="mt-6 flex items-center justify-between border-t border-slate-800/60 pt-4 text-xs text-slate-400">
+        <div className="mt-8 flex items-center justify-between border-t border-white/[0.06] pt-5 text-xs text-slate-500">
           <button
             type="button"
-            className="rounded-lg border border-slate-700/60 px-3 py-1.5 transition hover:bg-white/[0.04] disabled:opacity-40"
+            className="rounded-lg border border-white/[0.08] px-3 py-1.5 transition hover:bg-white/[0.04] disabled:opacity-40"
             disabled={currentPage <= 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
           >
@@ -242,7 +255,7 @@ export default function HistoryLog() {
           <span>{t('history.pageOf', { current: currentPage, total: lastPage })}</span>
           <button
             type="button"
-            className="rounded-lg border border-slate-700/60 px-3 py-1.5 transition hover:bg-white/[0.04] disabled:opacity-40"
+            className="rounded-lg border border-white/[0.08] px-3 py-1.5 transition hover:bg-white/[0.04] disabled:opacity-40"
             disabled={currentPage >= lastPage}
             onClick={() => setPage((value) => value + 1)}
           >

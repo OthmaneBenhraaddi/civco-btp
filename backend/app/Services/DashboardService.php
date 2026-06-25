@@ -6,8 +6,10 @@ use App\Enums\InvoiceStatus;
 use App\Enums\ProjectStatus;
 use App\Models\Expense;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Project;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class DashboardService
@@ -102,8 +104,52 @@ class DashboardService
                 'outstanding_balance' => $outstandingBalance,
                 'overdue_invoices_count' => $overdueInvoicesCount,
                 'total_expenses' => $totalExpenses,
+                'activity_series' => $this->buildFinancialActivitySeries($companyId, $user),
             ],
             'recent_projects' => $recentProjects,
         ];
+    }
+
+    /**
+     * @return list<array{month: string, revenue: float, chantiers: int}>
+     */
+    private function buildFinancialActivitySeries(int $companyId, ?User $user = null): array
+    {
+        $activeStatuses = [
+            ProjectStatus::Planned->value,
+            ProjectStatus::InProgress->value,
+            ProjectStatus::OnHold->value,
+        ];
+
+        $series = [];
+        $now = Carbon::now();
+
+        for ($offset = 9; $offset >= 0; $offset--) {
+            $monthDate = $now->copy()->subMonths($offset);
+            $monthStart = $monthDate->copy()->startOfMonth();
+            $monthEnd = $monthDate->copy()->endOfMonth();
+
+            $revenue = (float) Payment::query()
+                ->whereHas('invoice', fn ($query) => $query->forCompany($companyId))
+                ->whereBetween('paid_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->sum('amount');
+
+            $chantierQuery = Project::query()
+                ->forCompany($companyId)
+                ->whereIn('status', $activeStatuses)
+                ->where('created_at', '<=', $monthEnd);
+
+            if ($user !== null && ! $user->isAdmin()) {
+                $chantierQuery->whereHas('teamMembers', fn ($query) => $query->where('users.id', $user->id));
+            }
+
+            $series[] = [
+                'month' => $monthDate->format('Y-m'),
+                'revenue' => round($revenue, 2),
+                'chantiers' => $chantierQuery->count(),
+            ];
+        }
+
+        return $series;
     }
 }

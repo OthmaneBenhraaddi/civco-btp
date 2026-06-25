@@ -10,14 +10,84 @@ export const DASHBOARD_WIDGET_IDS = [
   'recentProjects',
 ]
 
-export const DASHBOARD_WIDGET_LAYOUT = {
-  kpis: { colSpan: 'col-span-12' },
-  taskOverview: { colSpan: 'col-span-12 lg:col-span-8' },
-  chantierDistribution: { colSpan: 'col-span-12 lg:col-span-4' },
-  dailySchedule: { colSpan: 'col-span-12 lg:col-span-4' },
-  workspaceCalendar: { colSpan: 'col-span-12 lg:col-span-4' },
-  financialActivity: { colSpan: 'col-span-12 lg:col-span-8' },
-  recentProjects: { colSpan: 'col-span-12 lg:col-span-8' },
+/** Preferred width on a 12-column grid (xl breakpoint). Rows are packed to always sum to 12. */
+export const DASHBOARD_WIDGET_COL_SPAN = {
+  kpis: 12,
+  taskOverview: 7,
+  chantierDistribution: 5,
+  dailySchedule: 4,
+  workspaceCalendar: 4,
+  financialActivity: 8,
+  recentProjects: 12,
+}
+
+const XL_COL_SPAN_CLASS = {
+  1: 'xl:col-span-1',
+  2: 'xl:col-span-2',
+  3: 'xl:col-span-3',
+  4: 'xl:col-span-4',
+  5: 'xl:col-span-5',
+  6: 'xl:col-span-6',
+  7: 'xl:col-span-7',
+  8: 'xl:col-span-8',
+  9: 'xl:col-span-9',
+  10: 'xl:col-span-10',
+  11: 'xl:col-span-11',
+  12: 'xl:col-span-12',
+}
+
+export function getWidgetColSpanClass(span) {
+  const safe = Math.min(12, Math.max(1, span))
+  if (safe === 12) {
+    return 'col-span-12'
+  }
+  return `col-span-12 ${XL_COL_SPAN_CLASS[safe]}`
+}
+
+/**
+ * Pack widgets into grid rows that always fill 12 columns — no leftover gaps when reordering.
+ */
+export function packDashboardLayout(order) {
+  const packed = []
+  let row = []
+  let used = 0
+
+  function flushRow(expandLast) {
+    if (row.length === 0) {
+      return
+    }
+
+    if (expandLast) {
+      const total = row.reduce((sum, widget) => sum + widget.colSpan, 0)
+      if (total < 12) {
+        row[row.length - 1].colSpan += 12 - total
+      }
+    }
+
+    packed.push(...row)
+    row = []
+    used = 0
+  }
+
+  for (const id of order) {
+    const preferred = DASHBOARD_WIDGET_COL_SPAN[id] ?? 12
+
+    if (used > 0 && used + preferred > 12) {
+      flushRow(true)
+    }
+
+    const span = preferred >= 12 ? 12 : preferred
+    row.push({ id, colSpan: span })
+    used += span
+
+    if (used >= 12) {
+      flushRow(false)
+    }
+  }
+
+  flushRow(true)
+
+  return packed
 }
 
 export function getDefaultDashboardLayout() {

@@ -10,7 +10,7 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center overflow-hidden bg-[#111827]">
+      <div className="flex h-full items-center justify-center overflow-hidden bg-[#0b0c0e] text-slate-400">
         <p className="text-sm text-slate-400">{t('common.loading')}</p>
       </div>
     )

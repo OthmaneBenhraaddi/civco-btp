@@ -135,6 +135,7 @@ export default function ProjectMapPage() {
               center={mapCenter}
               zoom={DEFAULT_ZOOM}
               scrollWheelZoom
+              attributionControl={false}
               className="project-map-leaflet h-full w-full"
             >
               <TileLayer attribution={MAP_TILE_ATTRIBUTION} url={MAP_TILE_URL} />

@@ -107,7 +107,7 @@ export default function ClientBadgesPanel({
       ) : availableBadges.length === 0 ? (
         <p className="text-xs text-slate-500">{t('clients.noBadgesAvailable')}</p>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
           {availableBadges.map((badge) => {
             const checked = isBadgeSelected(selectedIds, badge.id)
 
@@ -115,14 +115,15 @@ export default function ClientBadgesPanel({
               <label
                 key={badge.id}
                 className={[
-                  'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors',
+                  'inline-flex w-auto cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors',
                   checked
-                    ? 'border-slate-600/50 bg-white/[0.04]'
-                    : 'border-transparent hover:bg-white/[0.02]',
+                    ? 'border-white/15 bg-white/[0.04]'
+                    : 'border-white/[0.06] hover:bg-white/[0.02]',
                 ].join(' ')}
               >
                 <input
                   type="checkbox"
+                  className="shrink-0"
                   checked={checked}
                   onChange={() => toggleBadge(badge.id)}
                 />

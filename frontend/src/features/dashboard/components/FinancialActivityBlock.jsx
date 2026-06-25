@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import { useTheme } from '../../../context/ThemeContext'
+import { formatMoney } from '../../../utils/currency'
 import { buildFinancialActivitySeries } from '../dashboardChartData'
 import {
   CHART_AXIS_TICK,
@@ -21,16 +22,27 @@ import {
   DASHBOARD_CARD_CLASS,
 } from '../dashboardTheme'
 
+function formatRevenueAxis(value) {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`
+  }
+
+  if (value >= 1_000) {
+    return `${Math.round(value / 1_000)}k`
+  }
+
+  return String(Math.round(value))
+}
+
 export default function FinancialActivityBlock({ financial }) {
   const { t, locale } = useTranslation()
   const { colors } = useTheme()
 
   const chartData = useMemo(
     () => buildFinancialActivitySeries(locale, {
-      totalRevenue: financial?.total_revenue ?? 0,
-      totalExpenses: financial?.total_expenses ?? 0,
+      activitySeries: financial?.activity_series ?? [],
     }),
-    [financial?.total_expenses, financial?.total_revenue, locale],
+    [financial?.activity_series, locale],
   )
 
   return (
@@ -39,7 +51,7 @@ export default function FinancialActivityBlock({ financial }) {
 
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={colors.chart_revenue} stopOpacity={0.4} />
@@ -58,18 +70,36 @@ export default function FinancialActivityBlock({ financial }) {
               tickLine={false}
             />
             <YAxis
+              yAxisId="revenue"
               tick={CHART_AXIS_TICK}
               axisLine={false}
               tickLine={false}
-              width={48}
-              tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+              width={52}
+              tickFormatter={formatRevenueAxis}
+            />
+            <YAxis
+              yAxisId="chantiers"
+              orientation="right"
+              tick={CHART_AXIS_TICK}
+              axisLine={false}
+              tickLine={false}
+              width={36}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={CHART_TOOLTIP_STYLE}
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
+              formatter={(value, name) => {
+                if (name === t('dashboard.revenueSeries')) {
+                  return [formatMoney(value, locale), name]
+                }
+
+                return [value, name]
+              }}
             />
             <Legend iconType="circle" wrapperStyle={CHART_LEGEND_STYLE} />
             <Area
+              yAxisId="revenue"
               type="monotone"
               dataKey="revenue"
               name={t('dashboard.revenueSeries')}
@@ -79,6 +109,7 @@ export default function FinancialActivityBlock({ financial }) {
               animationDuration={800}
             />
             <Area
+              yAxisId="chantiers"
               type="monotone"
               dataKey="chantiers"
               name={t('dashboard.chantierSeries')}

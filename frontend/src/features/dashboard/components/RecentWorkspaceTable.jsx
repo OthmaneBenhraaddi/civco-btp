@@ -36,7 +36,7 @@ export default function RecentWorkspaceTable({ projects }) {
         <h2 className="text-base font-semibold text-white">{t('dashboard.recentUpdates')}</h2>
         <Link
           to="/projects"
-          className="rounded-lg border border-gray-700/50 bg-[#111827] px-3 py-1.5 text-xs font-semibold text-gray-400 transition hover:border-gray-600 hover:text-white"
+            className="rounded-lg border border-white/[0.06] bg-[#121316] px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-white/10 hover:text-white"
         >
           {t('dashboard.viewProjects')}
         </Link>
@@ -48,7 +48,7 @@ export default function RecentWorkspaceTable({ projects }) {
         <div className="overflow-x-auto rounded-xl border border-gray-700/50">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-700/50 bg-[#111827]/50">
+              <tr className="border-b border-white/[0.06] bg-transparent">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                   {t('dashboard.columns.project')}
                 </th>
@@ -70,7 +70,7 @@ export default function RecentWorkspaceTable({ projects }) {
               {projects.map((project) => (
                 <tr
                   key={project.id}
-                  className="border-b border-gray-700/30 last:border-0 transition-colors hover:bg-[#111827]/40"
+                  className="border-b border-white/[0.06] last:border-0 transition-colors hover:bg-white/[0.02]"
                 >
                   <td className="px-4 py-3.5">
                     <Link

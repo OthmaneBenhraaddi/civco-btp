@@ -188,100 +188,130 @@ function navLinkClasses(isActive, collapsed) {
   }
 
   if (isActive) {
-    base.push('bg-blue-500/15 font-semibold text-blue-300')
+    base.push('bg-white/[0.06] font-medium text-white')
   } else {
-    base.push('text-slate-200 hover:bg-white/[0.06] hover:text-white')
+    base.push('text-slate-400 hover:bg-white/[0.03] hover:text-slate-200')
   }
 
   return base.join(' ')
 }
 
-export default function Sidebar({ isCollapsed }) {
+export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose }) {
   const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const logout = useLogout()
-  const collapsed = isCollapsed
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+  const navCollapsed = isCollapsed && !mobileOpen
+
+  function handleNavClick() {
+    if (mobileOpen) {
+      onMobileClose?.()
+    }
+  }
 
   return (
-    <aside
-      className={[
-        'sidebar flex h-screen shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-slate-800/80 bg-[#141519] p-4',
-        'transition-all duration-300 ease-in-out max-md:hidden',
-        collapsed ? 'w-16 px-2' : 'w-64',
-      ].join(' ')}
-    >
-      <div className={['mb-6 shrink-0', collapsed ? 'flex justify-center' : ''].join(' ')}>
-        {!collapsed ? (
-          <div className="space-y-1">
-            <h1 className="flex items-baseline gap-1.5 text-lg font-bold tracking-tight">
-              <span className="text-white">{t('layout.brandMain')}</span>
-              <span className="text-blue-500">{t('layout.brandAccent')}</span>
-            </h1>
-            <p className="truncate text-sm text-slate-400">{t('layout.companySubtitle')}</p>
-          </div>
-        ) : (
-          <span className="text-sm font-bold text-blue-500">{t('layout.brandMain').slice(0, 1)}</span>
-        )}
-      </div>
-
-      {!collapsed && isAdmin ? (
-        <div className="mb-4 shrink-0">
-          <Link
-            to="/projects"
-            className="sidebar-new-project flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-500"
-          >
-            <IconPlus className="h-4 w-4 shrink-0" />
-            {t('projects.new')}
-          </Link>
-        </div>
-      ) : null}
-
-      <nav
-        className={[
-          'sidebar-nav flex flex-1 flex-col gap-y-1',
-          collapsed ? 'items-center' : '',
-        ].join(' ')}
-        aria-label={t('layout.mainNavigation')}
-      >
-        {visibleNavItems.map(({ to, end, labelKey, Icon }) => {
-          const label = t(labelKey)
-
-          return (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => navLinkClasses(isActive, collapsed)}>
-              <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed ? <span className="truncate">{label}</span> : null}
-              {collapsed ? (
-                <span
-                  className="pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-800/80 bg-[#111214] px-2.5 py-1.5 text-xs font-medium text-slate-200 opacity-0 shadow-lg shadow-black/40 transition-opacity duration-150 group-hover/nav:opacity-100"
-                  role="tooltip"
-                >
-                  {label}
-                </span>
-              ) : null}
-            </NavLink>
-          )
-        })}
-      </nav>
-
-      <div className="mt-auto shrink-0 space-y-3 pt-4">
+    <>
+      {mobileOpen ? (
         <button
           type="button"
-          onClick={() => logout()}
-          className={[
-            'group/nav relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-red-300',
-            collapsed ? 'justify-center' : '',
-          ].join(' ')}
-          title={t('nav.logout')}
-        >
-          <IconLogOut className="h-5 w-5 shrink-0" />
-          {!collapsed ? <span className="truncate">{t('nav.logout')}</span> : null}
-        </button>
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={onMobileClose}
+          aria-label={t('layout.closeMenu')}
+        />
+      ) : null}
 
-        <p className="text-center text-[10px] font-medium uppercase tracking-widest text-slate-600">
-          {collapsed ? 'v1' : t('layout.versionTag')}
-        </p>
-      </div>
-    </aside>
+      <aside
+        className={[
+          'sidebar fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-white/[0.06] bg-[#121316] p-4',
+          'transition-transform duration-300 ease-in-out md:relative md:z-auto md:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          navCollapsed ? 'md:w-16 md:px-2' : 'md:w-64',
+        ].join(' ')}
+      >
+        <div className={['mb-6 shrink-0', navCollapsed ? 'flex justify-center' : ''].join(' ')}>
+          {!navCollapsed ? (
+            <div className="space-y-1">
+              <h1 className="flex items-baseline gap-1.5 text-lg font-semibold tracking-tight text-white">
+                <span>{t('layout.brandMain')}</span>
+                <span className="text-slate-500">{t('layout.brandAccent')}</span>
+              </h1>
+              <p className="truncate text-sm text-slate-400">{t('layout.companySubtitle')}</p>
+            </div>
+          ) : (
+            <span className="text-sm font-semibold text-white">{t('layout.brandMain').slice(0, 1)}</span>
+          )}
+        </div>
+
+        {!navCollapsed && isAdmin ? (
+          <div className="mb-4 shrink-0">
+            <Link
+              to="/projects"
+              onClick={handleNavClick}
+              className="sidebar-new-project flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200"
+            >
+              <IconPlus className="h-4 w-4 shrink-0" />
+              {t('projects.new')}
+            </Link>
+          </div>
+        ) : null}
+
+        <nav
+          className={[
+            'sidebar-nav flex flex-1 flex-col gap-y-1',
+            navCollapsed ? 'items-center' : '',
+          ].join(' ')}
+          aria-label={t('layout.mainNavigation')}
+        >
+          {visibleNavItems.map(({ to, end, labelKey, Icon }) => {
+            const label = t(labelKey)
+
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={handleNavClick}
+                className={({ isActive }) => navLinkClasses(isActive, navCollapsed)}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {!navCollapsed ? <span className="truncate">{label}</span> : null}
+                {navCollapsed ? (
+                  <span
+                    className="pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-800/80 bg-[#111214] px-2.5 py-1.5 text-xs font-medium text-slate-200 opacity-0 shadow-lg shadow-black/40 transition-opacity duration-150 group-hover/nav:opacity-100"
+                    role="tooltip"
+                  >
+                    {label}
+                  </span>
+                ) : null}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        <div className="mt-auto shrink-0 space-y-3 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              handleNavClick()
+              logout()
+            }}
+            className={[
+              'sidebar-logout-btn group/nav relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5',
+              'text-sm font-medium text-slate-300 transition-colors',
+              'hover:bg-white/[0.06] hover:text-red-300',
+              navCollapsed ? 'justify-center' : '',
+            ].join(' ')}
+            title={t('nav.logout')}
+          >
+            <IconLogOut className="h-5 w-5 shrink-0" />
+            {!navCollapsed ? <span className="truncate">{t('nav.logout')}</span> : null}
+          </button>
+
+          <p className="text-center text-[10px] font-medium uppercase tracking-widest text-slate-600">
+            {navCollapsed ? 'v1' : t('layout.versionTag')}
+          </p>
+        </div>
+      </aside>
+    </>
   )
 }
