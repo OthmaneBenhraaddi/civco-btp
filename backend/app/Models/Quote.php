@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\QuoteStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,9 +13,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Quote extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
+        'tenant_id',
         'company_id',
         'client_id',
         'project_id',
@@ -23,10 +25,12 @@ class Quote extends Model
         'issued_at',
         'valid_until',
         'notes',
+        'client_signature_data',
+        'client_signed_at',
         'total_ht',
         'total_tax',
         'total_ttc',
-        'print_count',
+        'generation_count',
     ];
 
     protected function casts(): array
@@ -35,10 +39,11 @@ class Quote extends Model
             'status' => QuoteStatus::class,
             'issued_at' => 'date',
             'valid_until' => 'date',
+            'client_signed_at' => 'datetime',
             'total_ht' => 'decimal:2',
             'total_tax' => 'decimal:2',
             'total_ttc' => 'decimal:2',
-            'print_count' => 'integer',
+            'generation_count' => 'integer',
         ];
     }
 

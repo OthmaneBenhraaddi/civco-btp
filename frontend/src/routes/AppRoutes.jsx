@@ -17,8 +17,17 @@ import InvoicesPage from '../features/invoices/InvoicesPage'
 import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage'
 import TasksPage from '../features/tasks/TasksPage'
 import HistoryPage from '../features/history/HistoryPage'
+import ClientPortalDashboardPage from '../features/client-portal/ClientPortalDashboardPage'
+import ClientPortalDiscussionsPage from '../features/client-portal/ClientPortalDiscussionsPage'
+import ClientPortalCalendarPage from '../features/client-portal/ClientPortalCalendarPage'
+import ClientPortalQuotesPage from '../features/client-portal/ClientPortalQuotesPage'
+import ClientPortalQuoteDetailPage from '../features/client-portal/ClientPortalQuoteDetailPage'
 import ConfigurationPage from '../features/configuration/ConfigurationPage'
 import RolesPage from '../features/roles/RolesPage'
+import SuperAdminDashboard from '../features/super-admin/SuperAdminDashboard'
+import AdminMessagingPage from '../features/messaging/AdminMessagingPage'
+import TeamManagementPage from '../features/team/TeamManagementPage'
+import SuperAdminRoute from '../components/SuperAdminRoute'
 import AppLayout from '../layouts/AppLayout'
 import AuthLayout from '../layouts/AuthLayout'
 
@@ -37,11 +46,20 @@ export default function AppRoutes() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
+              <Route path="portal" element={<ClientPortalDashboardPage />} />
+              <Route path="portal/discussions" element={<ClientPortalDiscussionsPage />} />
+              <Route path="portal/calendar" element={<ClientPortalCalendarPage />} />
+              <Route path="portal/quotes" element={<ClientPortalQuotesPage />} />
+              <Route path="portal/quotes/:id" element={<ClientPortalQuoteDetailPage />} />
               <Route index element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="map" element={<ProjectMapPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
+
+              <Route element={<SuperAdminRoute />}>
+                <Route path="super-admin" element={<SuperAdminDashboard />} />
+              </Route>
 
               <Route element={<AdminRoute />}>
                 <Route path="clients" element={<ClientsPage />} />
@@ -54,6 +72,8 @@ export default function AppRoutes() {
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="configuration" element={<ConfigurationPage />} />
                 <Route path="history" element={<HistoryPage />} />
+                <Route path="discussions" element={<AdminMessagingPage />} />
+                <Route path="team" element={<TeamManagementPage />} />
               </Route>
             </Route>
           </Route>

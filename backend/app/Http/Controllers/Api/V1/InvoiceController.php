@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvoiceStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
+use App\Http\Controllers\Concerns\ResolvesTenantContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Invoice\StoreInvoiceRequest;
 use App\Http\Requests\Invoice\UpdateInvoiceRequest;
 use App\Http\Resources\InvoiceResource;
-use App\Models\Client;
 use App\Models\Invoice;
-use App\Models\Project;
+use App\Services\DispatchNoteService;
 use App\Services\InvoiceReferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,9 +19,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class InvoiceController extends Controller
 {
     use ResolvesCompanyContext;
+    use ResolvesTenantContext;
 
     public function __construct(
         private readonly InvoiceReferenceService $referenceService,
+        private readonly DispatchNoteService $dispatchNoteService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -54,14 +56,25 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request): JsonResponse
     {
         $companyId = $this->companyId($request);
-        $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+        $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
+        }
+
+        try {
+            $this->dispatchNoteService->assertInvoiceDispatchNoteIsValid(
+                $request->integer('dispatch_note_id'),
+                $companyId,
+                $request->integer('client_id'),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
         }
 
         $invoice = Invoice::query()->create([
             ...$request->validated(),
+            ...$this->tenantAttributesForCreate($request),
             'company_id' => $companyId,
             'reference' => $this->referenceService->nextForCompany($companyId),
             'status' => InvoiceStatus::Draft,
@@ -91,11 +104,11 @@ class InvoiceController extends Controller
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
 
         if ($request->filled('client_id')) {
-            $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+            $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
         }
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
         }
 
         if ($request->filled('status') && in_array($invoice->status, [InvoiceStatus::Paid, InvoiceStatus::Cancelled], true)) {
@@ -135,7 +148,7 @@ class InvoiceController extends Controller
     {
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
 
-        $invoice->increment('print_count');
+        $invoice->increment('generation_count');
 
         return new InvoiceResource($invoice->fresh()->load(['client', 'project', 'quote', 'lines', 'payments']));
     }
@@ -143,30 +156,6 @@ class InvoiceController extends Controller
     private function ensureInvoiceBelongsToCompany(Request $request, Invoice $invoice): void
     {
         if ($invoice->company_id !== $this->companyId($request)) {
-            abort(404);
-        }
-    }
-
-    private function ensureClientBelongsToCompany(Request $request, int $clientId): void
-    {
-        $exists = Client::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($clientId)
-            ->exists();
-
-        if (! $exists) {
-            abort(404);
-        }
-    }
-
-    private function ensureProjectBelongsToCompany(Request $request, int $projectId): void
-    {
-        $exists = Project::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($projectId)
-            ->exists();
-
-        if (! $exists) {
             abort(404);
         }
     }

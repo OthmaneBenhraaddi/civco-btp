@@ -115,7 +115,7 @@ label {
   font-size: 0.95rem;
 }
 
-input:not(.search-input) {
+input:not(.search-input):not(.login-input) {
   border: 1px solid #d1d5db;
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
@@ -287,12 +287,34 @@ button.login-demo-badge {
   font-weight: 500;
 }
 
+.login-input-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
 .login-input {
+  width: 100%;
   background-color: #16171b;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: text;
   min-height: auto;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  padding-right: 1rem;
+  padding-left: 2.75rem;
+  border-radius: 0.5rem;
+}
+
+.login-input-wrap .login-input-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
 }
 
 .login-input:focus {
@@ -1397,7 +1419,6 @@ button.ghost.danger,
 }
 
 .page-header,
-.dashboard-header,
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -1906,8 +1927,9 @@ select {
   border-radius: 8px;
 }
 
-.kpi-grid {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.dashboard-grid {
+  row-gap: 1.5rem;
+  column-gap: 1.5rem;
 }
 
 .dashboard-grid--edit {
@@ -2080,19 +2102,59 @@ button.action-toast-close:focus-visible {
     z-index: 0;
   }
 
+  .commercial-print-watermark-copy,
+  .policy-print-watermark-copy {
+    font-size: 4.25rem;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+    text-align: center;
+    color: rgba(190, 18, 60, 0.16);
+    white-space: pre-wrap;
+    padding: 2rem;
+  }
+
   .commercial-print-sheet > *:not(.commercial-print-watermark) {
     position: relative;
     z-index: 1;
   }
 
-  .print-copy-badge-original {
-    border-color: #047857 !important;
-    color: #047857 !important;
+  .policy-print-root {
+    position: relative;
+    min-height: 100vh;
+  }
+
+  .policy-print-watermark {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-align: center;
+    line-height: 1.15;
+    color: rgba(100, 116, 139, 0.14);
+    transform: rotate(-28deg);
+    pointer-events: none;
+    z-index: 0;
+    white-space: pre-wrap;
+    padding: 2rem;
+  }
+
+  .policy-print-tenant-header {
+    position: relative;
+    z-index: 1;
+  }
+
+  .policy-print-root > *:not(.policy-print-watermark) {
+    position: relative;
+    z-index: 1;
   }
 
   .print-copy-badge-copy {
-    border-color: #475569 !important;
-    color: #475569 !important;
+    border-color: #be123c !important;
+    color: #be123c !important;
   }
 
   .commercial-print-table th,
@@ -2109,6 +2171,10 @@ button.action-toast-close:focus-visible {
   box-shadow:
     inset 0 0 0 1px rgba(148, 163, 184, 0.12),
     0 20px 40px rgba(0, 0, 0, 0.28);
+}
+
+.project-map-empty__icon {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.08);
 }
 
 .project-map-page .leaflet-container,

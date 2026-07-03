@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,13 +12,15 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Invoice extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
+        'tenant_id',
         'company_id',
         'client_id',
         'project_id',
         'quote_id',
+        'dispatch_note_id',
         'reference',
         'status',
         'issued_at',
@@ -28,7 +31,7 @@ class Invoice extends Model
         'total_ttc',
         'amount_paid',
         'balance_due',
-        'print_count',
+        'generation_count',
     ];
 
     protected function casts(): array
@@ -42,7 +45,7 @@ class Invoice extends Model
             'total_ttc' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'balance_due' => 'decimal:2',
-            'print_count' => 'integer',
+            'generation_count' => 'integer',
         ];
     }
 
@@ -59,6 +62,11 @@ class Invoice extends Model
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
+    }
+
+    public function dispatchNote(): BelongsTo
+    {
+        return $this->belongsTo(DispatchNote::class);
     }
 
     public function lines(): HasMany

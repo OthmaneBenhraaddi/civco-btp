@@ -12,8 +12,13 @@ class DeliveryFormResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'client_id' => $this->client_id,
+            'project_id' => $this->project_id,
+            'quote_id' => $this->quote_id,
             'reference' => $this->reference,
             'status' => $this->status->value,
+            'generation_count' => (int) $this->generation_count,
+            'dispatch_note_id' => $this->dispatch_note_id,
             'delivery_date' => $this->delivery_date?->toDateString(),
             'description' => $this->description,
             'client' => $this->whenLoaded('client', fn () => [

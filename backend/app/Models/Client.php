@@ -3,15 +3,18 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
+        'tenant_id',
         'company_id',
         'name',
         'contact_name',
@@ -58,5 +61,10 @@ class Client extends Model
     public function contacts(): HasMany
     {
         return $this->hasMany(ClientContact::class)->orderBy('name');
+    }
+
+    public function portalUser(): HasOne
+    {
+        return $this->hasOne(User::class);
     }
 }

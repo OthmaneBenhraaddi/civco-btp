@@ -41,12 +41,14 @@ class RoleSeeder extends Seeder
             ],
             'accountant' => [
                 'name' => 'Comptable',
-                'description' => 'Billing and financial operations',
+                'description' => 'Accès financier en lecture seule',
                 'badge_tone' => 'emerald',
                 'permissions' => [
-                    'dashboard.view', 'client.view', 'project.view',
-                    'quote.view', 'invoice.view', 'invoice.manage', 'payment.record', 'delivery_form.view',
-                    'expense.view', 'expense.manage', 'document.view', 'document.upload', 'document.archive',
+                    'dashboard.view',
+                    'view_financials',
+                    'view_clients',
+                    'expense.view',
+                    'document.view',
                 ],
             ],
             'collaborator' => [

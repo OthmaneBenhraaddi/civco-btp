@@ -20,7 +20,9 @@ class QuoteResource extends JsonResource
             'total_ht' => (float) $this->total_ht,
             'total_tax' => (float) $this->total_tax,
             'total_ttc' => (float) $this->total_ttc,
-            'print_count' => (int) $this->print_count,
+            'generation_count' => (int) $this->generation_count,
+            'has_client_signature' => $this->client_signature_data !== null,
+            'client_signed_at' => $this->client_signed_at?->toIso8601String(),
             'client' => $this->whenLoaded('client', fn () => [
                 'id' => $this->client->id,
                 'name' => $this->client->name,

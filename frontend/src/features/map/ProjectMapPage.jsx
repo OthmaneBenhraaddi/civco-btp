@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { MapPin } from 'lucide-react'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import StatusBadge from '../../components/StatusBadge'
 import RoleBadge from '../../components/RoleBadge'
+import PermissionGate from '../../components/PermissionGate'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { resolveNavPath } from '../../routes/routeAccess'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import MapFitBounds from './MapFitBounds'
 import { buildNeonMarkerIcon, resolveProjectMarkerColor } from './projectMapMarkers'
+
+function hasValidMapCoordinates(project) {
+  const lat = Number(project?.latitude)
+  const lng = Number(project?.longitude)
+
+  return Number.isFinite(lat) && Number.isFinite(lng)
+}
 
 const DEFAULT_CENTER = [31.7917, -7.0926]
 const DEFAULT_ZOOM = 6
@@ -22,6 +32,31 @@ const MAP_TILE_URL = STADIA_API_KEY
   : STADIA_TILE_BASE
 const MAP_TILE_ATTRIBUTION =
   '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+
+function ProjectMapEmptyState() {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+
+  return (
+    <div className="project-map-empty flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="project-map-empty__icon flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-700/60 bg-slate-800/60 text-slate-400">
+        <MapPin size={28} strokeWidth={1.75} aria-hidden />
+      </div>
+      <div className="max-w-md space-y-2">
+        <p className="text-base font-medium text-slate-200">{t('map.empty')}</p>
+        <p className="text-sm leading-relaxed text-slate-500">{t('map.emptyHint')}</p>
+      </div>
+      <PermissionGate permission="project.create">
+        <Link
+          to={resolveNavPath('/projects', user)}
+          className="inline-flex items-center justify-center rounded-lg border border-slate-600/60 bg-slate-800/90 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
+        >
+          {t('map.emptyAction')}
+        </Link>
+      </PermissionGate>
+    </div>
+  )
+}
 
 function ProjectMapPopup({ project }) {
   const { t } = useTranslation()
@@ -63,6 +98,13 @@ export default function ProjectMapPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const mapProjects = useMemo(
+    () => projects.filter(hasValidMapCoordinates),
+    [projects],
+  )
+
+  const hasMapProjects = mapProjects.length > 0
+
   useEffect(() => {
     async function loadMapProjects() {
       setLoading(true)
@@ -85,21 +127,21 @@ export default function ProjectMapPage() {
   const markerIcons = useMemo(() => {
     const iconMap = new Map()
 
-    projects.forEach((project) => {
+    mapProjects.forEach((project) => {
       const color = resolveProjectMarkerColor(project, colors)
       iconMap.set(project.id, buildNeonMarkerIcon(color))
     })
 
     return iconMap
-  }, [projects, colors])
+  }, [mapProjects, colors])
 
   const mapCenter = useMemo(() => {
-    if (projects.length === 1) {
-      return [projects[0].latitude, projects[0].longitude]
+    if (mapProjects.length === 1) {
+      return [mapProjects[0].latitude, mapProjects[0].longitude]
     }
 
     return DEFAULT_CENTER
-  }, [projects])
+  }, [mapProjects])
 
   return (
     <div className="project-map-page list-page flex h-full min-h-0 flex-col">
@@ -112,7 +154,7 @@ export default function ProjectMapPage() {
         </div>
         {!loading ? (
           <p className="text-sm text-slate-500">
-            {t('map.projectCount', { count: projects.length })}
+            {t('map.projectCount', { count: mapProjects.length })}
           </p>
         ) : null}
       </header>
@@ -124,11 +166,8 @@ export default function ProjectMapPage() {
           <div className="flex h-full items-center justify-center text-sm text-slate-500">
             {t('common.loading')}
           </div>
-        ) : projects.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="text-sm text-slate-400">{t('map.empty')}</p>
-            <p className="text-xs text-slate-500">{t('map.emptyHint')}</p>
-          </div>
+        ) : !hasMapProjects ? (
+          <ProjectMapEmptyState />
         ) : (
           <>
             <MapContainer
@@ -139,8 +178,8 @@ export default function ProjectMapPage() {
               className="project-map-leaflet h-full w-full"
             >
               <TileLayer attribution={MAP_TILE_ATTRIBUTION} url={MAP_TILE_URL} />
-              <MapFitBounds projects={projects} />
-              {projects.map((project) => (
+              <MapFitBounds projects={mapProjects} />
+              {mapProjects.map((project) => (
                 <Marker
                   key={project.id}
                   position={[project.latitude, project.longitude]}

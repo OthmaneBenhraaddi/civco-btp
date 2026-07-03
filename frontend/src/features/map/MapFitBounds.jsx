@@ -6,12 +6,17 @@ export default function MapFitBounds({ projects }) {
   const map = useMap()
 
   useEffect(() => {
-    if (!projects?.length) {
+    const validProjects = (projects ?? []).filter(
+      (project) => Number.isFinite(Number(project?.latitude))
+        && Number.isFinite(Number(project?.longitude)),
+    )
+
+    if (validProjects.length === 0) {
       return
     }
 
     const bounds = L.latLngBounds(
-      projects.map((project) => [project.latitude, project.longitude]),
+      validProjects.map((project) => [project.latitude, project.longitude]),
     )
 
     map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 })

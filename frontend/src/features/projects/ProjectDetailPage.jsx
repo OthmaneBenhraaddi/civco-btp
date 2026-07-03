@@ -12,6 +12,7 @@ import {
   logProjectUpdated,
   resolveActorLabel,
 } from '../history/auditLogActions'
+import { formatProjectOverviewDescription } from './utils/projectOverview'
 
 const TAB_KEYS = ['overview', 'planning', 'team', 'progress', 'documents', 'expenses']
 
@@ -141,6 +142,18 @@ export default function ProjectDetailPage() {
         title: projectData.title ?? project?.title ?? 'Projet',
         detail: `A mis à jour l'adresse du chantier du projet « ${projectData.title ?? project?.title ?? ''} »`,
       })
+
+      if (projectData.latitude != null && projectData.longitude != null) {
+        pushToast({
+          action: 'creation',
+          message: t('projects.overview.siteAddressGeocoded'),
+        })
+      } else {
+        pushToast({
+          action: 'modification',
+          message: t('projects.overview.siteAddressGeocodeFailed'),
+        })
+      }
     } catch (err) {
       setError(extractErrorMessage(err, t('projects.updateError')))
     } finally {
@@ -396,7 +409,7 @@ export default function ProjectDetailPage() {
               />
             </label>
           </div>
-          <p>{project.description || t('projects.overview.noDescription')}</p>
+          <p>{formatProjectOverviewDescription(project, t('projects.overview.noDescription'))}</p>
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${project.progress_percent}%` }} />
           </div>

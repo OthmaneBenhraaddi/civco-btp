@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,9 +13,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Project extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
+        'tenant_id',
         'company_id',
         'client_id',
         'reference',
@@ -108,6 +110,21 @@ class Project extends Model
     public function documents(): MorphMany
     {
         return $this->morphMany(Document::class, 'documentable');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(ProjectComment::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(ProjectMedia::class);
+    }
+
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
     }
 
     public function formattedSiteAddress(): ?string

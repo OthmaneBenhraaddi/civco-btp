@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import * as clientsApi from '../api/clients'
-import * as projectsApi from '../api/projects'
+import * as searchApi from '../api/search'
 import { useTranslation } from '../i18n/LanguageContext'
 import { useAuth } from '../context/AuthContext'
 import { findNavRoutes, getRecommendedRoutes } from './globalSearchConfig'
@@ -95,6 +94,15 @@ const ROW_BASE =
 
 const ROW_ACTIVE = 'is-active'
 
+function IconBuilding({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 20V6l8-4 8 4v14" strokeLinejoin="round" />
+      <path d="M9 20v-6h6v6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function ResultIcon({ result }) {
   if (result.type === 'client') {
     return <IconUsers className="h-4 w-4 text-slate-300" />
@@ -102,6 +110,14 @@ function ResultIcon({ result }) {
 
   if (result.type === 'project') {
     return <IconBriefcase className="h-4 w-4 text-slate-300" />
+  }
+
+  if (result.type === 'task') {
+    return <IconCheckSquare className="h-4 w-4 text-slate-300" />
+  }
+
+  if (result.type === 'tenant') {
+    return <IconBuilding className="h-4 w-4 text-slate-300" />
   }
 
   const Icon = ROUTE_ICONS[result.routeId] ?? IconFileText
@@ -211,31 +227,19 @@ export default function GlobalSearch() {
       setIsSearching(true)
 
       try {
-        const [clientsResponse, projectsResponse] = await Promise.all([
-          clientsApi.fetchClients({ search: query, page: 1 }),
-          projectsApi.fetchProjects({ search: query, page: 1 }),
-        ])
-
+        const response = await searchApi.globalSearch(query)
         if (cancelled) return
 
-        const clients = (clientsResponse.data ?? []).slice(0, 5).map((client) => ({
-          id: `client-${client.id}`,
-          type: 'client',
-          label: client.name,
-          subtitle: client.email ?? client.city ?? t('nav.clients'),
-          path: '/clients',
-          state: { prefillSearch: client.name },
+        const items = (response.items ?? []).map((item) => ({
+          id: `${item.type}-${item.id}`,
+          type: item.type,
+          label: item.label,
+          subtitle: item.subtitle,
+          path: item.path,
+          state: item.state,
         }))
 
-        const projects = (projectsResponse.data ?? []).slice(0, 5).map((project) => ({
-          id: `project-${project.id}`,
-          type: 'project',
-          label: project.title,
-          subtitle: project.reference,
-          path: `/projects/${project.id}`,
-        }))
-
-        setEntityResults([...clients, ...projects])
+        setEntityResults(items)
       } catch {
         if (!cancelled) setEntityResults([])
       } finally {
@@ -247,7 +251,7 @@ export default function GlobalSearch() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [isOpen, searchQuery, t])
+  }, [isOpen, searchQuery])
 
   const selectResult = useCallback((result) => {
     navigate(result.path, result.state ? { state: result.state } : undefined)

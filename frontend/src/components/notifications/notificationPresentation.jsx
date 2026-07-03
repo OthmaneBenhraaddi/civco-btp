@@ -1,13 +1,21 @@
 import {
   Bell,
   Check,
-  CheckCircle2,
   FileText,
-  FolderKanban,
   History,
+  MessageSquare,
+  Receipt,
   Trash2,
   UserPlus,
+  CheckCircle2,
+  FolderKanban,
 } from 'lucide-react'
+
+const TYPE_ICON_MAP = {
+  chat: { Icon: MessageSquare, tone: 'text-sky-400' },
+  quote_signed: { Icon: FileText, tone: 'text-emerald-400' },
+  invoice_created: { Icon: Receipt, tone: 'text-amber-400' },
+}
 
 const TITLE_ICON_RULES = [
   { test: /document/i, Icon: FileText, tone: 'text-sky-400' },
@@ -17,9 +25,13 @@ const TITLE_ICON_RULES = [
   { test: /projet|chantier/i, Icon: FolderKanban, tone: 'text-indigo-400' },
 ]
 
-export function resolveNotificationIcon(title = '', isActivity = false) {
+export function resolveNotificationIcon(title = '', isActivity = false, type = null) {
   if (isActivity) {
     return { Icon: History, tone: 'text-slate-400' }
+  }
+
+  if (type && TYPE_ICON_MAP[type]) {
+    return TYPE_ICON_MAP[type]
   }
 
   const match = TITLE_ICON_RULES.find((rule) => rule.test.test(title))

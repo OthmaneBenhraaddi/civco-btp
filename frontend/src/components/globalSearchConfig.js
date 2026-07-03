@@ -45,6 +45,21 @@ export const GLOBAL_NAV_ROUTES = [
     keywords: ['facture', 'factures', 'invoice', 'invoices'],
     adminOnly: true,
   },
+    {
+    id: 'super-admin',
+    path: '/super-admin',
+    labelKey: 'nav.superAdmin',
+    keywords: ['entités', 'entities', 'tenant', 'tenants', 'super admin', 'système'],
+    adminOnly: true,
+    superAdminOnly: true,
+  },
+  {
+    id: 'team',
+    path: '/team',
+    labelKey: 'nav.team',
+    keywords: ['équipe', 'team', 'membre', 'technicien', 'comptable', 'utilisateur'],
+    adminOnly: true,
+  },
   {
     id: 'configuration',
     path: '/configuration',

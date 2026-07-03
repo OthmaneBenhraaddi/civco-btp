@@ -84,3 +84,12 @@ export async function fetchCompanyUsers() {
   const { data } = await api.get('/api/v1/company/users')
   return data
 }
+
+export async function uploadProjectMedia(projectId, { title, image }) {
+  const formData = new FormData()
+  formData.append('title', title)
+  formData.append('image', image)
+
+  const { data } = await api.post(`/api/v1/projects/${projectId}/media`, formData)
+  return data
+}

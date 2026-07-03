@@ -1,6 +1,19 @@
 import PrintCopyBadge from './PrintCopyBadge'
+import DigitalSignatureBox from './DigitalSignatureBox'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { formatMoney } from '../../utils/currency'
+
+function resolveCopyLabel(copyStrength, t) {
+  if (copyStrength === 'duplicate') {
+    return t('print.duplicate')
+  }
+
+  if (copyStrength === 'copy') {
+    return t('print.copy')
+  }
+
+  return null
+}
 
 export default function CommercialPrintSheet({
   documentType,
@@ -11,30 +24,57 @@ export default function CommercialPrintSheet({
   secondaryDate,
   secondaryDateLabel,
   notes,
+  compiledFooter,
   lines,
   totalHt,
   totalTax,
   totalTtc,
   extraSummary = [],
-  copyVariant,
+  isCopy = false,
+  copyStrength = null,
+  watermarkLabel = null,
+  tenantLogoUrl,
+  tenantName,
+  showSignature = true,
+  signature,
 }) {
   const { t, locale } = useTranslation()
 
   const title = documentType === 'invoice' ? t('invoices.title') : t('quotes.title')
+  const brandLabel = tenantName ?? t('print.brandName')
+  const copyLabel = isCopy ? resolveCopyLabel(copyStrength, t) : null
 
   return (
     <div className="commercial-print-sheet mx-auto max-w-[210mm] bg-white p-10 text-slate-900">
-      <div className="commercial-print-watermark" aria-hidden>
-        {copyVariant === 'copy' ? t('print.copy') : ''}
-      </div>
+      {isCopy && watermarkLabel ? (
+        <div className="commercial-print-watermark commercial-print-watermark-copy" aria-hidden>
+          {watermarkLabel}
+        </div>
+      ) : null}
 
       <header className="mb-8 flex items-start justify-between gap-6 border-b border-slate-300 pb-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">CIVCO BTP</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">{title}</h1>
-          <p className="mt-2 text-lg font-semibold text-slate-800">{reference}</p>
+        <div className="flex min-w-0 items-start gap-4">
+          {tenantLogoUrl ? (
+            <img
+              src={tenantLogoUrl}
+              alt={brandLabel}
+              className="max-h-16 max-w-[180px] shrink-0 object-contain object-left"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{brandLabel}</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">{title}</h1>
+            <p className="mt-2 flex flex-wrap items-center gap-3 text-lg font-semibold text-slate-800">
+              <span>{reference}</span>
+              {copyLabel ? (
+                <span className="rounded border-2 border-rose-600 px-2 py-0.5 text-xs font-black uppercase tracking-[0.25em] text-rose-700">
+                  {copyLabel}
+                </span>
+              ) : null}
+            </p>
+          </div>
         </div>
-        <PrintCopyBadge variant={copyVariant} />
+        {copyLabel ? <PrintCopyBadge label={copyLabel} /> : null}
       </header>
 
       <section className="mb-8 grid grid-cols-2 gap-6 text-sm">
@@ -109,6 +149,20 @@ export default function CommercialPrintSheet({
           <span className="font-semibold text-slate-800">{t('quotes.notes')}: </span>
           {notes}
         </p>
+      ) : null}
+
+      {compiledFooter ? (
+        <p className="mt-6 text-sm leading-relaxed text-slate-600">{compiledFooter}</p>
+      ) : null}
+
+      {showSignature ? (
+        <DigitalSignatureBox
+          label={signature?.label}
+          signed={signature?.signed}
+          signedAt={signature?.signed_at}
+          signedVia={signature?.signed_via}
+          signatureImage={signature?.signature_image}
+        />
       ) : null}
     </div>
   )

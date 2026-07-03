@@ -3,10 +3,12 @@ import { Link, useParams } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
+import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { useCommercialPrint } from '../../hooks/useCommercialPrint'
+import { usePolicyCommercialPrint } from '../../hooks/usePolicyCommercialPrint'
 import * as invoicesApi from '../../api/invoices'
+import * as commercialDocumentsApi from '../../api/commercialDocuments'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
 import {
@@ -42,6 +44,8 @@ export default function InvoiceDetailPage() {
   const [paymentForm, setPaymentForm] = useState(emptyPayment)
   const [savingLine, setSavingLine] = useState(false)
   const [savingPayment, setSavingPayment] = useState(false)
+  const [compiledFooter, setCompiledFooter] = useState('')
+  const [documentPreview, setDocumentPreview] = useState(null)
 
   const canEditLines = invoice?.status === 'draft' && hasPermission('invoice.manage')
   const canRecordPayment = hasPermission('payment.record')
@@ -69,6 +73,30 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     loadInvoice()
   }, [id])
+
+  useEffect(() => {
+    if (!id) return undefined
+
+    let cancelled = false
+
+    commercialDocumentsApi.fetchInvoiceDocumentPreview(id)
+      .then((data) => {
+        if (!cancelled) {
+          setCompiledFooter(data.compiled_footer ?? '')
+          setDocumentPreview(data)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompiledFooter('')
+          setDocumentPreview(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, invoice?.status])
 
   async function handleStatusChange(status) {
     setError('')
@@ -175,14 +203,22 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  const incrementPrint = useCallback(async () => {
-    const data = await invoicesApi.incrementInvoicePrint(id)
+  const refreshInvoice = useCallback(async () => {
+    const data = await invoicesApi.fetchInvoice(id)
     setInvoice(data.data ?? data)
   }, [id])
 
-  const { copyVariant, printing, handlePrint } = useCommercialPrint({
-    printCount: invoice?.print_count,
-    onIncrement: incrementPrint,
+  const {
+    isCopy,
+    copyStrength,
+    printing,
+    handlePrint,
+    tenantLogoUrl,
+    tenantName,
+  } = usePolicyCommercialPrint({
+    documentType: 'invoice',
+    documentId: Number(id),
+    onTracked: refreshInvoice,
   })
 
   if (loading) {
@@ -458,31 +494,39 @@ export default function InvoiceDetailPage() {
     </div>
 
     <div className="print-only">
-      <CommercialPrintSheet
-        documentType="invoice"
-        reference={invoice.reference}
-        clientName={invoice.client?.name}
-        projectTitle={invoice.project?.title}
-        issuedAt={invoice.issued_at}
-        secondaryDate={invoice.due_date}
-        secondaryDateLabel={t('invoices.dueDate')}
-        notes={invoice.notes}
-        lines={lines}
-        totalHt={invoice.total_ht}
-        totalTax={invoice.total_tax}
-        totalTtc={invoice.total_ttc}
-        extraSummary={[
-          {
-            label: t('invoices.amountPaid'),
-            value: formatMoney(invoice.amount_paid, locale),
-          },
-          {
-            label: t('invoices.balanceDue'),
-            value: formatMoney(invoice.balance_due, locale),
-          },
-        ]}
-        copyVariant={copyVariant}
-      />
+      <PolicyPrintWrapper watermarkLabel={isCopy ? t('print.copyWatermark') : null}>
+        <CommercialPrintSheet
+          documentType="invoice"
+          reference={invoice.reference}
+          clientName={invoice.client?.name}
+          projectTitle={invoice.project?.title}
+          issuedAt={invoice.issued_at}
+          secondaryDate={invoice.due_date}
+          secondaryDateLabel={t('invoices.dueDate')}
+          notes={invoice.notes}
+          compiledFooter={compiledFooter}
+          lines={lines}
+          totalHt={invoice.total_ht}
+          totalTax={invoice.total_tax}
+          totalTtc={invoice.total_ttc}
+          extraSummary={[
+            {
+              label: t('invoices.amountPaid'),
+              value: formatMoney(invoice.amount_paid, locale),
+            },
+            {
+              label: t('invoices.balanceDue'),
+              value: formatMoney(invoice.balance_due, locale),
+            },
+          ]}
+          isCopy={isCopy}
+          copyStrength={copyStrength}
+          watermarkLabel={isCopy ? t('print.copyWatermark') : null}
+          tenantLogoUrl={tenantLogoUrl ?? documentPreview?.tenant?.logo_url}
+          tenantName={tenantName ?? documentPreview?.tenant?.name}
+          signature={documentPreview?.signature}
+        />
+      </PolicyPrintWrapper>
     </div>
     </>
   )

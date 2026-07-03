@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import Modal from '../../../components/Modal'
+import { useWizardResetOnOpen } from '../../../hooks/useWizardResetOnOpen'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as sectorsApi from '../../../api/sectors'
 import { CONTACT_ROLE_OPTIONS } from '../../../api/clientContacts'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
+import { handleWizardEnterKey } from '../../../utils/wizardForm'
 import ClientBadge from '../../../components/ClientBadge'
 import { isBadgeSelected, normalizeBadgeIds } from '../ClientBadgesPanel'
 import {
@@ -52,6 +54,8 @@ export default function NewClientModal({
   saving = false,
 }) {
   const { t } = useTranslation()
+  const stepContentRef = useRef(null)
+  const finalSubmitLockRef = useRef(false)
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(DEFAULT_CLIENT_WIZARD_FORM)
   const [extraContacts, setExtraContacts] = useState([])
@@ -69,14 +73,15 @@ export default function NewClientModal({
     (sector) => String(sector.id) === String(form.selectedSectorId),
   )
 
-  useEffect(() => {
-    if (!open) return
-
+  const resetWizard = useCallback(() => {
     setStep(0)
     setForm(DEFAULT_CLIENT_WIZARD_FORM)
     setExtraContacts([])
     setCatalogError('')
-  }, [open])
+    finalSubmitLockRef.current = false
+  }, [])
+
+  useWizardResetOnOpen(open, resetWizard)
 
   useEffect(() => {
     if (!open) return
@@ -103,6 +108,14 @@ export default function NewClientModal({
 
     loadSectors()
   }, [open, t])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    stepContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [open, step])
 
   function updateForm(patch) {
     setForm((current) => ({ ...current, ...patch }))
@@ -162,36 +175,54 @@ export default function NewClientModal({
     return parts.join('\n')
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault()
+  async function handleFinalSubmit() {
+    if (saving || finalSubmitLockRef.current || !form.name.trim()) {
+      return
+    }
 
-    const primaryEmail = form.email || extraContacts[0]?.email || ''
-    const primaryPhone = form.phone || extraContacts[0]?.phone || ''
-    const primaryContactName = form.contact_name || extraContacts[0]?.name || ''
+    finalSubmitLockRef.current = true
 
-    await onSubmit({
-      form: {
-        name: form.name.trim(),
-        contact_name: primaryContactName,
-        email: primaryEmail,
-        phone: primaryPhone,
-        address_line1: form.address_line1,
-        city: form.city,
-        postal_code: form.postal_code,
-        country: form.country,
-        notes: buildNotes(),
-        is_active: form.is_active,
-        badge_ids: normalizeBadgeIds(form.badge_ids),
-        role_id: form.role_id,
-      },
-      extraContacts: extraContacts
-        .filter((contact) => contact.name.trim())
-        .map((contact) => ({
-          name: contact.name.trim(),
-          email: contact.email || null,
-          phone: contact.phone || null,
-          contact_role: contact.contact_role,
-        })),
+    try {
+      const primaryEmail = form.email || extraContacts[0]?.email || ''
+      const primaryPhone = form.phone || extraContacts[0]?.phone || ''
+      const primaryContactName = form.contact_name || extraContacts[0]?.name || ''
+
+      await onSubmit({
+        form: {
+          name: form.name.trim(),
+          contact_name: primaryContactName,
+          email: primaryEmail,
+          phone: primaryPhone,
+          address_line1: form.address_line1,
+          city: form.city,
+          postal_code: form.postal_code,
+          country: form.country,
+          notes: buildNotes(),
+          is_active: form.is_active,
+          badge_ids: normalizeBadgeIds(form.badge_ids),
+          role_id: form.role_id,
+        },
+        extraContacts: extraContacts
+          .filter((contact) => contact.name.trim())
+          .map((contact) => ({
+            name: contact.name.trim(),
+            email: contact.email || null,
+            phone: contact.phone || null,
+            contact_role: contact.contact_role,
+          })),
+      })
+    } finally {
+      finalSubmitLockRef.current = false
+    }
+  }
+
+  function handleWizardKeyDown(event) {
+    handleWizardEnterKey(event, {
+      step,
+      totalSteps: WIZARD_STEPS.length,
+      canAdvance,
+      goNext,
+      onFinalSubmit: handleFinalSubmit,
     })
   }
 
@@ -202,10 +233,10 @@ export default function NewClientModal({
       onClose={onClose}
       panelClassName="new-client-modal w-full max-w-2xl text-white"
     >
-      <form className="space-y-2" onSubmit={handleSubmit}>
+      <div className="space-y-2" onKeyDown={handleWizardKeyDown}>
         <WizardProgress currentStep={step} stepCount={WIZARD_STEPS.length} labels={stepLabels} />
 
-        <div className="relative min-h-[16rem]">
+        <div ref={stepContentRef} className="relative min-h-[16rem]">
           {step === 0 ? (
             <div className="wizard-step space-y-5">
               <label>
@@ -215,7 +246,6 @@ export default function NewClientModal({
                   value={form.name}
                   onChange={(event) => updateForm({ name: event.target.value })}
                   placeholder={t('clients.wizard.namePlaceholder')}
-                  required
                   autoFocus
                 />
               </label>
@@ -507,12 +537,17 @@ export default function NewClientModal({
               {t('clients.wizard.next')}
             </button>
           ) : (
-            <button type="submit" disabled={saving || !form.name.trim()} className={BTN_PRIMARY}>
+            <button
+              type="button"
+              onClick={handleFinalSubmit}
+              disabled={saving || !form.name.trim()}
+              className={BTN_PRIMARY}
+            >
               {saving ? t('common.saving') : t('clients.create')}
             </button>
           )}
         </div>
-      </form>
+      </div>
     </Modal>
   )
 }

@@ -4,22 +4,26 @@ namespace App\Models;
 
 use App\Enums\DeliveryFormStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DeliveryForm extends Model
 {
-    use BelongsToCompany;
+    use BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
+        'tenant_id',
         'company_id',
         'client_id',
         'project_id',
         'quote_id',
         'invoice_id',
+        'dispatch_note_id',
         'reference',
         'status',
+        'generation_count',
         'delivery_date',
         'description',
     ];
@@ -29,6 +33,7 @@ class DeliveryForm extends Model
         return [
             'status' => DeliveryFormStatus::class,
             'delivery_date' => 'date',
+            'generation_count' => 'integer',
         ];
     }
 
@@ -50,6 +55,11 @@ class DeliveryForm extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function dispatchNote(): BelongsTo
+    {
+        return $this->belongsTo(DispatchNote::class);
     }
 
     public function lines(): HasMany

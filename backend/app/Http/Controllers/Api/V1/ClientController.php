@@ -10,6 +10,9 @@ use App\Http\Resources\ClientResource;
 use App\Models\Badge;
 use App\Models\Client;
 use App\Services\ActivityLogService;
+use App\Services\ClientPortalProvisioningService;
+use App\Services\ClientQueryService;
+use App\Support\TenantManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,15 +23,32 @@ class ClientController extends Controller
 
     public function __construct(
         private readonly ActivityLogService $activityLogService,
+        private readonly ClientQueryService $clientQuery,
+        private readonly ClientPortalProvisioningService $portalProvisioning,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $actor = $request->user();
+        $tenantScope = $this->clientQuery->resolveTenantScope($request, $actor);
+
         $query = Client::query()
-            ->forCompany($this->companyId($request))
-            ->with('badges')
+            ->withoutGlobalScope('tenant')
+            ->with(['badges', 'portalUser'])
             ->withCount('projects')
             ->orderBy('name');
+
+        if ($actor->isSuperAdmin()) {
+            if ($tenantScope !== null) {
+                $query->where('clients.tenant_id', $tenantScope);
+            }
+        } else {
+            $query->forCompany($this->companyId($request));
+
+            if ($tenantScope !== null) {
+                $query->where('clients.tenant_id', $tenantScope);
+            }
+        }
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(function ($builder) use ($search): void {
@@ -53,9 +73,12 @@ class ClientController extends Controller
         $badgeIds = $validated['badge_ids'] ?? null;
         unset($validated['badge_ids']);
 
+        $tenantId = $request->user()->tenant_id ?? TenantManager::currentId();
+
         $client = Client::query()->create([
             ...$validated,
             'company_id' => $this->companyId($request),
+            'tenant_id' => $tenantId,
             'country' => $request->input('country', 'FR'),
             'is_active' => $request->boolean('is_active', true),
         ]);
@@ -68,7 +91,7 @@ class ClientController extends Controller
 
         $this->activityLogService->logClientCreated($client->fresh());
 
-        return (new ClientResource($client->load('badges')))
+        return (new ClientResource($client->load(['badges', 'portalUser'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -77,7 +100,9 @@ class ClientController extends Controller
     {
         $this->ensureClientBelongsToCompany($request, $client);
 
-        return new ClientResource($client->loadCount('projects')->load(['badges', 'contacts']));
+        return new ClientResource(
+            $client->loadCount('projects')->load(['badges', 'contacts', 'portalUser'])
+        );
     }
 
     public function update(UpdateClientRequest $request, Client $client): ClientResource
@@ -96,7 +121,9 @@ class ClientController extends Controller
             $this->syncClientBadges($request, $client, []);
         }
 
-        return new ClientResource($client->fresh()->loadCount('projects')->load('badges'));
+        return new ClientResource(
+            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+        );
     }
 
     public function destroy(Request $request, Client $client): JsonResponse
@@ -114,9 +141,44 @@ class ClientController extends Controller
         return response()->json(['message' => 'Client deleted.']);
     }
 
+    public function togglePortalStatus(Request $request, Client $client): ClientResource
+    {
+        $this->ensureClientBelongsToCompany($request, $client);
+        $this->clientQuery->assertCanManageClient($request->user(), $client->tenant_id);
+
+        $validated = $request->validate([
+            'active' => ['required', 'boolean'],
+        ]);
+
+        $this->portalProvisioning->setPortalActive(
+            $client,
+            $this->company($request),
+            $validated['active'],
+        );
+
+        return new ClientResource(
+            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+        );
+    }
+
     private function ensureClientBelongsToCompany(Request $request, Client $client): void
     {
+        $actor = $request->user();
+        $tenantScope = $this->clientQuery->resolveTenantScope($request, $actor);
+
+        if ($actor->isSuperAdmin()) {
+            if ($tenantScope !== null && (int) $client->tenant_id !== $tenantScope) {
+                abort(404);
+            }
+
+            return;
+        }
+
         if ($client->company_id !== $this->companyId($request)) {
+            abort(404);
+        }
+
+        if ($tenantScope !== null && (int) $client->tenant_id !== $tenantScope) {
             abort(404);
         }
     }

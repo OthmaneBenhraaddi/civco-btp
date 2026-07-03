@@ -1,21 +1,14 @@
-import { useTranslation } from '../../i18n/LanguageContext'
-
-export default function PrintCopyBadge({ variant }) {
-  const { t } = useTranslation()
-  const isOriginal = variant === 'original'
+export default function PrintCopyBadge({ label }) {
+  if (!label) {
+    return null
+  }
 
   return (
     <div
-      className={[
-        'print-copy-badge inline-flex items-center justify-center rounded-md border-2 px-4 py-1.5',
-        'text-sm font-black uppercase tracking-[0.35em]',
-        isOriginal
-          ? 'border-emerald-600 text-emerald-700 print-copy-badge-original'
-          : 'border-slate-500 text-slate-600 print-copy-badge-copy',
-      ].join(' ')}
-      aria-label={isOriginal ? t('print.original') : t('print.copy')}
+      className="print-copy-badge print-copy-badge-copy inline-flex items-center justify-center rounded-md border-2 border-rose-600 px-4 py-1.5 text-sm font-black uppercase tracking-[0.35em] text-rose-700"
+      aria-label={label}
     >
-      {isOriginal ? t('print.original') : t('print.copy')}
+      {label}
     </div>
   )
 }

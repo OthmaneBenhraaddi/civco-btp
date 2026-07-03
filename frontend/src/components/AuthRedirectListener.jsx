@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { appendTenantQuery } from '../utils/tenantDevContext'
 
 export default function AuthRedirectListener() {
   const navigate = useNavigate()
 
   useEffect(() => {
     function handleUnauthorized() {
-      navigate('/login', { replace: true })
+      navigate(appendTenantQuery('/login'), { replace: true })
     }
 
     window.addEventListener('auth:unauthorized', handleUnauthorized)

@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
+import { resolveProfileRoleLabel } from '../utils/authIdentity'
 import GlobalSearch from './GlobalSearch'
 import LanguageSwitcher from './LanguageSwitcher'
 import NotificationDropdown from './NotificationDropdown'
@@ -22,11 +23,11 @@ export default function AppHeader({
   isMobileNavOpen = false,
   onToggleMobileNav,
 }) {
-  const { user, isAdmin } = useAuth()
+  const { user, roles } = useAuth()
   const { t } = useTranslation()
 
   const displayName = user?.full_name ?? t('layout.profileFallbackName')
-  const roleLabel = isAdmin ? t('layout.profileRoleAdmin') : t('layout.profileRoleMember')
+  const roleLabel = resolveProfileRoleLabel(user, roles, t)
 
   return (
     <header className="app-header sticky top-0 z-20 flex h-16 w-full shrink-0 items-center justify-between overflow-visible border-b border-white/[0.06] bg-[#121316]/95 px-4 backdrop-blur-md sm:px-6">

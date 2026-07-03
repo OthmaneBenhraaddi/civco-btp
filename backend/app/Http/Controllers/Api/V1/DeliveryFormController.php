@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\DeliveryFormStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
+use App\Http\Controllers\Concerns\ResolvesTenantContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DeliveryForm\StoreDeliveryFormRequest;
 use App\Http\Requests\DeliveryForm\UpdateDeliveryFormRequest;
 use App\Http\Resources\DeliveryFormResource;
-use App\Models\Client;
 use App\Models\DeliveryForm;
-use App\Models\Project;
 use App\Services\DeliveryFormReferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 class DeliveryFormController extends Controller
 {
     use ResolvesCompanyContext;
+    use ResolvesTenantContext;
 
     public function __construct(
         private readonly DeliveryFormReferenceService $referenceService,
@@ -64,15 +64,16 @@ class DeliveryFormController extends Controller
         $lines = $validated['lines'];
         unset($validated['lines']);
 
-        $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+        $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
         }
 
-        $deliveryForm = DB::transaction(function () use ($companyId, $validated, $lines): DeliveryForm {
+        $deliveryForm = DB::transaction(function () use ($request, $companyId, $validated, $lines): DeliveryForm {
             $deliveryForm = DeliveryForm::query()->create([
                 ...$validated,
+                ...$this->tenantAttributesForCreate($request),
                 'company_id' => $companyId,
                 'reference' => $this->referenceService->nextForCompany($companyId),
                 'status' => DeliveryFormStatus::Draft,
@@ -110,9 +111,9 @@ class DeliveryFormController extends Controller
     {
         $this->ensureDeliveryFormBelongsToCompany($request, $deliveryForm);
 
-        if ($deliveryForm->status === DeliveryFormStatus::Invoiced) {
+        if ($deliveryForm->status === DeliveryFormStatus::SignedAndStamped) {
             return response()->json([
-                'message' => 'Invoiced delivery forms cannot be modified.',
+                'message' => 'Signed and stamped delivery forms cannot be modified.',
             ], 422);
         }
 
@@ -121,11 +122,11 @@ class DeliveryFormController extends Controller
         unset($validated['lines']);
 
         if ($request->filled('client_id')) {
-            $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+            $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
         }
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
         }
 
         DB::transaction(function () use ($deliveryForm, $validated, $lines): void {
@@ -170,30 +171,6 @@ class DeliveryFormController extends Controller
     private function ensureDeliveryFormBelongsToCompany(Request $request, DeliveryForm $deliveryForm): void
     {
         if ($deliveryForm->company_id !== $this->companyId($request)) {
-            abort(404);
-        }
-    }
-
-    private function ensureClientBelongsToCompany(Request $request, int $clientId): void
-    {
-        $exists = Client::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($clientId)
-            ->exists();
-
-        if (! $exists) {
-            abort(404);
-        }
-    }
-
-    private function ensureProjectBelongsToCompany(Request $request, int $projectId): void
-    {
-        $exists = Project::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($projectId)
-            ->exists();
-
-        if (! $exists) {
             abort(404);
         }
     }

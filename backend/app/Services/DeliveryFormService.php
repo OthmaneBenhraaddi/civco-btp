@@ -39,6 +39,7 @@ class DeliveryFormService
 
             $deliveryForm = DeliveryForm::query()->create([
                 'company_id' => $quote->company_id,
+                'tenant_id' => $quote->tenant_id,
                 'client_id' => $quote->client_id,
                 'project_id' => $quote->project_id,
                 'quote_id' => $quote->id,

@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\QuoteStatus;
 use App\Models\Invoice;
 use App\Models\Quote;
+use App\Services\DispatchNoteService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -13,6 +14,8 @@ class QuoteService
 {
     public function __construct(
         private readonly InvoiceReferenceService $invoiceReferenceService,
+        private readonly DispatchNoteService $dispatchNoteService,
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function recalculateTotals(Quote $quote): Quote
@@ -32,7 +35,7 @@ class QuoteService
         return $quote->fresh();
     }
 
-    public function convertToInvoice(Quote $quote): Invoice
+    public function convertToInvoice(Quote $quote, ?int $dispatchNoteId = null): Invoice
     {
         if ($quote->status !== QuoteStatus::Accepted) {
             throw new InvalidArgumentException('Only accepted quotes can be converted to an invoice.');
@@ -42,14 +45,22 @@ class QuoteService
             throw new InvalidArgumentException('This quote has already been converted to an invoice.');
         }
 
-        return DB::transaction(function () use ($quote) {
+        $this->dispatchNoteService->assertInvoiceDispatchNoteIsValid(
+            $dispatchNoteId,
+            $quote->company_id,
+            $quote->client_id,
+        );
+
+        return DB::transaction(function () use ($quote, $dispatchNoteId) {
             $quote->load('lines');
 
             $invoice = Invoice::query()->create([
                 'company_id' => $quote->company_id,
+                'tenant_id' => $quote->tenant_id,
                 'client_id' => $quote->client_id,
                 'project_id' => $quote->project_id,
                 'quote_id' => $quote->id,
+                'dispatch_note_id' => $dispatchNoteId,
                 'reference' => $this->invoiceReferenceService->nextForCompany($quote->company_id),
                 'status' => InvoiceStatus::Draft,
                 'issued_at' => now()->toDateString(),
@@ -75,7 +86,13 @@ class QuoteService
                 ]);
             }
 
-            return $invoice->load(['client', 'project', 'lines', 'quote']);
+            $invoice = $invoice->load(['client', 'project', 'lines', 'quote']);
+
+            if ($invoice->tenant_id !== null) {
+                $this->notificationService->notifyInvoiceCreated($invoice);
+            }
+
+            return $invoice;
         });
     }
 }

@@ -64,7 +64,7 @@ export default function ProjectsPage() {
   useAutoRefresh(loadProjects, [loadProjects], { runOnMount: false })
 
   useEffect(() => {
-    clientsApi.fetchClients({ per_page: 100, is_active: true })
+    clientsApi.fetchClients({ per_page: 100 })
       .then((data) => setClients(data.data ?? []))
       .catch(() => setClients([]))
   }, [])

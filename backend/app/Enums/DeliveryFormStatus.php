@@ -6,5 +6,5 @@ enum DeliveryFormStatus: string
 {
     case Draft = 'draft';
     case Signed = 'signed';
-    case Invoiced = 'invoiced';
+    case SignedAndStamped = 'signed_and_stamped';
 }

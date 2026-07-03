@@ -6,12 +6,18 @@ import ColorSettingsPanel from '../clients/ColorSettingsPanel'
 import LotSettingsPanel from '../clients/LotSettingsPanel'
 import RolesSettingsPanel from '../roles/RolesSettingsPanel'
 import DocumentTypeSettingsPanel from './DocumentTypeSettingsPanel'
+import DocumentControlsSettingsPanel from './DocumentControlsSettingsPanel'
+import ContractTemplateSettingsPanel from './ContractTemplateSettingsPanel'
+import EntityLogoSettingsPanel from './EntityLogoSettingsPanel'
 
 const TABS = [
+  { id: 'entity', labelKey: 'configuration.tabEntity' },
   { id: 'badges', labelKey: 'configuration.tabBadges' },
   { id: 'lots', labelKey: 'configuration.tabLots' },
   { id: 'documents', labelKey: 'configuration.tabDocuments' },
+  { id: 'document-controls', labelKey: 'configuration.tabDocumentControls' },
   { id: 'colors', labelKey: 'configuration.tabColors' },
+  { id: 'contracts', labelKey: 'configuration.tabContracts' },
   { id: 'roles', labelKey: 'configuration.tabRoles' },
 ]
 
@@ -22,7 +28,7 @@ export default function ConfigurationPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(
-    VALID_TAB_IDS.has(tabFromUrl) ? tabFromUrl : 'lots',
+    VALID_TAB_IDS.has(tabFromUrl) ? tabFromUrl : 'entity',
   )
 
   useEffect(() => {
@@ -59,14 +65,20 @@ export default function ConfigurationPage() {
       </div>
 
       <div className="mt-6">
-        {activeTab === 'badges' ? (
+        {activeTab === 'entity' ? (
+          <EntityLogoSettingsPanel />
+        ) : activeTab === 'badges' ? (
           <BadgeSettingsPanel />
         ) : activeTab === 'lots' ? (
           <LotSettingsPanel />
         ) : activeTab === 'documents' ? (
           <DocumentTypeSettingsPanel />
+        ) : activeTab === 'document-controls' ? (
+          <DocumentControlsSettingsPanel />
         ) : activeTab === 'roles' ? (
           <RolesSettingsPanel />
+        ) : activeTab === 'contracts' ? (
+          <ContractTemplateSettingsPanel />
         ) : (
           <ColorSettingsPanel />
         )}

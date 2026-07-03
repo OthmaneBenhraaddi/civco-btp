@@ -44,6 +44,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'Assign tasks', 'slug' => 'task.assign', 'module' => 'task'],
             ['name' => 'Update tasks', 'slug' => 'task.update', 'module' => 'task'],
             ['name' => 'View project budget', 'slug' => 'project.budget', 'module' => 'project'],
+            ['name' => 'View financials (read-only)', 'slug' => 'view_financials', 'module' => 'financials'],
+            ['name' => 'Manage financials', 'slug' => 'manage_financials', 'module' => 'financials'],
+            ['name' => 'Manage tasks', 'slug' => 'manage_tasks', 'module' => 'task'],
+            ['name' => 'View clients (semantic)', 'slug' => 'view_clients', 'module' => 'client'],
+            ['name' => 'Edit clients (semantic)', 'slug' => 'edit_clients', 'module' => 'client'],
+            ['name' => 'Manage projects (semantic)', 'slug' => 'manage_projects', 'module' => 'project'],
         ];
 
         foreach ($permissions as $permission) {

@@ -55,11 +55,33 @@ class NotificationController extends Controller
         return response()->json([
             'data' => new NotificationResource($notification->fresh()),
             'meta' => [
-                'unread_count' => Notification::query()
-                    ->where('user_id', $request->user()->id)
-                    ->whereNull('read_at')
-                    ->count(),
+                'unread_count' => $this->unreadCountFor($request->user()->id),
             ],
         ]);
+    }
+
+    public function markAllAsRead(Request $request): JsonResponse
+    {
+        Notification::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'meta' => [
+                'unread_count' => 0,
+            ],
+        ]);
+    }
+
+    private function unreadCountFor(int $userId): int
+    {
+        return Notification::query()
+            ->where('user_id', $userId)
+            ->whereNull('read_at')
+            ->count();
     }
 }

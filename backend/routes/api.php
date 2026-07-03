@@ -1,5 +1,25 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| API routes (v1)
+|--------------------------------------------------------------------------
+|
+| Local:      http://localhost:8000/api/v1/...
+| Production: https://{subdomain}.monerp.com/api/v1/...
+|
+| Subdomain routing is configured in routes/tenancy.php
+|
+*/
+
+use App\Http\Controllers\Api\V1\CommercialDocumentController;
+use App\Http\Controllers\Api\V1\GlobalSearchController;
+use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\ContractTemplateController;
+use App\Http\Controllers\Api\V1\ClientPortalQuoteController;
+use App\Http\Controllers\Api\V1\ClientPortalController;
+use App\Http\Controllers\Api\V1\ClientPortalMessageController;
+use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -15,8 +35,12 @@ use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LotController;
 use App\Http\Controllers\Api\V1\InvoiceLineController;
+use App\Http\Controllers\Api\V1\MessagingPresenceController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\DispatchNoteController;
+use App\Http\Controllers\Api\V1\PrintTrackingController;
+use App\Http\Controllers\Api\V1\ProjectMediaController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\QuoteLineController;
@@ -25,7 +49,10 @@ use App\Http\Controllers\Api\V1\ProjectProgressController;
 use App\Http\Controllers\Api\V1\ProjectTeamController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectorController;
+use App\Http\Controllers\Api\V1\SuperAdminController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\ThemeColorController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,14 +69,60 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::put('/messaging/presence', [MessagingPresenceController::class, 'update']);
+
+        Route::prefix('client-portal')->group(function (): void {
+            Route::get('/projects', [ClientPortalController::class, 'projects']);
+            Route::get('/projects/{project}/milestones', [ClientPortalController::class, 'milestones']);
+            Route::get('/projects/{project}/media', [ClientPortalController::class, 'media']);
+            Route::get('/projects/{project}/comments', [ClientPortalController::class, 'comments']);
+            Route::post('/projects/{project}/comments', [ClientPortalController::class, 'storeComment']);
+            Route::get('/projects/{project}/contract', [ClientPortalController::class, 'contract']);
+            Route::post('/projects/{project}/contract/sign', [ClientPortalController::class, 'signContract']);
+            Route::get('/quotes', [ClientPortalQuoteController::class, 'index']);
+            Route::get('/quotes/{quote}', [ClientPortalQuoteController::class, 'show']);
+            Route::get('/quotes/{quote}/preview', [ClientPortalQuoteController::class, 'preview']);
+            Route::post('/quotes/{quote}/accept', [ClientPortalQuoteController::class, 'accept']);
+            Route::get('/messages/threads', [ClientPortalMessageController::class, 'threads']);
+            Route::get('/messages/thread', [ClientPortalMessageController::class, 'thread']);
+            Route::post('/messages', [ClientPortalMessageController::class, 'store']);
+        });
+
+        Route::prefix('super-admin')->middleware('super_admin')->group(function (): void {
+            Route::get('/tenants', [SuperAdminController::class, 'index']);
+            Route::post('/tenants', [SuperAdminController::class, 'store']);
+            Route::patch('/tenants/{tenant}/status', [SuperAdminController::class, 'updateStatus']);
+            Route::patch('/tenants/{tenant}/admins/{user}/status', [SuperAdminController::class, 'updateAdminStatus']);
+            Route::get('/tenants/{tenant}/admins/{user}/credentials', [SuperAdminController::class, 'showAdminCredentials']);
+            Route::post('/tenants/{tenant}/admins/{user}/reset-password', [SuperAdminController::class, 'resetAdminPassword']);
+        });
+
+        Route::middleware('admin')->group(function (): void {
+            Route::get('/team/tenant-options', [TeamController::class, 'tenantOptions']);
+            Route::get('/team/members', [TeamController::class, 'index']);
+            Route::patch('/team/members/{user}/status', [TeamController::class, 'toggleStatus']);
+
+            Route::prefix('messaging')->group(function (): void {
+                Route::get('/threads', [MessagingController::class, 'threads']);
+                Route::get('/conversations/{clientUser}', [MessagingController::class, 'thread']);
+                Route::post('/messages', [MessagingController::class, 'store']);
+            });
+        });
 
         Route::middleware('company')->group(function (): void {
+            Route::get('/search', GlobalSearchController::class)
+                ->middleware('permission:dashboard.view');
+
             Route::get('/dashboard/summary', [DashboardController::class, 'summary'])
                 ->middleware('permission:dashboard.view');
 
             Route::get('/company/users', [CompanyUserController::class, 'index'])
                 ->middleware('permission:project.view');
+
+            Route::post('/team/members', [TeamController::class, 'store'])
+                ->middleware('permission:user.create');
 
             Route::get('/clients', [ClientController::class, 'index'])
                 ->middleware('permission:client.view');
@@ -61,6 +134,8 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:client.update');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])
                 ->middleware('permission:client.delete');
+            Route::patch('/clients/{client}/portal-status', [ClientController::class, 'togglePortalStatus'])
+                ->middleware(['admin', 'permission:client.update']);
             Route::post('/clients/{client}/contacts', [ClientContactController::class, 'store'])
                 ->middleware('permission:client.update');
             Route::put('/client-contacts/{clientContact}', [ClientContactController::class, 'update'])
@@ -81,6 +156,16 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:client.view');
             Route::put('/theme-colors', [ThemeColorController::class, 'update'])
                 ->middleware(['admin', 'permission:role.manage']);
+
+            Route::get('/tenant/logo', [TenantSettingsController::class, 'showLogo'])
+                ->middleware('admin');
+            Route::post('/tenant/logo', [TenantSettingsController::class, 'updateLogo'])
+                ->middleware('admin');
+
+            Route::get('/tenant/document-controls', [TenantSettingsController::class, 'showDocumentControls'])
+                ->middleware('admin');
+            Route::put('/tenant/document-controls', [TenantSettingsController::class, 'updateDocumentControls'])
+                ->middleware('admin');
 
             Route::get('/lots', [LotController::class, 'index'])
                 ->middleware('permission:project.view');
@@ -155,6 +240,9 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/documents/{document}/archive', [DocumentController::class, 'archive'])
                 ->middleware('permission:document.archive');
 
+            Route::post('/projects/{project}/media', [ProjectMediaController::class, 'store'])
+                ->middleware('permission:project.update');
+
             Route::get('/projects/{project}/expenses', [ExpenseController::class, 'index'])
                 ->middleware('permission:expense.view');
             Route::post('/projects/{project}/expenses', [ExpenseController::class, 'store'])
@@ -169,6 +257,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/quotes', [QuoteController::class, 'store'])
                 ->middleware('permission:quote.manage');
             Route::get('/quotes/{quote}', [QuoteController::class, 'show'])
+                ->middleware('permission:quote.view');
+            Route::get('/quotes/{quote}/document-preview', [CommercialDocumentController::class, 'quotePreview'])
                 ->middleware('permission:quote.view');
             Route::post('/quotes/{quote}/increment-print', [QuoteController::class, 'incrementPrint'])
                 ->middleware('permission:quote.view');
@@ -191,10 +281,25 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:delivery_form.manage');
             Route::get('/delivery-forms/{deliveryForm}', [DeliveryFormController::class, 'show'])
                 ->middleware('permission:delivery_form.view');
+            Route::get('/delivery-forms/{deliveryForm}/document-preview', [CommercialDocumentController::class, 'deliveryFormPreview'])
+                ->middleware('permission:delivery_form.view');
             Route::put('/delivery-forms/{deliveryForm}', [DeliveryFormController::class, 'update'])
                 ->middleware('permission:delivery_form.manage');
             Route::delete('/delivery-forms/{deliveryForm}', [DeliveryFormController::class, 'destroy'])
                 ->middleware('permission:delivery_form.manage');
+
+            Route::get('/dispatch-notes', [DispatchNoteController::class, 'index'])
+                ->middleware('permission:delivery_form.view');
+            Route::post('/dispatch-notes', [DispatchNoteController::class, 'store'])
+                ->middleware('permission:delivery_form.manage');
+            Route::get('/dispatch-notes/{dispatchNote}', [DispatchNoteController::class, 'show'])
+                ->middleware('permission:delivery_form.view');
+            Route::post('/dispatch-notes/{dispatchNote}/execute', [DispatchNoteController::class, 'execute'])
+                ->middleware('permission:delivery_form.manage');
+
+            Route::post('/prints/track', [PrintTrackingController::class, 'track'])
+                ->middleware('permission:project.view');
+
             Route::post('/quotes/{quote}/convert-to-delivery-form', [QuoteController::class, 'convertToDeliveryForm'])
                 ->middleware('permission:delivery_form.manage');
 
@@ -203,6 +308,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/invoices', [InvoiceController::class, 'store'])
                 ->middleware('permission:invoice.manage');
             Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])
+                ->middleware('permission:invoice.view');
+            Route::get('/invoices/{invoice}/document-preview', [CommercialDocumentController::class, 'invoicePreview'])
                 ->middleware('permission:invoice.view');
             Route::post('/invoices/{invoice}/increment-print', [InvoiceController::class, 'incrementPrint'])
                 ->middleware('permission:invoice.view');
@@ -221,9 +328,13 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])
                 ->middleware('permission:payment.record');
 
+            Route::get('/permissions', [PermissionController::class, 'index'])
+                ->middleware('permission:role.view');
             Route::get('/roles', [RoleController::class, 'index'])
                 ->middleware('permission:role.view');
             Route::post('/roles', [RoleController::class, 'store'])
+                ->middleware('permission:role.manage');
+            Route::put('/roles/{role}', [RoleController::class, 'update'])
                 ->middleware('permission:role.manage');
             Route::delete('/roles/{role}', [RoleController::class, 'destroy'])
                 ->middleware('permission:role.manage');
@@ -237,6 +348,28 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:dashboard.view');
             Route::delete('/audit-logs/{audit_log}', [AuditLogController::class, 'destroy'])
                 ->middleware('permission:dashboard.view');
+
+            Route::get('/contract-templates', [ContractTemplateController::class, 'index'])
+                ->middleware('permission:role.manage');
+            Route::post('/contract-templates', [ContractTemplateController::class, 'store'])
+                ->middleware('permission:role.manage');
+            Route::get('/contract-templates/{contractTemplate}', [ContractTemplateController::class, 'show'])
+                ->middleware('permission:role.manage');
+            Route::put('/contract-templates/{contractTemplate}', [ContractTemplateController::class, 'update'])
+                ->middleware('permission:role.manage');
+            Route::delete('/contract-templates/{contractTemplate}', [ContractTemplateController::class, 'destroy'])
+                ->middleware('permission:role.manage');
+            Route::get('/contract-templates/{contractTemplate}/preview', [ContractTemplateController::class, 'preview'])
+                ->middleware('permission:role.manage');
+
+            Route::get('/contracts', [ContractController::class, 'index'])
+                ->middleware('permission:project.view');
+            Route::post('/contracts/compile', [ContractController::class, 'compile'])
+                ->middleware('permission:project.update');
+            Route::get('/contracts/{contract}', [ContractController::class, 'show'])
+                ->middleware('permission:project.view');
+            Route::post('/contracts/{contract}/tenant-signature', [ContractController::class, 'submitTenantSignature'])
+                ->middleware(['admin', 'permission:project.update']);
         });
     });
 });

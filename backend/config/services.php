@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'nominatim' => [
+        'contact_email' => env('NOMINATIM_CONTACT_EMAIL', 'contact@civco-btp.ma'),
+        'ca_bundle' => env('NOMINATIM_CA_BUNDLE'),
+    ],
+
 ];

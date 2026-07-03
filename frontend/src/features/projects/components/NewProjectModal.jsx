@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import Modal from '../../../components/Modal'
 import WizardProgress from '../../../components/wizard/WizardProgress'
 import { SectorCard, TypeCard } from '../../../components/wizard/wizardCards'
+import { useWizardResetOnOpen } from '../../../hooks/useWizardResetOnOpen'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as lotsApi from '../../../api/lots'
 import * as sectorsApi from '../../../api/sectors'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
+import { handleWizardEnterKey } from '../../../utils/wizardForm'
 import {
   BTN_GHOST,
   BTN_PRIMARY,
@@ -30,6 +32,8 @@ export default function NewProjectModal({
 }) {
   const { t } = useTranslation()
   const fileInputRef = useRef(null)
+  const stepContentRef = useRef(null)
+  const finalSubmitLockRef = useRef(false)
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(DEFAULT_PROJECT_FORM)
   const [documents, setDocuments] = useState([])
@@ -63,9 +67,7 @@ export default function NewProjectModal({
     return map
   }, [availableLots])
 
-  useEffect(() => {
-    if (!open) return
-
+  const resetWizard = useCallback(() => {
     setStep(0)
     setForm({
       ...DEFAULT_PROJECT_FORM,
@@ -74,6 +76,23 @@ export default function NewProjectModal({
     setDocuments([])
     setIsDragging(false)
     setCatalogError('')
+    finalSubmitLockRef.current = false
+  }, [clients])
+
+  useWizardResetOnOpen(open, resetWizard)
+
+  useEffect(() => {
+    if (!open || !clients[0]?.id) {
+      return
+    }
+
+    setForm((current) => {
+      if (current.client_id) {
+        return current
+      }
+
+      return { ...current, client_id: String(clients[0].id) }
+    })
   }, [open, clients])
 
   useEffect(() => {
@@ -107,6 +126,14 @@ export default function NewProjectModal({
 
     loadCatalog()
   }, [open, t])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    stepContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [open, step])
 
   function updateForm(patch) {
     setForm((current) => ({ ...current, ...patch }))
@@ -158,23 +185,46 @@ export default function NewProjectModal({
     setStep((value) => Math.max(value - 1, 0))
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    const documentMeta = documents.map((file) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    }))
-    const selectedLotNames = availableLots
-      .filter((lot) => form.selectedLotIds.includes(lot.id))
-      .map((lot) => lot.name)
+  async function handleFinalSubmit() {
+    if (saving || finalSubmitLockRef.current) {
+      return
+    }
 
-    await onSubmit({
-      ...form,
-      documentMeta,
-      selectedLotNames,
-      sectorName: selectedSector?.name ?? null,
-      sectors,
+    if (!form.objet.trim() || !form.selectedSectorId || !form.client_id) {
+      return
+    }
+
+    finalSubmitLockRef.current = true
+
+    try {
+      const documentMeta = documents.map((file) => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      }))
+      const selectedLotNames = availableLots
+        .filter((lot) => form.selectedLotIds.includes(lot.id))
+        .map((lot) => lot.name)
+
+      await onSubmit({
+        ...form,
+        documentMeta,
+        selectedLotNames,
+        sectorName: selectedSector?.name ?? null,
+        sectors,
+      })
+    } finally {
+      finalSubmitLockRef.current = false
+    }
+  }
+
+  function handleWizardKeyDown(event) {
+    handleWizardEnterKey(event, {
+      step,
+      totalSteps: WIZARD_STEPS.length,
+      canAdvance,
+      goNext,
+      onFinalSubmit: handleFinalSubmit,
     })
   }
 
@@ -185,10 +235,10 @@ export default function NewProjectModal({
       onClose={onClose}
       panelClassName="new-project-modal w-full max-w-2xl text-white"
     >
-      <form className="space-y-2" onSubmit={handleSubmit}>
+      <div className="space-y-2" onKeyDown={handleWizardKeyDown}>
         <WizardProgress currentStep={step} stepCount={WIZARD_STEPS.length} labels={stepLabels} />
 
-        <div className="relative min-h-[18rem]">
+        <div ref={stepContentRef} className="relative min-h-[18rem]">
           {step === 0 ? (
             <div className="wizard-step space-y-5">
               <label>
@@ -198,7 +248,6 @@ export default function NewProjectModal({
                   value={form.objet}
                   onChange={(event) => updateForm({ objet: event.target.value })}
                   placeholder={t('projects.form.objetPlaceholder')}
-                  required
                   autoFocus
                 />
               </label>
@@ -287,7 +336,6 @@ export default function NewProjectModal({
                   className={FIELD_CLASS}
                   value={form.client_id}
                   onChange={(event) => updateForm({ client_id: event.target.value })}
-                  required
                 >
                   <option value="">{t('projects.selectClient')}</option>
                   {clients.map((client) => (
@@ -322,7 +370,6 @@ export default function NewProjectModal({
                     className={FIELD_CLASS}
                     value={form.etatPaiement}
                     onChange={(event) => updateForm({ etatPaiement: event.target.value })}
-                    required
                   >
                     {PAYMENT_STATES.map((state) => (
                       <option key={state} value={state}>
@@ -482,15 +529,16 @@ export default function NewProjectModal({
             </button>
           ) : (
             <button
-              type="submit"
-              disabled={saving || !form.selectedSectorId || !form.client_id}
+              type="button"
+              onClick={handleFinalSubmit}
+              disabled={saving || !form.objet.trim() || !form.selectedSectorId || !form.client_id}
               className={`new-project-modal-btn ${BTN_PRIMARY}`}
             >
               {saving ? t('projects.creating') : t('projects.create')}
             </button>
           )}
         </div>
-      </form>
+      </div>
     </Modal>
   )
 }

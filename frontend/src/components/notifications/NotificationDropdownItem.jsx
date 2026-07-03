@@ -10,6 +10,7 @@ export default function NotificationDropdownItem({
   message,
   createdAt,
   locale,
+  type = null,
   isUnread = true,
   isActivity = false,
   isMarking = false,
@@ -18,7 +19,7 @@ export default function NotificationDropdownItem({
   markReadLabel,
   meta,
 }) {
-  const { Icon, tone } = resolveNotificationIcon(title, isActivity)
+  const { Icon, tone } = resolveNotificationIcon(title, isActivity, type)
 
   return (
     <div

@@ -64,6 +64,39 @@ class RoleController extends Controller
             ->setStatusCode(201);
     }
 
+    public function update(Request $request, Role $role): RoleResource
+    {
+        $companyId = $this->companyId($request);
+
+        if ($role->company_id !== null && $role->company_id !== $companyId) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'badge_tone' => ['nullable', 'string', 'max:20'],
+            'permission_ids' => ['nullable', 'array'],
+            'permission_ids.*' => ['integer', 'exists:permissions,id'],
+        ]);
+
+        if ($role->is_system) {
+            unset($validated['name']);
+        }
+
+        $role->update(collect($validated)->except('permission_ids')->all());
+
+        if (array_key_exists('permission_ids', $validated)) {
+            if ($role->is_system) {
+                abort(422, 'Les permissions des rôles système ne peuvent pas être modifiées.');
+            }
+
+            $role->permissions()->sync($validated['permission_ids'] ?? []);
+        }
+
+        return new RoleResource($role->fresh()->load('permissions'));
+    }
+
     public function destroy(Request $request, Role $role): JsonResponse
     {
         if ($role->is_system) {

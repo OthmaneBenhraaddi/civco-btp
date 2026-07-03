@@ -4,11 +4,19 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Support\TenantLogoStorage;
 
 class AuthContextService
 {
+    public function __construct(
+        private readonly PostLoginRedirectService $postLoginRedirect,
+        private readonly PermissionResolver $permissionResolver,
+    ) {}
+
     public function forUser(User $user, ?int $companyId = null): array
     {
+        $user->loadMissing('tenant');
+
         $company = $this->resolveCompany($user, $companyId);
 
         $roles = $company
@@ -16,8 +24,10 @@ class AuthContextService
             : collect();
 
         $permissions = $company
-            ? $user->permissionSlugsForCompany($company->id)
+            ? $this->permissionResolver->expand($user->permissionSlugsForCompany($company->id))
             : [];
+
+        $primaryRole = $roles->first();
 
         return [
             'user' => [
@@ -28,6 +38,10 @@ class AuthContextService
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role ?? 'user',
+                'job_title' => $primaryRole?->name,
+                'client_id' => $user->client_id,
+                'tenant_id' => $user->tenant_id,
+                'is_super_admin' => $user->isSuperAdmin(),
             ],
             'company' => $company ? [
                 'id' => $company->id,
@@ -45,6 +59,14 @@ class AuthContextService
                 'slug' => $role->slug,
             ])->values()->all(),
             'permissions' => $permissions,
+            'tenant' => $user->tenant ? [
+                'id' => $user->tenant->id,
+                'name' => $user->tenant->name,
+                'subdomain' => $user->tenant->subdomain,
+                'logo_url' => TenantLogoStorage::url($user->tenant->logo_path),
+            ] : null,
+            'redirect_to' => $this->postLoginRedirect->pathFor($user),
+            'redirect_url' => $this->postLoginRedirect->absoluteUrlFor($user),
         ];
     }
 
@@ -52,6 +74,12 @@ class AuthContextService
     {
         if ($companyId !== null) {
             return $user->companies()->where('companies.id', $companyId)->first();
+        }
+
+        if ($user->tenant_id !== null) {
+            return $user->companies()
+                ->orderByDesc('company_user.is_primary')
+                ->first();
         }
 
         return $user->primaryCompany();

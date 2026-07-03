@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getDevTenantSlug } from '../utils/tenantDevContext'
 
 let activeCompanyId = null
 let authBootstrapComplete = false
@@ -31,6 +32,16 @@ api.interceptors.request.use(async (config) => {
     config.headers['X-Company-Id'] = activeCompanyId
   }
 
+  const tenantSlug = getDevTenantSlug()
+
+  if (tenantSlug) {
+    config.headers['X-Tenant'] = tenantSlug
+    config.params = {
+      ...(config.params ?? {}),
+      tenant: tenantSlug,
+    }
+  }
+
   const method = config.method?.toLowerCase()
   if (['post', 'put', 'patch', 'delete'].includes(method)) {
     let token = getCookie('XSRF-TOKEN')
@@ -55,8 +66,15 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && authBootstrapComplete && !error.config.url?.includes('/login')) {
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    const status = error.response?.status
+    const url = error.config?.url ?? ''
+
+    if (authBootstrapComplete && !url.includes('/login')) {
+      if (status === 401) {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      } else if (status === 403 && url.includes('/me')) {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      }
     }
 
     return Promise.reject(error)

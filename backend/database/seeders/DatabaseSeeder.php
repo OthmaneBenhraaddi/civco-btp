@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             LotSeeder::class,
             PresentationSeeder::class,
             NotificationSeeder::class,
+            ClientPortalSeeder::class,
+            ContractTemplateSeeder::class,
         ]);
     }
 }

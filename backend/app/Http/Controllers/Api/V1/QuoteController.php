@@ -4,14 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\QuoteStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
+use App\Http\Controllers\Concerns\ResolvesTenantContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Quote\StoreQuoteRequest;
 use App\Http\Requests\Quote\UpdateQuoteRequest;
 use App\Http\Resources\DeliveryFormResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\QuoteResource;
-use App\Models\Client;
-use App\Models\Project;
 use App\Models\Quote;
 use App\Services\DeliveryFormService;
 use App\Services\QuoteReferenceService;
@@ -24,6 +23,7 @@ use InvalidArgumentException;
 class QuoteController extends Controller
 {
     use ResolvesCompanyContext;
+    use ResolvesTenantContext;
 
     public function __construct(
         private readonly QuoteReferenceService $referenceService,
@@ -65,14 +65,15 @@ class QuoteController extends Controller
     public function store(StoreQuoteRequest $request): JsonResponse
     {
         $companyId = $this->companyId($request);
-        $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+        $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
         }
 
         $quote = Quote::query()->create([
             ...$request->validated(),
+            ...$this->tenantAttributesForCreate($request),
             'company_id' => $companyId,
             'reference' => $this->referenceService->nextForCompany($companyId),
             'status' => QuoteStatus::Draft,
@@ -99,14 +100,22 @@ class QuoteController extends Controller
         $this->ensureQuoteBelongsToCompany($request, $quote);
 
         if ($request->filled('client_id')) {
-            $this->ensureClientBelongsToCompany($request, $request->integer('client_id'));
+            $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
         }
 
         if ($request->filled('project_id')) {
-            $this->ensureProjectBelongsToCompany($request, $request->integer('project_id'));
+            $this->assertProjectBelongsToCompany($request, $request->integer('project_id'));
         }
 
         $quote->update($request->validated());
+
+        if ($request->filled('status') && $request->string('status')->toString() === QuoteStatus::Sent->value) {
+            $quote->loadMissing('client:id,tenant_id');
+
+            if ($quote->tenant_id === null && $quote->client?->tenant_id !== null) {
+                $quote->update(['tenant_id' => $quote->client->tenant_id]);
+            }
+        }
 
         return new QuoteResource($quote->fresh()->load(['client', 'project', 'lines', 'invoice', 'deliveryForms']));
     }
@@ -137,8 +146,15 @@ class QuoteController extends Controller
     {
         $this->ensureQuoteBelongsToCompany($request, $quote);
 
+        $validated = $request->validate([
+            'dispatch_note_id' => ['required', 'integer', 'exists:dispatch_notes,id'],
+        ]);
+
         try {
-            $invoice = $this->quoteService->convertToInvoice($quote);
+            $invoice = $this->quoteService->convertToInvoice(
+                $quote,
+                $request->integer('dispatch_note_id'),
+            );
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
@@ -175,7 +191,7 @@ class QuoteController extends Controller
     {
         $this->ensureQuoteBelongsToCompany($request, $quote);
 
-        $quote->increment('print_count');
+        $quote->increment('generation_count');
 
         return new QuoteResource($quote->fresh()->load(['client', 'project', 'lines', 'invoice', 'deliveryForms']));
     }
@@ -183,30 +199,6 @@ class QuoteController extends Controller
     private function ensureQuoteBelongsToCompany(Request $request, Quote $quote): void
     {
         if ($quote->company_id !== $this->companyId($request)) {
-            abort(404);
-        }
-    }
-
-    private function ensureClientBelongsToCompany(Request $request, int $clientId): void
-    {
-        $exists = Client::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($clientId)
-            ->exists();
-
-        if (! $exists) {
-            abort(404);
-        }
-    }
-
-    private function ensureProjectBelongsToCompany(Request $request, int $projectId): void
-    {
-        $exists = Project::query()
-            ->forCompany($this->companyId($request))
-            ->whereKey($projectId)
-            ->exists();
-
-        if (! $exists) {
             abort(404);
         }
     }

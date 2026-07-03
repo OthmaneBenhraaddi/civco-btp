@@ -19,11 +19,8 @@ export async function markNotificationAsRead(notificationId) {
 }
 
 export async function markAllNotificationsAsRead() {
-  const { items } = await fetchUnreadNotifications()
-  if (items.length === 0) {
-    return { unreadCount: 0 }
+  const { data } = await api.put('/api/v1/notifications/read-all')
+  return {
+    unreadCount: data.meta?.unread_count ?? 0,
   }
-
-  await Promise.all(items.map((item) => markNotificationAsRead(item.id)))
-  return { unreadCount: 0 }
 }

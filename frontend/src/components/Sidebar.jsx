@@ -2,66 +2,171 @@ import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLogout } from '../hooks/useLogout'
 import { useTranslation } from '../i18n/LanguageContext'
+import { getDashboardNavPath, resolveNavPath } from '../routes/routeAccess'
 
 const NAV_ITEMS = [
+  {
+    to: '/portal',
+    end: true,
+    labelKey: 'nav.clientDashboard',
+    Icon: IconDashboard,
+    audience: 'client',
+  },
+  {
+    to: '/portal/discussions',
+    labelKey: 'nav.clientDiscussions',
+    Icon: IconDiscussions,
+    audience: 'client',
+  },
+  {
+    to: '/portal/calendar',
+    labelKey: 'nav.clientCalendar',
+    Icon: IconCalendar,
+    audience: 'client',
+  },
+  {
+    to: '/portal/quotes',
+    labelKey: 'nav.clientQuotes',
+    Icon: IconQuotes,
+    audience: 'client',
+  },
   {
     to: '/',
     end: true,
     labelKey: 'nav.dashboard',
     Icon: IconDashboard,
+    audience: 'erp',
+  },
+  {
+    to: '/super-admin',
+    end: true,
+    labelKey: 'nav.superAdmin',
+    Icon: IconSuperAdmin,
+    platformSuperAdminOnly: true,
   },
   {
     to: '/tasks',
     labelKey: 'nav.tasks',
     Icon: IconTasks,
+    audience: 'erp',
   },
   {
     to: '/clients',
     labelKey: 'nav.clients',
     Icon: IconClients,
+    audience: 'erp',
     adminOnly: true,
+  },
+  {
+    to: '/discussions',
+    labelKey: 'nav.messaging',
+    Icon: IconDiscussions,
+    audience: 'erp',
+    adminOnly: true,
+    entityBoundAdminOnly: true,
   },
   {
     to: '/map',
     labelKey: 'nav.map',
     Icon: IconMap,
+    audience: 'erp',
   },
   {
     to: '/projects',
     labelKey: 'nav.projects',
     Icon: IconProjects,
+    audience: 'erp',
   },
   {
     to: '/quotes',
     labelKey: 'nav.quotes',
     Icon: IconQuotes,
+    audience: 'erp',
     adminOnly: true,
   },
   {
     to: '/delivery-forms',
     labelKey: 'nav.deliveryForms',
     Icon: IconDeliveryForms,
+    audience: 'erp',
     adminOnly: true,
   },
   {
     to: '/invoices',
     labelKey: 'nav.invoices',
     Icon: IconInvoices,
+    audience: 'erp',
     adminOnly: true,
   },
   {
     to: '/history',
     labelKey: 'nav.history',
     Icon: IconHistory,
+    audience: 'erp',
     adminOnly: true,
+  },
+  {
+    to: '/team',
+    labelKey: 'nav.team',
+    Icon: IconTeam,
+    audience: 'erp',
+    adminOnly: true,
+    tenantAdminOnly: true,
   },
   {
     to: '/configuration',
     labelKey: 'nav.configuration',
     Icon: IconSettings,
+    audience: 'erp',
     adminOnly: true,
   },
 ]
+
+function IconSuperAdmin({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 20h16M6 20V8l6-4 6 4v12" strokeLinejoin="round" />
+      <path d="M10 12h4M12 10v4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconTeam({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M16 11a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z" />
+      <path d="M4 20a6 6 0 0 1 12 0" strokeLinecap="round" />
+      <path d="M19 8v6M22 11h-6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconDiscussions({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H8l-4 3V6a1 1 0 011-1z" strokeLinejoin="round" />
+      <path d="M8 10h8M8 13h5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconCalendar({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconPortal({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 20V10l8-6 8 6v10" strokeLinejoin="round" />
+      <path d="M9 20v-6h6v6" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 function IconDashboard({ className }) {
   return (
@@ -196,12 +301,56 @@ function navLinkClasses(isActive, collapsed) {
   return base.join(' ')
 }
 
+function canViewPlatformSuperAdminNav(user) {
+  return user != null && user.tenant_id === null && user.is_super_admin === true
+}
+
+function isNavItemVisible(item, { isClientPortalUser, isAdmin, user }) {
+  if (item.platformSuperAdminOnly) {
+    return canViewPlatformSuperAdminNav(user)
+  }
+
+  if (isClientPortalUser) {
+    return item.audience === 'client'
+  }
+
+  if (item.audience === 'client') {
+    return false
+  }
+
+  if (item.entityBoundAdminOnly) {
+    return isAdmin && Boolean(user?.tenant_id) && !canViewPlatformSuperAdminNav(user)
+  }
+
+  if (item.adminOnly && !isAdmin) {
+    return false
+  }
+
+  if (item.tenantAdminOnly) {
+    return isAdmin && (Boolean(user?.tenant_id) || canViewPlatformSuperAdminNav(user))
+  }
+
+  return item.audience === 'erp'
+}
+
 export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose }) {
   const { t } = useTranslation()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isClientPortalUser, user, tenant, roles } = useAuth()
   const logout = useLogout()
-  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+  const visibleNavItems = NAV_ITEMS.filter((item) => isNavItemVisible(item, {
+    isClientPortalUser,
+    isAdmin,
+    user,
+  }))
   const navCollapsed = isCollapsed && !mobileOpen
+
+  function resolveItemPath(item) {
+    if (item.labelKey === 'nav.dashboard') {
+      return getDashboardNavPath(user, roles)
+    }
+
+    return resolveNavPath(item.to, user)
+  }
 
   function handleNavClick() {
     if (mobileOpen) {
@@ -230,13 +379,25 @@ export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose
       >
         <div className={['mb-6 shrink-0', navCollapsed ? 'flex justify-center' : ''].join(' ')}>
           {!navCollapsed ? (
-            <div className="space-y-1">
-              <h1 className="flex items-baseline gap-1.5 text-lg font-semibold tracking-tight text-white">
-                <span>{t('layout.brandMain')}</span>
-                <span className="text-slate-500">{t('layout.brandAccent')}</span>
-              </h1>
-              <p className="truncate text-sm text-slate-400">{t('layout.companySubtitle')}</p>
+            <div className="space-y-2">
+              {tenant?.logo_url ? (
+                <img
+                  src={tenant.logo_url}
+                  alt=""
+                  className="h-10 max-w-[180px] object-contain object-left"
+                />
+              ) : (
+                <h1 className="flex items-baseline gap-1.5 text-lg font-semibold tracking-tight text-white">
+                  <span>{t('layout.brandMain')}</span>
+                  <span className="text-slate-500">{t('layout.brandAccent')}</span>
+                </h1>
+              )}
+              <p className="truncate text-sm text-slate-400">
+                {tenant?.name ?? t('layout.companySubtitle')}
+              </p>
             </div>
+          ) : tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt="" className="h-8 w-8 rounded object-contain" />
           ) : (
             <span className="text-sm font-semibold text-white">{t('layout.brandMain').slice(0, 1)}</span>
           )}
@@ -245,7 +406,7 @@ export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose
         {!navCollapsed && isAdmin ? (
           <div className="mb-4 shrink-0">
             <Link
-              to="/projects"
+              to={resolveNavPath('/projects', user)}
               onClick={handleNavClick}
               className="sidebar-new-project flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200"
             >
@@ -262,12 +423,14 @@ export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose
           ].join(' ')}
           aria-label={t('layout.mainNavigation')}
         >
-          {visibleNavItems.map(({ to, end, labelKey, Icon }) => {
+          {visibleNavItems.map((item) => {
+            const { end, labelKey, Icon } = item
+            const to = resolveItemPath(item)
             const label = t(labelKey)
 
             return (
               <NavLink
-                key={to}
+                key={`${labelKey}-${to}`}
                 to={to}
                 end={end}
                 onClick={handleNavClick}

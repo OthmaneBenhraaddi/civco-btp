@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Middleware\CheckUserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\AuthContextService;
+use App\Support\TenantAuthGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,13 +26,15 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        if (! $user->is_active) {
+        if (! $user->canAccessApplication()) {
             Auth::logout();
 
             throw ValidationException::withMessages([
-                'email' => ['This account is inactive.'],
+                'email' => [CheckUserStatus::DEACTIVATED_MESSAGE],
             ]);
         }
+
+        TenantAuthGuard::assertLoginMatchesTenant($request, $user);
 
         if ($request->hasSession()) {
             $request->session()->regenerate();

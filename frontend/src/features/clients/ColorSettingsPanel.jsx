@@ -89,9 +89,16 @@ export default function ColorSettingsPanel() {
 
       {THEME_COLOR_GROUPS.map((group) => (
         <section key={group.id} className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-            {t(group.labelKey)}
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+              {t(group.labelKey)}
+            </h3>
+            {group.hintKey ? (
+              <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-slate-500">
+                {t(group.hintKey)}
+              </p>
+            ) : null}
+          </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {group.keys.map((key) => (
               <ColorField

@@ -4,17 +4,17 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { extractErrorMessage } from '../../utils/apiHelpers'
-import { getHomePathForRole } from '../../routes/routeAccess'
+import { resolveRedirectPath } from '../../routes/routeAccess'
 
 const DEMO_ACCOUNTS = {
   admin: { email: 'admin@btpdemo.fr', password: 'password' },
+  client: { email: 'client.portal@civco-btp.ma', password: 'password' },
   yassine: { email: 'yassine.mansouri@civco-btp.ma', password: 'password' },
   amine: { email: 'amine.alami@civco-btp.ma', password: 'password' },
 }
 
 const INPUT_CLASS = [
-  'login-input w-full rounded-lg border border-white/[0.08] bg-[#16171b] py-3 pl-10 pr-4',
-  'text-sm text-white placeholder:text-slate-500',
+  'login-input w-full text-sm text-white placeholder:text-slate-500',
   'transition-all duration-200',
   'focus:border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/15',
 ].join(' ')
@@ -46,7 +46,7 @@ export default function LoginPage() {
 
     try {
       const context = await login({ email, password })
-      navigate(getHomePathForRole(context?.user?.role), { replace: true })
+      navigate(resolveRedirectPath(context), { replace: true })
     } catch (err) {
       const validationError = err.response?.data?.errors?.email?.[0]
       setError(validationError ?? extractErrorMessage(err, t('auth.invalidCredentials')))
@@ -79,6 +79,18 @@ export default function LoginPage() {
         </button>
         <button
           type="button"
+          onClick={() => fillDemoCredentials('client')}
+          className={[
+            'login-demo-badge rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200',
+            activeDemo === 'client'
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+              : 'border-white/[0.08] bg-white/[0.03] text-slate-400 hover:border-white/15 hover:bg-white/[0.06] hover:text-slate-200',
+          ].join(' ')}
+        >
+          {t('auth.demoClient')}
+        </button>
+        <button
+          type="button"
           onClick={() => fillDemoCredentials('yassine')}
           className={[
             'login-demo-badge rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200',
@@ -106,9 +118,9 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="grid gap-5">
         <label className="grid gap-2 text-sm font-medium text-slate-300">
           {t('auth.email')}
-          <span className="relative block">
+          <span className="login-input-wrap">
             <Mail
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              className="login-input-icon h-4 w-4"
               strokeWidth={1.75}
               aria-hidden
             />
@@ -129,9 +141,9 @@ export default function LoginPage() {
 
         <label className="grid gap-2 text-sm font-medium text-slate-300">
           {t('auth.password')}
-          <span className="relative block">
+          <span className="login-input-wrap">
             <Lock
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              className="login-input-icon h-4 w-4"
               strokeWidth={1.75}
               aria-hidden
             />

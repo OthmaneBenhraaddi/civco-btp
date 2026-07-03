@@ -6,8 +6,10 @@ import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
 import * as deliveryFormsApi from '../../api/deliveryForms'
+import * as dispatchNotesApi from '../../api/dispatchNotes'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 
@@ -20,7 +22,7 @@ const emptyForm = {
 }
 
 export default function DeliveryFormsPage() {
-  const { hasPermission } = useAuth()
+  const { hasPermission, user } = useAuth()
   const { t } = useTranslation()
   const [forms, setForms] = useState([])
   const [clients, setClients] = useState([])
@@ -34,11 +36,24 @@ export default function DeliveryFormsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [selectedFormIds, setSelectedFormIds] = useState([])
+  const [dispatchNotes, setDispatchNotes] = useState([])
+  const [bundling, setBundling] = useState(false)
+  const [executingNoteId, setExecutingNoteId] = useState(null)
 
   const clientProjects = useMemo(
     () => projects.filter((project) => String(project.client_id) === String(form.client_id)),
     [projects, form.client_id],
   )
+
+  async function loadDispatchNotes() {
+    try {
+      const data = await dispatchNotesApi.fetchDispatchNotes({ per_page: 20 })
+      setDispatchNotes(data.data ?? [])
+    } catch {
+      setDispatchNotes([])
+    }
+  }
 
   async function loadForms(page = 1) {
     setLoading(true)
@@ -61,10 +76,11 @@ export default function DeliveryFormsPage() {
 
   useEffect(() => {
     loadForms()
+    loadDispatchNotes()
   }, [search, statusFilter])
 
   useEffect(() => {
-    clientsApi.fetchClients({ per_page: 100, is_active: true })
+    clientsApi.fetchClients({ per_page: 100 })
       .then((data) => setClients(data.data ?? []))
       .catch(() => setClients([]))
 
@@ -141,6 +157,72 @@ export default function DeliveryFormsPage() {
     }
   }
 
+  function toggleFormSelection(formId) {
+    setSelectedFormIds((current) => (
+      current.includes(formId)
+        ? current.filter((id) => id !== formId)
+        : [...current, formId]
+    ))
+  }
+
+  function isBundlable(item) {
+    return item.status === 'signed_and_stamped' && !item.dispatch_note_id
+  }
+
+  function resolveFormClientId(item) {
+    return item.client_id ?? item.client?.id ?? null
+  }
+
+  async function handleBundleDispatchNote() {
+    const selected = forms.filter((item) => selectedFormIds.includes(item.id))
+
+    if (selected.length === 0) {
+      setError(t('dispatchNotes.selectBl'))
+      return
+    }
+
+    const clientIds = [...new Set(selected.map(resolveFormClientId).filter(Boolean))]
+
+    if (clientIds.length !== 1) {
+      setError(t('dispatchNotes.sameClientRequired'))
+      return
+    }
+
+    setBundling(true)
+    setError('')
+
+    try {
+      await dispatchNotesApi.createDispatchNote({
+        client_id: Number(clientIds[0]),
+        delivery_form_ids: selected.map((item) => item.id),
+      })
+      setSelectedFormIds([])
+      await Promise.all([loadForms(meta?.current_page ?? 1), loadDispatchNotes()])
+    } catch (err) {
+      setError(extractErrorMessage(err, t('dispatchNotes.bundleError')))
+    } finally {
+      setBundling(false)
+    }
+  }
+
+  async function handleExecuteDispatchNote(noteId) {
+    if (!window.confirm(t('dispatchNotes.executeConfirm'))) {
+      return
+    }
+
+    setExecutingNoteId(noteId)
+    setError('')
+
+    try {
+      await dispatchNotesApi.executeDispatchNote(noteId)
+      await loadDispatchNotes()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('dispatchNotes.executeError')))
+    } finally {
+      setExecutingNoteId(null)
+    }
+  }
+
   async function handleDelete(item) {
     if (!window.confirm(t('deliveryForms.deleteConfirm', { reference: item.reference }))) {
       return
@@ -162,9 +244,16 @@ export default function DeliveryFormsPage() {
           <p>{t('deliveryForms.subtitle')}</p>
         </div>
         <PermissionGate permission="delivery_form.manage">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
-            {t('deliveryForms.new')}
-          </button>
+          <div className="header-actions">
+            {selectedFormIds.length > 0 ? (
+              <button type="button" className="ghost" onClick={handleBundleDispatchNote} disabled={bundling}>
+                {bundling ? t('dispatchNotes.bundling') : t('dispatchNotes.bundle', { count: selectedFormIds.length })}
+              </button>
+            ) : null}
+            <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+              {t('deliveryForms.new')}
+            </button>
+          </div>
         </PermissionGate>
       </header>
 
@@ -182,7 +271,7 @@ export default function DeliveryFormsPage() {
           <option value="">{t('deliveryForms.allStatuses')}</option>
           <option value="draft">{t('status.draft')}</option>
           <option value="signed">{t('status.signed')}</option>
-          <option value="invoiced">{t('status.invoiced')}</option>
+          <option value="signed_and_stamped">{t('status.signed_and_stamped')}</option>
         </select>
       </div>
 
@@ -195,6 +284,7 @@ export default function DeliveryFormsPage() {
           <table>
             <thead>
               <tr>
+                <th className="select-col" />
                 <th>{t('deliveryForms.reference')}</th>
                 <th>{t('deliveryForms.project')}</th>
                 <th>{t('deliveryForms.client')}</th>
@@ -206,20 +296,30 @@ export default function DeliveryFormsPage() {
             <tbody>
               {forms.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>{t('deliveryForms.empty')}</td>
+                  <td colSpan={7}>{t('deliveryForms.empty')}</td>
                 </tr>
               ) : (
                 forms.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <Link to={`/delivery-forms/${item.id}`}>{item.reference}</Link>
+                      {hasPermission('delivery_form.manage') && isBundlable(item) ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedFormIds.includes(item.id)}
+                          onChange={() => toggleFormSelection(item.id)}
+                          aria-label={t('dispatchNotes.selectBlItem', { reference: item.reference })}
+                        />
+                      ) : null}
+                    </td>
+                    <td>
+                      <Link to={resolveNavPath(`/delivery-forms/${item.id}`, user)}>{item.reference}</Link>
                     </td>
                     <td>{item.project?.title ?? '—'}</td>
                     <td>{item.client?.name ?? '—'}</td>
                     <td>{item.delivery_date ?? '—'}</td>
                     <td><StatusBadge status={item.status} /></td>
                     <td className="actions">
-                      <Link to={`/delivery-forms/${item.id}`} className="btn-action">{t('deliveryForms.open')}</Link>
+                      <Link to={resolveNavPath(`/delivery-forms/${item.id}`, user)} className="btn-action">{t('deliveryForms.open')}</Link>
                       {hasPermission('delivery_form.manage') && item.status === 'draft' ? (
                         <button type="button" className="ghost danger" onClick={() => handleDelete(item)}>
                           {t('common.delete')}
@@ -233,6 +333,57 @@ export default function DeliveryFormsPage() {
           </table>
         </div>
       )}
+
+      <section className="card mt-6">
+        <header className="section-header">
+          <div>
+            <h2>{t('dispatchNotes.title')}</h2>
+            <p className="hint">{t('dispatchNotes.subtitle')}</p>
+          </div>
+        </header>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{t('dispatchNotes.reference')}</th>
+                <th>{t('deliveryForms.client')}</th>
+                <th>{t('deliveryForms.status')}</th>
+                <th>{t('dispatchNotes.blCount')}</th>
+                <th>{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dispatchNotes.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>{t('dispatchNotes.empty')}</td>
+                </tr>
+              ) : (
+                dispatchNotes.map((note) => (
+                  <tr key={note.id}>
+                    <td>{note.reference_number}</td>
+                    <td>{note.client?.name ?? '—'}</td>
+                    <td><StatusBadge status={note.status} /></td>
+                    <td>{note.delivery_forms_count ?? 0}</td>
+                    <td className="actions">
+                      {hasPermission('delivery_form.manage') && note.status === 'draft' ? (
+                        <button
+                          type="button"
+                          className="btn-action"
+                          onClick={() => handleExecuteDispatchNote(note.id)}
+                          disabled={executingNoteId === note.id}
+                        >
+                          {executingNoteId === note.id ? t('dispatchNotes.executing') : t('dispatchNotes.execute')}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <Modal title={t('deliveryForms.new')} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form className="stack" onSubmit={handleSubmit}>

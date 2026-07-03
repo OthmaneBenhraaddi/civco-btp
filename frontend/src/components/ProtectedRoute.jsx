@@ -1,10 +1,19 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
-import { getHomePathForRole, isAdminOnlyPath } from '../routes/routeAccess'
+import { appendTenantQuery } from '../utils/tenantDevContext'
+import { isPlatformSuperAdmin } from '../utils/authIdentity'
+import {
+  getHomePathForRole,
+  isAdminOnlyPath,
+  isClientOnlyPath,
+  isClientUser,
+  isEntityBoundAdminPath,
+  isSuperAdminOnlyPath,
+} from '../routes/routeAccess'
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, isAdmin, user } = useAuth()
+  const { isAuthenticated, loading, isAdmin, isSuperAdmin, user, roles } = useAuth()
   const { t } = useTranslation()
   const location = useLocation()
 
@@ -17,11 +26,29 @@ export default function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    return <Navigate to={appendTenantQuery('/login')} replace state={{ from: location.pathname }} />
+  }
+
+  const clientUser = isClientUser(user, roles)
+
+  if (clientUser && !isClientOnlyPath(location.pathname)) {
+    return <Navigate to="/portal" replace />
+  }
+
+  if (!clientUser && isClientOnlyPath(location.pathname)) {
+    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
   }
 
   if (!isAdmin && isAdminOnlyPath(location.pathname)) {
-    return <Navigate to={getHomePathForRole(user?.role)} replace />
+    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+  }
+
+  if (!isSuperAdmin && isSuperAdminOnlyPath(location.pathname)) {
+    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+  }
+
+  if (isPlatformSuperAdmin(user) && isEntityBoundAdminPath(location.pathname)) {
+    return <Navigate to="/super-admin" replace />
   }
 
   return <Outlet />

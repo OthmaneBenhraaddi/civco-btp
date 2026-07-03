@@ -6,15 +6,16 @@ import * as notificationsApi from '../api/notifications'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
+import { resolveNavPath } from '../routes/routeAccess'
 import NotificationDropdownItem from './notifications/NotificationDropdownItem'
 
-const BELL_PREVIEW_LIMIT = 5
+const BELL_PREVIEW_LIMIT = 8
 const BELL_POLL_MS = 12000
 
 export default function NotificationDropdown() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { user, isAdmin, isClientPortalUser } = useAuth()
   const rootRef = useRef(null)
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
@@ -24,22 +25,29 @@ export default function NotificationDropdown() {
   const [markingId, setMarkingId] = useState(null)
   const [markingAll, setMarkingAll] = useState(false)
 
+  const showActivityFeed = isAdmin && !isClientPortalUser
+
   const loadNotifications = useCallback(async () => {
-    if (!isAdmin) {
+    if (!user) {
       return
     }
 
     setLoading(true)
 
     try {
-      const [notificationsResult, activityResult] = await Promise.all([
-        notificationsApi.fetchUnreadNotifications({ limit: BELL_PREVIEW_LIMIT }),
-        activityLogsApi.fetchActivityLogs({ per_page: BELL_PREVIEW_LIMIT }),
-      ])
+      const notificationsResult = await notificationsApi.fetchUnreadNotifications({
+        limit: BELL_PREVIEW_LIMIT,
+      })
 
       setItems(notificationsResult.items)
       setUnreadCount(notificationsResult.unreadCount)
-      setActivityItems(activityResult.items ?? [])
+
+      if (showActivityFeed) {
+        const activityResult = await activityLogsApi.fetchActivityLogs({ per_page: BELL_PREVIEW_LIMIT })
+        setActivityItems(activityResult.items ?? [])
+      } else {
+        setActivityItems([])
+      }
     } catch {
       setItems([])
       setActivityItems([])
@@ -47,12 +55,12 @@ export default function NotificationDropdown() {
     } finally {
       setLoading(false)
     }
-  }, [isAdmin])
+  }, [showActivityFeed, user])
 
   useAutoRefresh(
     () => loadNotifications(),
     [loadNotifications],
-    { intervalMs: BELL_POLL_MS, runOnMount: isAdmin },
+    { intervalMs: BELL_POLL_MS, runOnMount: Boolean(user) },
   )
 
   useEffect(() => {
@@ -93,6 +101,15 @@ export default function NotificationDropdown() {
     }
   }
 
+  async function handleOpenNotification(notification) {
+    await handleMarkRead(notification.id)
+    setOpen(false)
+
+    if (notification.action_path) {
+      navigate(resolveNavPath(notification.action_path, user))
+    }
+  }
+
   async function handleMarkAllRead() {
     if (markingAll || unreadCount === 0) {
       return
@@ -112,7 +129,7 @@ export default function NotificationDropdown() {
 
   function handleActivityClick() {
     setOpen(false)
-    navigate('/history')
+    navigate(resolveNavPath('/history', user))
   }
 
   function activityTitle(entry) {
@@ -125,10 +142,10 @@ export default function NotificationDropdown() {
 
   const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount)
   const hasAlerts = items.length > 0
-  const hasActivity = activityItems.length > 0
+  const hasActivity = showActivityFeed && activityItems.length > 0
   const showEmptyState = !loading && !hasAlerts && !hasActivity
 
-  if (!isAdmin) {
+  if (!user) {
     return null
   }
 
@@ -148,7 +165,7 @@ export default function NotificationDropdown() {
         <Bell className="h-5 w-5" strokeWidth={1.75} />
         {unreadCount > 0 ? (
           <span
-            className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-500 px-0.5 text-[9px] font-semibold leading-none text-white ring-2 ring-slate-900"
+            className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-semibold leading-none text-white ring-2 ring-slate-900"
             aria-label={t('notifications.unreadCount', { count: unreadCount })}
           >
             {badgeLabel}
@@ -219,13 +236,14 @@ export default function NotificationDropdown() {
                       <NotificationDropdownItem
                         title={notification.title}
                         message={notification.message}
+                        type={notification.type}
                         createdAt={notification.created_at}
                         locale={locale}
                         isUnread
                         isMarking={markingId === notification.id}
                         markReadLabel={t('notifications.markRead')}
                         onMarkRead={() => handleMarkRead(notification.id)}
-                        onOpen={() => handleMarkRead(notification.id)}
+                        onOpen={() => handleOpenNotification(notification)}
                       />
                     </li>
                   ))}
@@ -258,15 +276,17 @@ export default function NotificationDropdown() {
             ) : null}
           </div>
 
-          <div className="border-t border-slate-800/60 px-5 py-3.5">
-            <Link
-              to="/history"
-              onClick={() => setOpen(false)}
-              className="block text-center text-xs font-medium text-slate-400 transition-colors duration-200 hover:text-white"
-            >
-              {t('notifications.viewAllHistory')}
-            </Link>
-          </div>
+          {showActivityFeed ? (
+            <div className="border-t border-slate-800/60 px-5 py-3.5">
+              <Link
+                to={resolveNavPath('/history', user)}
+                onClick={() => setOpen(false)}
+                className="block text-center text-xs font-medium text-slate-400 transition-colors duration-200 hover:text-white"
+              >
+                {t('notifications.viewAllHistory')}
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

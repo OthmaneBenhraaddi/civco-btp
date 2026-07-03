@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Enums\TaskStatus;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
+        'tenant_id',
         'project_phase_id',
         'assigned_to_user_id',
         'title',

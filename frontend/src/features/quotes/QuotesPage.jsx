@@ -6,6 +6,7 @@ import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
 import * as quotesApi from '../../api/quotes'
 import { extractErrorMessage } from '../../utils/apiHelpers'
@@ -62,7 +63,7 @@ export default function QuotesPage() {
   }, [search, statusFilter])
 
   useEffect(() => {
-    clientsApi.fetchClients({ per_page: 100, is_active: true })
+    clientsApi.fetchClients({ per_page: 100 })
       .then((data) => setClients(data.data ?? []))
       .catch(() => setClients([]))
   }, [])
@@ -180,14 +181,14 @@ export default function QuotesPage() {
                 quotes.map((quote) => (
                   <tr key={quote.id}>
                     <td>
-                      <Link to={`/quotes/${quote.id}`}>{quote.reference}</Link>
+                      <Link to={resolveNavPath(`/quotes/${quote.id}`, user)}>{quote.reference}</Link>
                     </td>
                     <td>{quote.client?.name ?? '—'}</td>
                     <td><StatusBadge status={quote.status} /></td>
                     <td>{formatMoney(quote.total_ttc, locale)}</td>
                     <td>{quote.issued_at ?? '—'}</td>
                     <td className="actions">
-                      <Link to={`/quotes/${quote.id}`} className="btn-action">{t('quotes.open')}</Link>
+                      <Link to={resolveNavPath(`/quotes/${quote.id}`, user)} className="btn-action">{t('quotes.open')}</Link>
                       {hasPermission('quote.manage') && quote.status === 'draft' ? (
                         <button type="button" className="ghost danger" onClick={() => handleDelete(quote)}>
                           {t('common.delete')}

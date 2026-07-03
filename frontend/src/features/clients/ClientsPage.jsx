@@ -11,11 +11,14 @@ import * as clientsApi from '../../api/clients'
 import * as badgesApi from '../../api/badges'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import ClientContactsPanel from './ClientContactsPanel'
+import ClientPortalPanel from './ClientPortalPanel'
 import ClientBadgesPanel, { isBadgeSelected, normalizeBadgeIds } from './ClientBadgesPanel'
 import { getClientRoleId, setClientRoleId } from '../roles/clientRoleStore'
 import { getAllRoles, getRoleById, getRoleLabel } from '../roles/rolesStore'
 import * as clientContactsApi from '../../api/clientContacts'
+import * as teamMembersApi from '../../api/teamMembers'
 import { extractErrorMessage } from '../../utils/apiHelpers'
+import { isPlatformSuperAdmin } from '../../utils/authIdentity'
 import NewClientModal from './components/NewClientModal'
 import {
   logClientCreated,
@@ -91,12 +94,15 @@ function clientCardClasses(isSelected) {
 }
 
 export default function ClientsPage() {
-  const { hasPermission, user, roles } = useAuth()
+  const { hasPermission, user, roles, isAdmin } = useAuth()
   const { t } = useTranslation()
   const location = useLocation()
+  const isSuperAdmin = isPlatformSuperAdmin(user)
   const [clients, setClients] = useState([])
   const [meta, setMeta] = useState(null)
   const [search, setSearch] = useState('')
+  const [tenantFilter, setTenantFilter] = useState('')
+  const [tenantOptions, setTenantOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -104,6 +110,7 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [portalToggling, setPortalToggling] = useState(false)
   const [roleMapVersion, setRoleMapVersion] = useState(0)
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [selectedClientDetail, setSelectedClientDetail] = useState(null)
@@ -115,7 +122,12 @@ export default function ClientsPage() {
     setError('')
 
     try {
-      const data = await clientsApi.fetchClients({ search, page })
+      const params = { search, page }
+      if (isSuperAdmin && tenantFilter) {
+        params.tenant_id = tenantFilter
+      }
+
+      const data = await clientsApi.fetchClients(params)
       setClients(data.data ?? [])
       setMeta(data.meta ?? null)
     } catch (err) {
@@ -127,7 +139,25 @@ export default function ClientsPage() {
 
   useEffect(() => {
     loadClients()
-  }, [search])
+  }, [search, tenantFilter, isSuperAdmin])
+
+  useEffect(() => {
+    if (!isSuperAdmin) return undefined
+
+    let cancelled = false
+
+    teamMembersApi.fetchTeamTenantOptions()
+      .then((response) => {
+        if (!cancelled) setTenantOptions(response.data ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setTenantOptions([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isSuperAdmin])
 
   useEffect(() => {
     async function loadBadges() {
@@ -314,6 +344,24 @@ export default function ClientsPage() {
 
   const selectedRole = selectedClient ? resolveClientRole(selectedClient.id) : null
 
+  async function handlePortalToggle(active) {
+    if (!selectedClient) return
+
+    setPortalToggling(true)
+    setError('')
+
+    try {
+      const data = await clientsApi.toggleClientPortalStatus(selectedClient.id, active)
+      const updated = data.data ?? data
+      setSelectedClientDetail(updated)
+      await loadClients(meta?.current_page ?? 1)
+    } catch (err) {
+      setError(extractErrorMessage(err, t('clients.portal.toggleError')))
+    } finally {
+      setPortalToggling(false)
+    }
+  }
+
   return (
     <div className="clients-page list-page">
       <header className="page-header">
@@ -325,12 +373,26 @@ export default function ClientsPage() {
         </PermissionGate>
       </header>
 
-      <div className="toolbar">
+      <div className="toolbar flex flex-wrap items-center gap-3">
         <SearchInput
           placeholder={t('clients.search')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        {isSuperAdmin ? (
+          <select
+            className="filter-select min-w-[12rem] py-2 text-sm"
+            value={tenantFilter}
+            onChange={(event) => setTenantFilter(event.target.value)}
+          >
+            <option value="">{t('clients.entityFilterAll')}</option>
+            {tenantOptions.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>
+                {tenant.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -433,6 +495,15 @@ export default function ClientsPage() {
                       </select>
                     </div>
                   </div>
+                </div>
+
+                <div className="mt-6">
+                  <ClientPortalPanel
+                    portalUser={selectedClient.portal_user}
+                    canManage={isAdmin && hasPermission('client.update')}
+                    toggling={portalToggling}
+                    onToggle={handlePortalToggle}
+                  />
                 </div>
 
                 <div className="mt-6">

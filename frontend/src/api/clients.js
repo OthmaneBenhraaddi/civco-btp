@@ -5,6 +5,11 @@ export async function fetchClients(params = {}) {
   return data
 }
 
+/** Clients available in create forms (projects, quotes, invoices, BL). */
+export async function fetchClientsForPicker() {
+  return fetchClients({ per_page: 100 })
+}
+
 export async function createClient(payload) {
   const { data } = await api.post('/api/v1/clients', payload)
   return data
@@ -22,5 +27,10 @@ export async function deleteClient(id) {
 
 export async function fetchClient(id) {
   const { data } = await api.get(`/api/v1/clients/${id}`)
+  return data
+}
+
+export async function toggleClientPortalStatus(id, active) {
+  const { data } = await api.patch(`/api/v1/clients/${id}/portal-status`, { active })
   return data
 }

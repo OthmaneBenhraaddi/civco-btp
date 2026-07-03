@@ -22,7 +22,7 @@ class InvoiceResource extends JsonResource
             'total_ttc' => (float) $this->total_ttc,
             'amount_paid' => (float) $this->amount_paid,
             'balance_due' => (float) $this->balance_due,
-            'print_count' => (int) $this->print_count,
+            'generation_count' => (int) $this->generation_count,
             'client' => $this->whenLoaded('client', fn () => [
                 'id' => $this->client->id,
                 'name' => $this->client->name,

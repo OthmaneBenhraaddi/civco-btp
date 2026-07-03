@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ProjectStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
+use App\Http\Controllers\Concerns\ResolvesTenantContext;
 use App\Http\Controllers\Concerns\ResolvesUserAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Project\StoreProjectRequest;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 class ProjectController extends Controller
 {
     use ResolvesCompanyContext;
+    use ResolvesTenantContext;
     use ResolvesUserAccess;
 
     public function __construct(
@@ -72,6 +74,8 @@ class ProjectController extends Controller
 
     public function store(StoreProjectRequest $request): JsonResponse
     {
+        $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
+
         $project = DB::transaction(function () use ($request): Project {
             $validated = $request->validated();
             $lotIds = $validated['lot_ids'] ?? [];
@@ -81,6 +85,7 @@ class ProjectController extends Controller
 
             $project = Project::query()->create([
                 ...$validated,
+                ...$this->tenantAttributesForCreate($request),
                 'company_id' => $this->companyId($request),
                 'reference' => $this->referenceService->nextForCompany($this->companyId($request)),
                 'status' => $request->input('status', ProjectStatus::Planned->value),

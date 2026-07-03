@@ -2,12 +2,17 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\PermissionResolver;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
 {
+    public function __construct(
+        private readonly PermissionResolver $permissionResolver,
+    ) {}
+
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $user = $request->user();
@@ -17,10 +22,15 @@ class CheckPermission
             abort(401);
         }
 
-        if (! in_array($permission, $user->permissionSlugsForCompany($companyId), true)) {
-            abort(403, 'Insufficient permissions.');
+        $userSlugs = $user->permissionSlugsForCompany($companyId);
+        $required = explode('|', $permission);
+
+        foreach ($required as $slug) {
+            if ($this->permissionResolver->userHas($userSlugs, trim($slug))) {
+                return $next($request);
+            }
         }
 
-        return $next($request);
+        abort(403, 'Insufficient permissions.');
     }
 }

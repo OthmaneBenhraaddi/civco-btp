@@ -1,15 +1,17 @@
-export default function PermissionToggle({ checked, onChange, label }) {
+export default function PermissionToggle({ checked, onChange, label, disabled = false }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={[
         'permission-toggle relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5',
         'border-0 shadow-none transition-colors duration-200 ease-in-out',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20',
+        disabled ? 'cursor-not-allowed opacity-50' : '',
         checked ? 'bg-blue-600/35' : 'bg-slate-800',
       ].join(' ')}
     >

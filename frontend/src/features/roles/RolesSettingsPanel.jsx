@@ -1,18 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import PermissionToggle from '../../components/PermissionToggle'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { PERMISSION_MODULES } from './mockRoles'
-import {
-  ALL_PERMISSION_IDS,
-  buildRolePermissionsState,
-  createCustomRole,
-  getAllRoles,
-  getRoleById,
-  getRoleDescription,
-  getRoleLabel,
-  persistRolePermissions,
-} from './rolesStore'
+import * as rolesApi from '../../api/roles'
+import { extractErrorMessage } from '../../utils/apiHelpers'
 
 function roleItemClasses(isActive) {
   const base = [
@@ -31,44 +22,124 @@ function roleItemClasses(isActive) {
   return base.join(' ')
 }
 
+function groupPermissions(permissions) {
+  const groups = new Map()
+
+  for (const permission of permissions) {
+    const moduleKey = permission.module ?? 'other'
+    if (!groups.has(moduleKey)) {
+      groups.set(moduleKey, [])
+    }
+    groups.get(moduleKey).push(permission)
+  }
+
+  return [...groups.entries()].map(([id, items]) => ({
+    id,
+    label: id,
+    permissions: items,
+  }))
+}
+
 export default function RolesSettingsPanel() {
   const { t } = useTranslation()
-  const [roles, setRoles] = useState(() => getAllRoles())
-  const [selectedRoleId, setSelectedRoleId] = useState(roles[0]?.id ?? 'super_admin')
-  const [rolePermissions, setRolePermissions] = useState(() => buildRolePermissionsState())
+  const [roles, setRoles] = useState([])
+  const [permissions, setPermissions] = useState([])
+  const [selectedRoleId, setSelectedRoleId] = useState(null)
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({ name: '', description: '' })
   const [createError, setCreateError] = useState('')
 
-  useEffect(() => {
-    persistRolePermissions(rolePermissions)
-  }, [rolePermissions])
+  const permissionModules = useMemo(() => groupPermissions(permissions), [permissions])
 
   const selectedRole = useMemo(
-    () => getRoleById(selectedRoleId),
-    [selectedRoleId, roles],
+    () => roles.find((role) => role.id === selectedRoleId) ?? null,
+    [roles, selectedRoleId],
   )
 
-  const activePermissions = rolePermissions[selectedRoleId] ?? []
+  const isSystemRole = Boolean(selectedRole?.is_system)
+  const isCustomRole = selectedRole && !selectedRole.is_system
 
-  function refreshRoles() {
-    setRoles(getAllRoles())
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const [rolesResponse, permissionsResponse] = await Promise.all([
+        rolesApi.fetchRoles(),
+        rolesApi.fetchPermissions(),
+      ])
+
+      const nextRoles = rolesResponse.data ?? []
+      const nextPermissions = permissionsResponse.data ?? []
+
+      setRoles(nextRoles)
+      setPermissions(nextPermissions)
+
+      setSelectedRoleId((current) => {
+        if (current && nextRoles.some((role) => role.id === current)) {
+          return current
+        }
+
+        return nextRoles[0]?.id ?? null
+      })
+    } catch (err) {
+      setError(extractErrorMessage(err, t('roles.loadError')))
+    } finally {
+      setLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    if (!selectedRole) {
+      setSelectedPermissionIds([])
+      return
+    }
+
+    setSelectedPermissionIds((selectedRole.permissions ?? []).map((permission) => permission.id))
+  }, [selectedRole])
+
+  async function persistPermissions(nextIds) {
+    if (!selectedRole || isSystemRole) return
+
+    setSaving(true)
+    setError('')
+
+    try {
+      const response = await rolesApi.updateRole(selectedRole.id, {
+        permission_ids: nextIds,
+      })
+      const updated = response.data ?? response
+
+      setRoles((current) => current.map((role) => (role.id === updated.id ? updated : role)))
+      setSelectedPermissionIds((updated.permissions ?? []).map((permission) => permission.id))
+    } catch (err) {
+      setError(extractErrorMessage(err, t('roles.saveError')))
+    } finally {
+      setSaving(false)
+    }
   }
 
   function togglePermission(permissionId) {
-    setRolePermissions((current) => {
-      const next = { ...current }
-      const set = new Set(next[selectedRoleId] ?? [])
+    if (isSystemRole) return
 
-      if (set.has(permissionId)) {
-        set.delete(permissionId)
-      } else {
-        set.add(permissionId)
-      }
+    const next = new Set(selectedPermissionIds)
+    if (next.has(permissionId)) {
+      next.delete(permissionId)
+    } else {
+      next.add(permissionId)
+    }
 
-      next[selectedRoleId] = [...set]
-      return next
-    })
+    const nextIds = [...next]
+    setSelectedPermissionIds(nextIds)
+    persistPermissions(nextIds)
   }
 
   function openCreateModal() {
@@ -77,7 +148,7 @@ export default function RolesSettingsPanel() {
     setCreateOpen(true)
   }
 
-  function handleCreateRole(event) {
+  async function handleCreateRole(event) {
     event.preventDefault()
 
     const name = createForm.name.trim()
@@ -86,18 +157,51 @@ export default function RolesSettingsPanel() {
       return
     }
 
-    const role = createCustomRole(name, createForm.description)
-    refreshRoles()
-    setRolePermissions((current) => ({
-      ...current,
-      [role.id]: [],
-    }))
-    setSelectedRoleId(role.id)
-    setCreateOpen(false)
+    setCreateError('')
+
+    try {
+      const response = await rolesApi.createRole({
+        name,
+        description: createForm.description.trim() || null,
+        permission_ids: [],
+      })
+      const created = response.data ?? response
+
+      setRoles((current) => [...current, created])
+      setSelectedRoleId(created.id)
+      setCreateOpen(false)
+    } catch (err) {
+      setCreateError(extractErrorMessage(err, t('roles.saveError')))
+    }
+  }
+
+  async function handleDeleteRole() {
+    if (!isCustomRole) return
+
+    if (!window.confirm(t('roles.deleteConfirm', { name: selectedRole.name }))) {
+      return
+    }
+
+    setError('')
+
+    try {
+      await rolesApi.deleteRole(selectedRole.id)
+      const remaining = roles.filter((role) => role.id !== selectedRole.id)
+      setRoles(remaining)
+      setSelectedRoleId(remaining[0]?.id ?? null)
+    } catch (err) {
+      setError(extractErrorMessage(err, t('roles.deleteError')))
+    }
+  }
+
+  if (loading) {
+    return <p className="text-sm text-slate-400">{t('common.loading')}</p>
   }
 
   return (
     <div className="roles-settings-panel mx-auto flex max-w-[1400px] flex-col gap-y-6">
+      {error ? <p className="error">{error}</p> : null}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <aside className="rounded-xl border border-slate-800/60 bg-[#111214] p-4 lg:col-span-1">
           <div className="mb-4 flex items-center justify-between gap-2">
@@ -124,11 +228,12 @@ export default function RolesSettingsPanel() {
                     onClick={() => setSelectedRoleId(role.id)}
                     className={roleItemClasses(isActive)}
                   >
-                    <span className="block truncate text-sm font-medium">{getRoleLabel(role, t)}</span>
+                    <span className="block truncate text-sm font-medium">{role.name}</span>
                     <span
                       className={`mt-0.5 block truncate text-xs ${isActive ? 'text-slate-400' : 'text-slate-500'}`}
                     >
-                      {getRoleDescription(role, t)}
+                      {role.description || role.slug}
+                      {role.is_system ? ` · ${t('roles.systemRole')}` : ''}
                     </span>
                   </button>
                 </li>
@@ -138,46 +243,71 @@ export default function RolesSettingsPanel() {
         </aside>
 
         <section className="rounded-xl border border-slate-800/60 bg-[#111214] p-5 lg:col-span-2">
-          <div className="mb-6 border-b border-slate-800/60 pb-4">
-            <h2 className="text-lg font-semibold text-white">{getRoleLabel(selectedRole, t)}</h2>
-            <p className="mt-1 text-sm text-slate-400">{getRoleDescription(selectedRole, t)}</p>
-            <p className="mt-2 text-xs text-slate-500">
-              {t('roles.activeCount', { count: activePermissions.length, total: ALL_PERMISSION_IDS.length })}
-            </p>
-          </div>
+          {selectedRole ? (
+            <>
+              <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800/60 pb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">{selectedRole.name}</h2>
+                  <p className="mt-1 text-sm text-slate-400">{selectedRole.description}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {t('roles.activeCount', {
+                      count: selectedPermissionIds.length,
+                      total: permissions.length,
+                    })}
+                    {saving ? ` · ${t('common.saving')}` : ''}
+                  </p>
+                  {isSystemRole ? (
+                    <p className="mt-2 text-xs text-amber-400/90">{t('roles.systemRoleHint')}</p>
+                  ) : null}
+                </div>
+                {isCustomRole ? (
+                  <button
+                    type="button"
+                    onClick={handleDeleteRole}
+                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10"
+                  >
+                    {t('common.delete')}
+                  </button>
+                ) : null}
+              </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {PERMISSION_MODULES.map((module) => (
-              <article
-                key={module.id}
-                className="rounded-xl border border-slate-800/50 bg-[#0d0e11]/80 p-4"
-              >
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  {t(module.labelKey)}
-                </h3>
-                <ul className="m-0 flex list-none flex-col p-0">
-                  {module.permissions.map((permission) => {
-                    const checked = activePermissions.includes(permission.id)
-                    const label = t(permission.labelKey)
+              <div className="grid gap-4 md:grid-cols-2">
+                {permissionModules.map((module) => (
+                  <article
+                    key={module.id}
+                    className="rounded-xl border border-slate-800/50 bg-[#0d0e11]/80 p-4"
+                  >
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      {t(`roles.modules.${module.id}`, module.label)}
+                    </h3>
+                    <ul className="m-0 flex list-none flex-col p-0">
+                      {module.permissions.map((permission) => {
+                        const checked = selectedPermissionIds.includes(permission.id)
+                        const label = permission.name
 
-                    return (
-                      <li
-                        key={permission.id}
-                        className="flex items-center justify-between gap-3 border-b border-slate-800/40 py-2.5 last:border-0"
-                      >
-                        <span className="text-sm text-slate-300">{label}</span>
-                        <PermissionToggle
-                          checked={checked}
-                          onChange={() => togglePermission(permission.id)}
-                          label={label}
-                        />
-                      </li>
-                    )
-                  })}
-                </ul>
-              </article>
-            ))}
-          </div>
+                        return (
+                          <li
+                            key={permission.id}
+                            className="flex items-center justify-between gap-3 border-b border-slate-800/40 py-2.5 last:border-0"
+                          >
+                            <span className="text-sm text-slate-300">{label}</span>
+                            <PermissionToggle
+                              checked={checked}
+                              disabled={isSystemRole || saving}
+                              onChange={() => togglePermission(permission.id)}
+                              label={label}
+                            />
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">{t('roles.empty')}</p>
+          )}
         </section>
       </div>
 

@@ -4,10 +4,13 @@ import PermissionGate from '../../components/PermissionGate'
 import Modal from '../../components/Modal'
 import StatusBadge from '../../components/StatusBadge'
 import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
+import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { useCommercialPrint } from '../../hooks/useCommercialPrint'
+import { usePolicyCommercialPrint } from '../../hooks/usePolicyCommercialPrint'
+import * as commercialDocumentsApi from '../../api/commercialDocuments'
 import * as deliveryFormsApi from '../../api/deliveryForms'
+import * as dispatchNotesApi from '../../api/dispatchNotes'
 import * as quotesApi from '../../api/quotes'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
@@ -39,6 +42,10 @@ export default function QuoteDetailPage() {
   const [blModalOpen, setBlModalOpen] = useState(false)
   const [selectedLineIds, setSelectedLineIds] = useState([])
   const [generatingBl, setGeneratingBl] = useState(false)
+  const [dispatchNotes, setDispatchNotes] = useState([])
+  const [dispatchNoteId, setDispatchNoteId] = useState('')
+  const [compiledFooter, setCompiledFooter] = useState('')
+  const [documentPreview, setDocumentPreview] = useState(null)
 
   const canEdit = quote?.status === 'draft' && hasPermission('quote.manage')
   const lines = unwrapResource(quote?.lines)
@@ -60,6 +67,30 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     loadQuote()
   }, [id])
+
+  useEffect(() => {
+    if (!id) return undefined
+
+    let cancelled = false
+
+    commercialDocumentsApi.fetchQuoteDocumentPreview(id)
+      .then((data) => {
+        if (!cancelled) {
+          setCompiledFooter(data.compiled_footer ?? '')
+          setDocumentPreview(data)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompiledFooter('')
+          setDocumentPreview(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, quote?.status])
 
   async function handleStatusChange(status) {
     setError('')
@@ -120,7 +151,35 @@ export default function QuoteDetailPage() {
     }
   }
 
+  useEffect(() => {
+    if (!quote?.client_id) {
+      setDispatchNotes([])
+      setDispatchNoteId('')
+      return
+    }
+
+    dispatchNotesApi.fetchDispatchNotes({
+      client_id: quote.client_id,
+      status: 'executed',
+      per_page: 50,
+    })
+      .then((data) => {
+        const items = data.data ?? []
+        setDispatchNotes(items)
+        setDispatchNoteId(items[0]?.id ? String(items[0].id) : '')
+      })
+      .catch(() => {
+        setDispatchNotes([])
+        setDispatchNoteId('')
+      })
+  }, [quote?.client_id])
+
   async function handleConvert() {
+    if (!dispatchNoteId) {
+      setError(t('dispatchNotes.requiredForInvoice'))
+      return
+    }
+
     if (!window.confirm(t('quotes.convertConfirm'))) {
       return
     }
@@ -129,7 +188,9 @@ export default function QuoteDetailPage() {
     setError('')
 
     try {
-      const data = await quotesApi.convertQuoteToInvoice(id)
+      const data = await quotesApi.convertQuoteToInvoice(id, {
+        dispatch_note_id: Number(dispatchNoteId),
+      })
       const invoice = data.data ?? data
       logQuoteConverted({
         actor: resolveActorLabel(user, roles, t('layout.profileFallbackName')),
@@ -184,14 +245,22 @@ export default function QuoteDetailPage() {
 
   const deliveryForms = quote?.delivery_forms ?? []
 
-  const incrementPrint = useCallback(async () => {
-    const data = await quotesApi.incrementQuotePrint(id)
+  const refreshQuote = useCallback(async () => {
+    const data = await quotesApi.fetchQuote(id)
     setQuote(data.data ?? data)
   }, [id])
 
-  const { copyVariant, printing, handlePrint } = useCommercialPrint({
-    printCount: quote?.print_count,
-    onIncrement: incrementPrint,
+  const {
+    isCopy,
+    copyStrength,
+    printing,
+    handlePrint,
+    tenantLogoUrl,
+    tenantName,
+  } = usePolicyCommercialPrint({
+    documentType: 'quote',
+    documentId: Number(id),
+    onTracked: refreshQuote,
   })
 
   if (loading) {
@@ -238,10 +307,23 @@ export default function QuoteDetailPage() {
               {printing ? t('print.printing') : t('print.print')}
             </button>
           ) : null}
-          {canEdit && lines.length > 0 ? (
-            <button type="button" className="ghost" onClick={() => handleStatusChange('sent')}>
-              {t('quotes.markSent')}
-            </button>
+          {canEdit ? (
+            <div className="inline-flex flex-col items-start gap-1">
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => handleStatusChange('sent')}
+                disabled={lines.length === 0}
+                title={lines.length === 0 ? t('quotes.publishRequiresLines') : undefined}
+              >
+                {t('quotes.markSent')}
+              </button>
+              <span className="max-w-xs text-xs text-slate-500">
+                {lines.length === 0
+                  ? t('quotes.publishRequiresLines')
+                  : t('quotes.markSentHint')}
+              </span>
+            </div>
           ) : null}
           {hasPermission('quote.manage') && quote.status === 'sent' ? (
             <>
@@ -259,9 +341,30 @@ export default function QuoteDetailPage() {
             </button>
           ) : null}
           {hasPermission('invoice.manage') && quote.status === 'accepted' && !quote.invoice ? (
-            <button type="button" onClick={handleConvert} disabled={converting || lines.length === 0}>
-              {converting ? t('quotes.converting') : t('quotes.convertToInvoice')}
-            </button>
+            <div className="inline-actions-stack">
+              <label className="dispatch-note-picker">
+                <span className="sr-only">{t('dispatchNotes.selectExecuted')}</span>
+                <select
+                  value={dispatchNoteId}
+                  onChange={(event) => setDispatchNoteId(event.target.value)}
+                  disabled={dispatchNotes.length === 0}
+                >
+                  <option value="">{t('dispatchNotes.selectExecuted')}</option>
+                  {dispatchNotes.map((note) => (
+                    <option key={note.id} value={note.id}>
+                      {note.reference_number} — {note.delivery_forms_count ?? 0} BL
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={handleConvert}
+                disabled={converting || lines.length === 0 || !dispatchNoteId}
+              >
+                {converting ? t('quotes.converting') : t('quotes.convertToInvoice')}
+              </button>
+            </div>
           ) : null}
           {quote.invoice ? (
             <Link to={`/invoices/${quote.invoice.id}`} className="btn-action">
@@ -418,21 +521,29 @@ export default function QuoteDetailPage() {
     </div>
 
     <div className="print-only">
-      <CommercialPrintSheet
-        documentType="quote"
-        reference={quote.reference}
-        clientName={quote.client?.name}
-        projectTitle={quote.project?.title}
-        issuedAt={quote.issued_at}
-        secondaryDate={quote.valid_until}
-        secondaryDateLabel={t('quotes.validUntil')}
-        notes={quote.notes}
-        lines={lines}
-        totalHt={quote.total_ht}
-        totalTax={quote.total_tax}
-        totalTtc={quote.total_ttc}
-        copyVariant={copyVariant}
-      />
+      <PolicyPrintWrapper watermarkLabel={isCopy ? t('print.copyWatermark') : null}>
+        <CommercialPrintSheet
+          documentType="quote"
+          reference={quote.reference}
+          clientName={quote.client?.name}
+          projectTitle={quote.project?.title}
+          issuedAt={quote.issued_at}
+          secondaryDate={quote.valid_until}
+          secondaryDateLabel={t('quotes.validUntil')}
+          notes={quote.notes}
+          compiledFooter={compiledFooter}
+          lines={lines}
+          totalHt={quote.total_ht}
+          totalTax={quote.total_tax}
+          totalTtc={quote.total_ttc}
+          isCopy={isCopy}
+          copyStrength={copyStrength}
+          watermarkLabel={isCopy ? t('print.copyWatermark') : null}
+          tenantLogoUrl={tenantLogoUrl ?? documentPreview?.tenant?.logo_url}
+          tenantName={tenantName ?? documentPreview?.tenant?.name}
+          signature={documentPreview?.signature}
+        />
+      </PolicyPrintWrapper>
     </div>
     </>
   )

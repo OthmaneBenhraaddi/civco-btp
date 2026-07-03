@@ -25,8 +25,8 @@ export async function deleteQuote(id) {
   return data
 }
 
-export async function convertQuoteToInvoice(id) {
-  const { data } = await api.post(`/api/v1/quotes/${id}/convert-to-invoice`)
+export async function convertQuoteToInvoice(id, payload = {}) {
+  const { data } = await api.post(`/api/v1/quotes/${id}/convert-to-invoice`, payload)
   return data
 }
 

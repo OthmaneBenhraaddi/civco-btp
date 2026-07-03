@@ -52,13 +52,22 @@ export const THEME_COLOR_GROUPS = [
     keys: ['role_purple', 'role_sky', 'role_amber', 'role_emerald', 'role_slate'],
   },
   {
-    id: 'charts',
-    labelKey: 'theme.groups.charts',
+    id: 'charts_financial',
+    labelKey: 'theme.groups.chartsFinancial',
+    hintKey: 'theme.groupHints.chartsFinancial',
+    keys: ['chart_revenue', 'chart_activity'],
+  },
+  {
+    id: 'charts_tasks',
+    labelKey: 'theme.groups.chartsTasks',
+    hintKey: 'theme.groupHints.chartsTasks',
+    keys: ['chart_in_progress', 'chart_completed'],
+  },
+  {
+    id: 'charts_chantiers',
+    labelKey: 'theme.groups.chartsChantiers',
+    hintKey: 'theme.groupHints.chartsChantiers',
     keys: [
-      'chart_revenue',
-      'chart_activity',
-      'chart_in_progress',
-      'chart_completed',
       'chart_palette_1',
       'chart_palette_2',
       'chart_palette_3',
@@ -75,8 +84,11 @@ export const STATUS_COLOR_KEYS = {
   completed: 'success_status',
   done: 'success_status',
   signed: 'accent_status',
+  signed_and_stamped: 'violet_status',
+  executed: 'success_status',
   accepted: 'info_status',
   sent: 'info_status',
+  pending: 'warning_status',
   invoiced: 'violet_status',
   in_progress: 'progress_status',
   planned: 'progress_status',
@@ -89,6 +101,9 @@ export const STATUS_COLOR_KEYS = {
   rejected: 'danger_status',
   draft: 'neutral_status',
   todo: 'neutral_status',
+  active: 'success_status',
+  inactive: 'neutral_status',
+  archived: 'neutral_status',
 }
 
 export const ROLE_TONE_COLOR_KEYS = {

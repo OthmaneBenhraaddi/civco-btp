@@ -6,7 +6,9 @@ import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
+import * as dispatchNotesApi from '../../api/dispatchNotes'
 import * as invoicesApi from '../../api/invoices'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
@@ -18,6 +20,7 @@ import {
 
 const emptyForm = {
   client_id: '',
+  dispatch_note_id: '',
   issued_at: '',
   due_date: '',
   notes: '',
@@ -36,6 +39,7 @@ export default function InvoicesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [dispatchNotes, setDispatchNotes] = useState([])
 
   async function loadInvoices(page = 1) {
     setLoading(true)
@@ -61,10 +65,25 @@ export default function InvoicesPage() {
   }, [search, statusFilter])
 
   useEffect(() => {
-    clientsApi.fetchClients({ per_page: 100, is_active: true })
+    clientsApi.fetchClients({ per_page: 100 })
       .then((data) => setClients(data.data ?? []))
       .catch(() => setClients([]))
   }, [])
+
+  useEffect(() => {
+    if (!form.client_id) {
+      setDispatchNotes([])
+      return
+    }
+
+    dispatchNotesApi.fetchDispatchNotes({
+      client_id: Number(form.client_id),
+      status: 'executed',
+      per_page: 50,
+    })
+      .then((data) => setDispatchNotes(data.data ?? []))
+      .catch(() => setDispatchNotes([]))
+  }, [form.client_id])
 
   function openCreate() {
     setForm({
@@ -82,6 +101,7 @@ export default function InvoicesPage() {
     try {
       const created = await invoicesApi.createInvoice({
         client_id: Number(form.client_id),
+        dispatch_note_id: Number(form.dispatch_note_id),
         issued_at: form.issued_at || null,
         due_date: form.due_date || null,
         notes: form.notes || null,
@@ -181,7 +201,7 @@ export default function InvoicesPage() {
                 invoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
-                      <Link to={`/invoices/${invoice.id}`}>{invoice.reference}</Link>
+                      <Link to={resolveNavPath(`/invoices/${invoice.id}`, user)}>{invoice.reference}</Link>
                     </td>
                     <td>{invoice.client?.name ?? '—'}</td>
                     <td><StatusBadge status={invoice.status} /></td>
@@ -189,7 +209,7 @@ export default function InvoicesPage() {
                     <td>{formatMoney(invoice.balance_due, locale)}</td>
                     <td>{invoice.due_date ?? '—'}</td>
                     <td className="actions">
-                      <Link to={`/invoices/${invoice.id}`} className="btn-action">{t('invoices.open')}</Link>
+                      <Link to={resolveNavPath(`/invoices/${invoice.id}`, user)} className="btn-action">{t('invoices.open')}</Link>
                       {hasPermission('invoice.manage') && invoice.status === 'draft' ? (
                         <button type="button" className="ghost danger" onClick={() => handleDelete(invoice)}>
                           {t('common.delete')}
@@ -210,7 +230,11 @@ export default function InvoicesPage() {
             {t('invoices.client')} *
             <select
               value={form.client_id}
-              onChange={(event) => setForm({ ...form, client_id: event.target.value })}
+              onChange={(event) => setForm({
+                ...form,
+                client_id: event.target.value,
+                dispatch_note_id: '',
+              })}
               required
             >
               <option value="">{t('invoices.selectClient')}</option>
@@ -218,6 +242,25 @@ export default function InvoicesPage() {
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>
+          </label>
+          <label>
+            {t('dispatchNotes.selectExecuted')} *
+            <select
+              value={form.dispatch_note_id}
+              onChange={(event) => setForm({ ...form, dispatch_note_id: event.target.value })}
+              required
+              disabled={!form.client_id || dispatchNotes.length === 0}
+            >
+              <option value="">{t('dispatchNotes.selectExecuted')}</option>
+              {dispatchNotes.map((note) => (
+                <option key={note.id} value={note.id}>
+                  {note.reference_number} — {note.delivery_forms_count ?? 0} BL
+                </option>
+              ))}
+            </select>
+            {form.client_id && dispatchNotes.length === 0 ? (
+              <span className="hint">{t('dispatchNotes.noneForClient')}</span>
+            ) : null}
           </label>
           <div className="form-row">
             <label>

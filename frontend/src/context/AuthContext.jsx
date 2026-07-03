@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { isClientUser as checkIsClientUser } from '../routes/routeAccess'
 import * as authApi from '../api/auth'
 import { setActiveCompanyId, setAuthBootstrapComplete } from '../api/client'
+import { clearDevTenantSlug, getDevTenantSlug, setDevTenantSlug } from '../utils/tenantDevContext'
+import { isPlatformSuperAdmin, sessionMatchesTenantContext } from '../utils/authIdentity'
+import { userHasPermission } from '../utils/permissionResolver'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +14,7 @@ const EMPTY_CONTEXT = {
   companies: [],
   roles: [],
   permissions: [],
+  tenant: null,
 }
 
 export function AuthProvider({ children }) {
@@ -18,21 +23,49 @@ export function AuthProvider({ children }) {
   const [companies, setCompanies] = useState([])
   const [roles, setRoles] = useState([])
   const [permissions, setPermissions] = useState([])
+  const [tenant, setTenant] = useState(null)
   const [loading, setLoading] = useState(true)
   const bootstrappingRef = useRef(false)
 
   const applyContext = useCallback((context) => {
+    const activeTenantSlug = getDevTenantSlug()
+
+    if (
+      context?.user
+      && activeTenantSlug
+      && !sessionMatchesTenantContext(context.user, context.tenant, activeTenantSlug)
+    ) {
+      setUser(null)
+      setCompany(null)
+      setCompanies([])
+      setRoles([])
+      setPermissions([])
+      setTenant(null)
+      setActiveCompanyId(null)
+      return false
+    }
+
     setUser(context.user)
     setCompany(context.company)
     setCompanies(context.companies ?? [])
     setRoles(context.roles ?? [])
     setPermissions(context.permissions ?? [])
+    setTenant(context.tenant ?? null)
     setActiveCompanyId(context.company?.id ?? null)
+
+    if (isPlatformSuperAdmin(context.user)) {
+      clearDevTenantSlug()
+    } else if (context.tenant?.subdomain) {
+      setDevTenantSlug(context.tenant.subdomain)
+    }
+
+    return true
   }, [])
 
   const clearContext = useCallback(() => {
     applyContext(EMPTY_CONTEXT)
     setActiveCompanyId(null)
+    clearDevTenantSlug()
   }, [applyContext])
 
   const bootstrapSession = useCallback(async () => {
@@ -44,8 +77,7 @@ export function AuthProvider({ children }) {
 
     try {
       const context = await authApi.fetchMe()
-      if (context?.user) {
-        applyContext(context)
+      if (context?.user && applyContext(context)) {
         return context
       }
     } catch {
@@ -102,11 +134,13 @@ export function AuthProvider({ children }) {
   }, [clearContext])
 
   const hasPermission = useCallback(
-    (permission) => permissions.includes(permission),
+    (permission) => userHasPermission(permissions, permission),
     [permissions],
   )
 
   const isAdmin = user?.role === 'admin'
+  const isSuperAdmin = isPlatformSuperAdmin(user)
+  const isClientPortalUser = checkIsClientUser(user, roles)
 
   const value = useMemo(
     () => ({
@@ -115,6 +149,7 @@ export function AuthProvider({ children }) {
       companies,
       roles,
       permissions,
+      tenant,
       loading,
       isAuthenticated: Boolean(user),
       login,
@@ -122,6 +157,8 @@ export function AuthProvider({ children }) {
       refresh,
       hasPermission,
       isAdmin,
+      isSuperAdmin,
+      isClientPortalUser,
     }),
     [
       user,
@@ -129,12 +166,15 @@ export function AuthProvider({ children }) {
       companies,
       roles,
       permissions,
+      tenant,
       loading,
       login,
       logout,
       refresh,
       hasPermission,
       isAdmin,
+      isSuperAdmin,
+      isClientPortalUser,
     ],
   )
 
