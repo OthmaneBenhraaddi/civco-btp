@@ -24,9 +24,14 @@ import ClientPortalQuotesPage from '../features/client-portal/ClientPortalQuotes
 import ClientPortalQuoteDetailPage from '../features/client-portal/ClientPortalQuoteDetailPage'
 import ConfigurationPage from '../features/configuration/ConfigurationPage'
 import RolesPage from '../features/roles/RolesPage'
-import SuperAdminDashboard from '../features/super-admin/SuperAdminDashboard'
+import SuperAdminOverviewPage from '../features/super-admin/SuperAdminOverviewPage'
+import SuperAdminEntitiesPage from '../features/super-admin/SuperAdminEntitiesPage'
+import SuperAdminCreateEntityPage from '../features/super-admin/SuperAdminCreateEntityPage'
+import SuperAdminMembersPage from '../features/super-admin/SuperAdminMembersPage'
+import SuperAdminSystemLogsPage from '../features/super-admin/SuperAdminSystemLogsPage'
 import AdminMessagingPage from '../features/messaging/AdminMessagingPage'
 import TeamManagementPage from '../features/team/TeamManagementPage'
+import ProfileSettingsPage from '../features/profile/ProfileSettingsPage'
 import SuperAdminRoute from '../components/SuperAdminRoute'
 import AppLayout from '../layouts/AppLayout'
 import AuthLayout from '../layouts/AuthLayout'
@@ -57,22 +62,29 @@ export default function AppRoutes() {
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
 
-              <Route element={<SuperAdminRoute />}>
-                <Route path="super-admin" element={<SuperAdminDashboard />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="quotes" element={<QuotesPage />} />
+              <Route path="quotes/:id" element={<QuoteDetailPage />} />
+              <Route path="delivery-forms" element={<DeliveryFormsPage />} />
+              <Route path="delivery-forms/:id" element={<DeliveryFormDetailPage />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+              <Route path="profile" element={<ProfileSettingsPage />} />
+              <Route path="discussions" element={<AdminMessagingPage />} />
+
+              <Route path="super-admin" element={<SuperAdminRoute />}>
+                <Route index element={<Navigate to="overview" replace />} />
+                <Route path="overview" element={<SuperAdminOverviewPage />} />
+                <Route path="entities" element={<SuperAdminEntitiesPage />} />
+                <Route path="create" element={<SuperAdminCreateEntityPage />} />
+                <Route path="members" element={<SuperAdminMembersPage />} />
+                <Route path="logs" element={<SuperAdminSystemLogsPage />} />
               </Route>
 
               <Route element={<AdminRoute />}>
-                <Route path="clients" element={<ClientsPage />} />
-                <Route path="quotes" element={<QuotesPage />} />
-                <Route path="quotes/:id" element={<QuoteDetailPage />} />
-                <Route path="delivery-forms" element={<DeliveryFormsPage />} />
-                <Route path="delivery-forms/:id" element={<DeliveryFormDetailPage />} />
-                <Route path="invoices" element={<InvoicesPage />} />
-                <Route path="invoices/:id" element={<InvoiceDetailPage />} />
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="configuration" element={<ConfigurationPage />} />
                 <Route path="history" element={<HistoryPage />} />
-                <Route path="discussions" element={<AdminMessagingPage />} />
                 <Route path="team" element={<TeamManagementPage />} />
               </Route>
             </Route>

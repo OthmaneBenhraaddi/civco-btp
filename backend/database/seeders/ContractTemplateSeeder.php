@@ -10,15 +10,7 @@ use Illuminate\Database\Seeder;
 
 class ContractTemplateSeeder extends Seeder
 {
-    public function run(): void
-    {
-        $tenant = Tenant::query()->where('subdomain', 'civco')->first();
-
-        $template = ContractTemplate::query()->updateOrCreate(
-            ['title' => 'Contrat de maîtrise d\'œuvre'],
-            [
-                'tenant_id' => $tenant?->id,
-                'content' => <<<'HTML'
+    private const TEMPLATE_BODY = <<<'HTML'
 <h2 style="font-size:20px;margin:0 0 16px;color:#111827;">Contrat de maîtrise d'œuvre</h2>
 <p>Entre la société <strong>{company_name}</strong>, ci-après « le Maître d'œuvre »,</p>
 <p>Et le client <strong>{client_name}</strong>, domicilié à {client_city}, ci-après « le Client »,</p>
@@ -30,20 +22,38 @@ class ContractTemplateSeeder extends Seeder
 <h3 style="font-size:16px;margin:24px 0 8px;">Article 3 — Honoraires</h3>
 <p>Les honoraires sont convenus sur la base du budget estimatif du projet : <strong>{project_budget} MAD</strong> (HT), selon les modalités définies dans le devis annexé.</p>
 <p>Fait à {project_city}, le {date_short}.</p>
-HTML,
-            ],
-        );
+HTML;
 
-        $project = Project::query()->whereIn('status', ['planned', 'in_progress', 'on_hold'])->first();
+    public function run(): void
+    {
+        Tenant::query()->each(function (Tenant $tenant): void {
+            ContractTemplate::query()->updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'title' => 'Contrat de maîtrise d\'œuvre',
+                ],
+                ['content' => self::TEMPLATE_BODY],
+            );
 
-        if ($project === null) {
-            return;
-        }
+            $project = Project::query()
+                ->where('tenant_id', $tenant->id)
+                ->whereIn('status', ['planned', 'in_progress', 'on_hold'])
+                ->first();
 
-        if ($project->contracts()->exists()) {
-            return;
-        }
+            if ($project === null || $project->contracts()->exists()) {
+                return;
+            }
 
-        app(ContractCompilationService::class)->createContractFromTemplate($template, $project);
+            $template = ContractTemplate::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('title', 'Contrat de maîtrise d\'œuvre')
+                ->first();
+
+            if ($template === null) {
+                return;
+            }
+
+            app(ContractCompilationService::class)->createContractFromTemplate($template, $project);
+        });
     }
 }

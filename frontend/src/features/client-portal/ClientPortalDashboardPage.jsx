@@ -6,9 +6,11 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
 import { BENTO_CARD_CLASS, PAGE_SUBTITLE_CLASS, PAGE_TITLE_CLASS } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
+import { formatMoney } from '../../utils/currency'
 import { LIVE_SYNC_INTERVAL_MS, useAutoRefresh } from '../../hooks/useAutoRefresh'
 import ChantierLiveFeed from './components/ChantierLiveFeed'
 import ClientContractSignature from './components/ClientContractSignature'
+import PortalAmendmentsPanel from './components/PortalAmendmentsPanel'
 import PortalProjectSelector from './components/PortalProjectSelector'
 import ProgressRing, { ProgressBar, useWeekLabel } from './components/ProjectProgressSection'
 
@@ -232,7 +234,17 @@ export default function ClientPortalDashboardPage() {
                   </div>
                   <div className="rounded-lg bg-[#121316] px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.endDate')}</dt>
-                    <dd className="mt-1 font-medium text-white">{selectedProject?.end_date ?? '—'}</dd>
+                    <dd className="mt-1 font-medium text-white">
+                      {selectedProject?.revised_end_date ?? selectedProject?.end_date ?? '—'}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                    <dt className="text-slate-500">{t('clientPortal.revisedBudget')}</dt>
+                    <dd className="mt-1 font-medium text-white">
+                      {selectedProject?.revised_budget != null
+                        ? formatMoney(selectedProject.revised_budget, locale)
+                        : '—'}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -256,6 +268,11 @@ export default function ClientPortalDashboardPage() {
           </div>
 
           <ChantierLiveFeed media={media} loading={loadingDetails} />
+
+          <PortalAmendmentsPanel
+            projectId={selectedProjectId}
+            onChanged={() => loadProjects({ silent: true })}
+          />
 
           <ClientContractSignature projectId={selectedProjectId} />
         </>

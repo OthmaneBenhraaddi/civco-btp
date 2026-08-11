@@ -3,11 +3,14 @@
 namespace App\Http\Requests\SuperAdmin;
 
 use App\Enums\TenantStatus;
+use App\Http\Requests\SuperAdmin\Concerns\ValidatesTenantBrandingFields;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreTenantRequest extends FormRequest
 {
+    use ValidatesTenantBrandingFields;
+
     public function authorize(): bool
     {
         return $this->user()?->isSuperAdmin() ?? false;
@@ -27,6 +30,7 @@ class StoreTenantRequest extends FormRequest
             ],
             'status' => ['required', Rule::enum(TenantStatus::class)],
             'logo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
+            ...$this->brandingRules(),
         ];
     }
 }

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+vendor
+composer.phar
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+bootstrap/cache/*.php
+tests
+.phpunit.cache
+.phpunit.result.cache
+README.md

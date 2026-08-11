@@ -16,13 +16,22 @@ export function usePolicyCommercialPrint({ documentType, documentId, onTracked }
   })
 
   const activePolicy = trackedPolicy ?? policyPrint.printPolicy
+  const hasHeader = activePolicy?.has_header ?? policyPrint.hasHeader
 
   return {
     ...policyPrint,
     trackedPolicy,
     isCopy: activePolicy?.is_copy ?? false,
     copyStrength: activePolicy?.copy_strength ?? null,
-    tenantLogoUrl: activePolicy?.tenant_logo_url ?? policyPrint.tenantLogoUrl,
-    tenantName: activePolicy?.tenant_name ?? policyPrint.tenantName,
+    hasHeader,
+    tenantLogoUrl: hasHeader
+      ? (activePolicy?.tenant_logo_url ?? policyPrint.tenantLogoUrl)
+      : null,
+    tenantName: hasHeader
+      ? (activePolicy?.tenant_name ?? policyPrint.tenantName)
+      : null,
+    company: hasHeader
+      ? (activePolicy?.company ?? policyPrint.company)
+      : null,
   }
 }

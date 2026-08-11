@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Enums\ProjectStatus;
 use App\Enums\TaskStatus;
+use App\Enums\UserStatus;
 use App\Models\ActivityLog;
-use App\Models\Notification;
 use App\Models\Client;
 use App\Models\Document;
 use App\Models\Project;
@@ -21,6 +21,10 @@ class ActivityLogService
         'progress_percent',
         'updated_at',
     ];
+
+    public function __construct(
+        private readonly NotificationService $notificationService,
+    ) {}
 
     public function log(
         int $companyId,
@@ -180,25 +184,12 @@ class ActivityLogService
         string $message,
         ?int $excludeUserId = null,
     ): void {
-        $adminIds = User::query()
-            ->where('role', 'admin')
-            ->where('is_active', true)
-            ->whereHas('companies', fn ($query) => $query->where('companies.id', $companyId))
-            ->pluck('id');
-
-        foreach ($adminIds as $adminId) {
-            if ($excludeUserId !== null && (int) $adminId === $excludeUserId) {
-                continue;
-            }
-
-            Notification::query()->create([
-                'user_id' => $adminId,
-                'title' => $title,
-                'message' => $message,
-                'read_at' => null,
-                'created_at' => now(),
-            ]);
-        }
+        $this->notificationService->notifyCompanyAdmins(
+            $companyId,
+            $title,
+            $message,
+            $excludeUserId,
+        );
     }
 
     private function maybeNotifyPhaseCompleted(ProjectPhase $phase, string $projectTitle): void
@@ -259,6 +250,133 @@ class ActivityLogService
             $project->company_id,
             'Document ajouté',
             "{$actor} a ajouté « {$document->original_filename} » au projet « {$project->title} ».",
+        );
+    }
+
+    public function logTeamMemberAccessToggled(User $member, UserStatus $nextStatus, ?User $actor = null): void
+    {
+        $companyId = $member->companies()
+            ->orderByDesc('company_user.is_primary')
+            ->value('companies.id');
+
+        if ($companyId === null) {
+            return;
+        }
+
+        $actorLabel = $actor !== null ? trim($actor->full_name) : $this->actorLabel();
+        $memberLabel = trim($member->full_name) !== '' ? trim($member->full_name) : $member->email;
+        $isDeactivating = $nextStatus !== UserStatus::Active;
+
+        $description = $isDeactivating
+            ? "🔐 Sécurité — Accès désactivé pour {$memberLabel} par {$actorLabel}."
+            : "🔐 Sécurité — Accès réactivé pour {$memberLabel} par {$actorLabel}.";
+
+        $this->log(
+            $companyId,
+            null,
+            'updated',
+            $description,
+            $actor?->id,
+        );
+    }
+
+    public function logTeamMemberRoleChanged(
+        User $member,
+        string $previousRoleName,
+        string $newRoleName,
+        ?User $actor = null,
+    ): void {
+        $companyId = $member->companies()
+            ->orderByDesc('company_user.is_primary')
+            ->value('companies.id');
+
+        if ($companyId === null) {
+            return;
+        }
+
+        $actorLabel = $actor !== null ? trim($actor->full_name) : $this->actorLabel();
+        $memberLabel = trim($member->full_name) !== '' ? trim($member->full_name) : $member->email;
+        $safePrevious = trim($previousRoleName) !== '' ? trim($previousRoleName) : '—';
+        $safeNext = trim($newRoleName) !== '' ? trim($newRoleName) : 'Membre';
+
+        $this->log(
+            $companyId,
+            null,
+            'updated',
+            "🔐 Sécurité — {$actorLabel} a changé le rôle de {$memberLabel} de « {$safePrevious} » en « {$safeNext} ».",
+            $actor?->id,
+        );
+    }
+
+    public function logTeamMemberArchived(User $member, ?User $actor = null): void
+    {
+        $companyId = $member->companies()
+            ->orderByDesc('company_user.is_primary')
+            ->value('companies.id');
+
+        if ($companyId === null) {
+            return;
+        }
+
+        $actorLabel = $actor !== null ? trim($actor->full_name) : $this->actorLabel();
+        $memberLabel = trim($member->full_name) !== '' ? trim($member->full_name) : $member->email;
+
+        $this->log(
+            $companyId,
+            null,
+            'updated',
+            "🔐 Sécurité — {$actorLabel} a archivé le compte de {$memberLabel}. Accès bloqué, historique conservé.",
+            $actor?->id,
+        );
+    }
+
+    public function logClientArchived(Client $client, ?User $actor = null): void
+    {
+        $actorLabel = $actor !== null ? trim($actor->full_name) : $this->actorLabel();
+
+        $this->log(
+            $client->company_id,
+            null,
+            'updated',
+            "🔐 Sécurité — {$actorLabel} a archivé le client « {$client->name} ». Données et historique conservés.",
+            $actor?->id,
+        );
+    }
+
+    public function logCredentialsUpdated(
+        User $member,
+        string $roleLabel,
+        string $newEmail,
+        bool $emailChanged,
+        bool $passwordChanged,
+        ?User $actor = null,
+    ): void {
+        $companyId = $member->companies()
+            ->orderByDesc('company_user.is_primary')
+            ->value('companies.id');
+
+        if ($companyId === null) {
+            return;
+        }
+
+        $memberLabel = trim($member->full_name) !== '' ? trim($member->full_name) : $member->email;
+        $actorLabel = $actor !== null ? trim($actor->full_name) : $memberLabel;
+        $safeRoleLabel = trim($roleLabel) !== '' ? $roleLabel : 'Membre';
+
+        if ($emailChanged && $passwordChanged) {
+            $description = "🔐 Sécurité — {$actorLabel} ({$safeRoleLabel}) a mis à jour son e-mail et son mot de passe (Nouvel e-mail: {$newEmail}).";
+        } elseif ($passwordChanged) {
+            $description = "🔐 Sécurité — {$actorLabel} ({$safeRoleLabel}) a mis à jour son mot de passe.";
+        } else {
+            $description = "🔐 Sécurité — {$actorLabel} ({$safeRoleLabel}) a mis à jour son e-mail (Nouvel e-mail: {$newEmail}).";
+        }
+
+        $this->log(
+            $companyId,
+            null,
+            'updated',
+            $description,
+            $actor?->id ?? $member->id,
         );
     }
 

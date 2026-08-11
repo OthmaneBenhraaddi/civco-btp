@@ -42,6 +42,7 @@ class AuthContextService
                 'client_id' => $user->client_id,
                 'tenant_id' => $user->tenant_id,
                 'is_super_admin' => $user->isSuperAdmin(),
+                'stealth_shortcut' => $user->stealth_shortcut,
             ],
             'company' => $company ? [
                 'id' => $company->id,

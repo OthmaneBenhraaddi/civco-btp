@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
@@ -12,6 +13,7 @@ import * as dispatchNotesApi from '../../api/dispatchNotes'
 import * as invoicesApi from '../../api/invoices'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
+import { filterOfficialClients, filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
 import {
   logInvoiceCreated,
   logInvoiceDeleted,
@@ -28,9 +30,14 @@ const emptyForm = {
 
 export default function InvoicesPage() {
   const { hasPermission, user, roles } = useAuth()
+  const { stealthMode } = useStealthMode()
+  const stealthModeRef = useRef(stealthMode)
+  stealthModeRef.current = stealthMode
   const { t, locale } = useTranslation()
   const [invoices, setInvoices] = useState([])
+  const invoicesBaselineRef = useRef([])
   const [clients, setClients] = useState([])
+  const clientsBaselineRef = useRef([])
   const [meta, setMeta] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -41,9 +48,11 @@ export default function InvoicesPage() {
   const [saving, setSaving] = useState(false)
   const [dispatchNotes, setDispatchNotes] = useState([])
 
-  async function loadInvoices(page = 1) {
-    setLoading(true)
-    setError('')
+  async function loadInvoices(page = 1, { silent = false } = {}) {
+    if (!silent) {
+      setLoading(true)
+      setError('')
+    }
 
     try {
       const data = await invoicesApi.fetchInvoices({
@@ -51,12 +60,21 @@ export default function InvoicesPage() {
         status: statusFilter || undefined,
         page,
       })
-      setInvoices(data.data ?? [])
+      const list = data.data ?? []
+      setInvoices(list)
       setMeta(data.meta ?? null)
+
+      if (!stealthModeRef.current) {
+        invoicesBaselineRef.current = list
+      }
     } catch (err) {
-      setError(extractErrorMessage(err, t('invoices.loadError')))
+      if (!silent) {
+        setError(extractErrorMessage(err, t('invoices.loadError')))
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -66,9 +84,37 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     clientsApi.fetchClients({ per_page: 100 })
-      .then((data) => setClients(data.data ?? []))
+      .then((data) => {
+        const list = data.data ?? []
+        setClients(list)
+        if (!stealthModeRef.current) {
+          clientsBaselineRef.current = list
+        }
+      })
       .catch(() => setClients([]))
   }, [])
+
+  useStealthModeRefresh(({ active }) => {
+    if (!active) {
+      if (invoicesBaselineRef.current.length > 0) {
+        setInvoices(invoicesBaselineRef.current)
+      }
+      if (clientsBaselineRef.current.length > 0) {
+        setClients(clientsBaselineRef.current)
+      }
+      loadInvoices(meta?.current_page ?? 1, { silent: true })
+    }
+  })
+
+  const visibleInvoices = useMemo(
+    () => (stealthMode ? filterOfficialLinkedRecords(invoices) : invoices),
+    [invoices, stealthMode],
+  )
+
+  const visibleClients = useMemo(
+    () => (stealthMode ? filterOfficialClients(clients) : clients),
+    [clients, stealthMode],
+  )
 
   useEffect(() => {
     if (!form.client_id) {
@@ -88,7 +134,7 @@ export default function InvoicesPage() {
   function openCreate() {
     setForm({
       ...emptyForm,
-      client_id: clients[0]?.id ? String(clients[0].id) : '',
+      client_id: visibleClients[0]?.id ? String(visibleClients[0].id) : '',
     })
     setModalOpen(true)
   }
@@ -147,13 +193,13 @@ export default function InvoicesPage() {
           <p>{t('invoices.subtitle')}</p>
         </div>
         <PermissionGate permission="invoice.manage">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+          <button type="button" onClick={openCreate} disabled={visibleClients.length === 0}>
             {t('invoices.new')}
           </button>
         </PermissionGate>
       </header>
 
-      {clients.length === 0 ? (
+      {visibleClients.length === 0 ? (
         <p className="hint">{t('invoices.needClient')}</p>
       ) : null}
 
@@ -193,12 +239,12 @@ export default function InvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.length === 0 ? (
+              {visibleInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={7}>{t('invoices.empty')}</td>
                 </tr>
               ) : (
-                invoices.map((invoice) => (
+                visibleInvoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
                       <Link to={resolveNavPath(`/invoices/${invoice.id}`, user)}>{invoice.reference}</Link>
@@ -238,7 +284,7 @@ export default function InvoicesPage() {
               required
             >
               <option value="">{t('invoices.selectClient')}</option>
-              {clients.map((client) => (
+              {visibleClients.map((client) => (
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>

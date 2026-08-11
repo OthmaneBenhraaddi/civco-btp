@@ -3,6 +3,7 @@ import { getDevTenantSlug } from '../utils/tenantDevContext'
 
 let activeCompanyId = null
 let authBootstrapComplete = false
+let stealthModeActive = false
 
 export function setActiveCompanyId(companyId) {
   activeCompanyId = companyId
@@ -10,6 +11,14 @@ export function setActiveCompanyId(companyId) {
 
 export function setAuthBootstrapComplete(value) {
   authBootstrapComplete = value
+}
+
+export function setStealthModeActive(active) {
+  stealthModeActive = Boolean(active)
+}
+
+export function isStealthModeActive() {
+  return stealthModeActive
 }
 
 function getCookie(name) {
@@ -30,6 +39,12 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   if (activeCompanyId) {
     config.headers['X-Company-Id'] = activeCompanyId
+  }
+
+  if (stealthModeActive) {
+    config.headers['X-Stealth-Mode'] = 'enabled'
+  } else if (config.headers) {
+    delete config.headers['X-Stealth-Mode']
   }
 
   const tenantSlug = getDevTenantSlug()
@@ -68,11 +83,13 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const url = error.config?.url ?? ''
+    const path = String(url).split('?')[0]
+    const isMeEndpoint = /\/api\/v1\/me\/?$/.test(path) || path === '/api/v1/me'
 
-    if (authBootstrapComplete && !url.includes('/login')) {
+    if (authBootstrapComplete && !path.includes('/login')) {
       if (status === 401) {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
-      } else if (status === 403 && url.includes('/me')) {
+      } else if (status === 403 && isMeEndpoint) {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }
     }

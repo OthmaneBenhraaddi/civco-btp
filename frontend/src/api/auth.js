@@ -18,3 +18,8 @@ export async function fetchMe(companyId) {
   })
   return data
 }
+
+export async function updateProfile(payload) {
+  const { data } = await api.patch('/api/v1/me', payload)
+  return data
+}

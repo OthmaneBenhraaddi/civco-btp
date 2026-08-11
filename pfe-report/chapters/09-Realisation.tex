@@ -1,0 +1,1126 @@
+\chapter{Réalisation et Implémentation}
+\label{chap:realisation}
+
+\section{Introduction}
+
+Ce chapitre décrit la réalisation concrète de l'application de gestion et de planification
+des projets BTP développée pour CIVCO BTP, à partir de la conception présentée au
+chapitre précédent. Nous présentons d'abord l'environnement technique et les outils
+utilisés, puis détaillons l'implémentation du backend Laravel, du frontend React et
+des principaux modules métier. Le chapitre se conclut par les tests réalisés et les
+résultats de validation.
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Environnement technique}
+
+\subsection{Stack technologique}
+
+\begin{description}
+  \item[Serveur applicatif] PHP 8.3, Laravel 13.8, Laravel Sanctum 4
+  (authentification SPA), Eloquent ORM, migrations et seeders.
+  \item[Interface utilisateur] React 19.2, Vite 8, React Router 7, Tailwind CSS 4, Axios,
+  Recharts (graphiques), Leaflet (cartographie).
+  \item[Base de données] MySQL / PostgreSQL (modèle relationnel,
+  schéma versionné par migrations Laravel).
+  \item[Outils complémentaires] Git / GitHub (versionnement), Visual Studio Code (IDE),
+  PHPUnit 12 (tests backend), ESLint (qualité frontend).
+\end{description}
+
+Le Tableau~\ref{tab:stack_versions} récapitule les versions principales des composants
+utilisés en développement.
+
+\begin{table}[H]
+\caption{Versions des composants de la stack technique}
+\label{tab:stack_versions}
+\centering
+\small
+\begin{tabular}{|l|l|p{6.5cm}|}
+\hline
+\textbf{Composant} & \textbf{Version} & \textbf{Rôle} \\
+\hline
+PHP & 8.3+ & Langage backend, exécution Laravel \\
+\hline
+Laravel & 13.8 & Framework API, ORM, authentification \\
+\hline
+Laravel Sanctum & 4.x & Sessions SPA sécurisées \\
+\hline
+React & 19.2 & Interface utilisateur composants \\
+\hline
+Vite & 8.0 & Build tool et serveur de développement \\
+\hline
+Tailwind CSS & 4.3 & Styles utilitaires \\
+\hline
+MySQL / PostgreSQL & 8.x / 16 & Persistance relationnelle \\
+\hline
+PHPUnit & 12.5 & Tests automatisés backend \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Outils de développement}
+
+\begin{description}
+  \item[Gestion de projet] Trello (tableau Kanban) pour planifier les modules,
+  suivre l'avancement des tâches et préparer les démonstrations de suivi.
+  \item[Contrôle de version] Git et GitHub pour le suivi des évolutions, branches de
+  fonctionnalités et revues de code.
+  \item[IDE] Visual Studio Code avec extensions PHP Intelephense, ESLint et Prettier.
+  \item[Tests] PHPUnit pour les tests d'intégration API ; tests manuels sur navigateur
+  (Chrome, Edge) pour les parcours utilisateurs.
+  \item[Qualité de code] Laravel Pint (formatage PHP), ESLint (linting JavaScript/React).
+  \item[Documentation API] Routes Laravel exposées sous \texttt{/api/v1/}, testables via
+  outils HTTP (Postman, curl) ou le navigateur pour les endpoints GET.
+\end{description}
+
+\subsection{Architecture de déploiement}
+
+\subsubsection{Environnement de développement}
+
+En développement, l'application repose sur deux processus parallèles, orchestrés depuis
+deux terminaux :
+
+\begin{enumerate}
+  \item \textbf{Backend Laravel} : \texttt{php artisan serve --host=127.0.0.1 --port=8000}
+  expose l'API sur le port 8000.
+  \item \textbf{Frontend Vite} : \texttt{npm run dev} lance le serveur de développement
+  React sur le port 5173, avec rechargement à chaud (\textit{hot-reload}).
+\end{enumerate}
+
+Le fichier \texttt{vite.config.js} configure un proxy : les requêtes vers \texttt{/api},
+\texttt{/sanctum} et \texttt{/storage} sont redirigées vers Laravel (port 8000), ce qui
+évite les problèmes de CORS en développement et simule un déploiement unifié.
+
+\subsubsection{Schéma de communication}
+
+\begin{itemize}
+  \item Le navigateur charge l'application React depuis \texttt{http://127.0.0.1:5173}.
+  \item Les appels API transitent par le proxy Vite vers \texttt{http://127.0.0.1:8000/api/v1/}.
+  \item Sanctum émet un cookie de session après authentification ; Axios est configuré
+  avec \texttt{withCredentials: true}.
+  \item Les fichiers uploadés (logos, documents, signatures) sont stockés dans
+  \texttt{storage/app/public} et servis via le lien symbolique \texttt{public/storage}.
+\end{itemize}
+
+\subsubsection{Étude d'hébergement : OVHcloud vs o2switch}
+
+En vue d'une mise en production chez CIVCO BTP, une \textbf{étude comparative
+d'hébergement} a été menée entre deux prestataires français largement utilisés pour
+les applications web PHP : \textbf{OVHcloud} et \textbf{o2switch}. L'objectif était
+d'identifier la solution la mieux adaptée au profil de l'entreprise : application
+métier interne, équipe réduite, budget maîtrisé et besoin de simplicité
+d'administration.
+
+\medskip
+
+Les critères d'évaluation retenus sont les suivants :
+
+\begin{itemize}
+  \item \textbf{Compatibilité Laravel / PHP 8.3} : exécution de l'API backend et des
+  commandes \texttt{artisan} (migrations, files d'attente, planificateur).
+  \item \textbf{Base de données} : support MySQL ou PostgreSQL, sauvegardes et quotas.
+  \item \textbf{Déploiement du frontend React} : hébergement des fichiers statiques
+  produits par \texttt{npm run build}.
+  \item \textbf{Sécurité} : certificat SSL, pare-feu, mises à jour système.
+  \item \textbf{Coût et prévisibilité} : tarification mensuelle, absence de surprises
+  sur la facturation.
+  \item \textbf{Support et localisation} : assistance en français, datacenters en
+  France, conformité pour des données clients BTP.
+  \item \textbf{Facilité d'exploitation} : courbe d'apprentissage pour une PME sans
+  équipe DevOps dédiée.
+\end{itemize}
+
+\begin{table}[H]
+\caption{Comparatif d'hébergement : OVHcloud vs o2switch}
+\label{tab:hebergement}
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{5.2cm}|p{5.2cm}|}
+\hline
+\textbf{Critère} & \textbf{OVHcloud} & \textbf{o2switch} \\
+\hline
+Type d'offre & VPS, cloud public, serveurs dédiés (IaaS) & Hébergement mutualisé
+tout-en-un \\
+\hline
+Laravel / PHP & Compatible (configuration manuelle : Nginx, PHP-FPM, Composer) &
+Compatible nativement (PHP 8.x, SSH, Composer) \\
+\hline
+Base de données & MySQL/PostgreSQL à installer et administrer & MySQL inclus,
+bases multiples \\
+\hline
+Frontend React (build) & Fichiers statiques sur VPS ou Object Storage & Hébergement
+direct des assets \texttt{dist/} \\
+\hline
+SSL (HTTPS) & Let's Encrypt ou certificat payant (selon offre) & Let's Encrypt
+inclus et automatisé \\
+\hline
+Sauvegardes & À configurer (snapshots, scripts) & Sauvegardes journalières incluses \\
+\hline
+Tarification & Variable (facturation à l'usage, snapshots, trafic) & Forfait fixe
+illimité (offre unique) \\
+\hline
+Support & Tickets, documentation technique & Support français réactif, panel cPanel \\
+\hline
+Scalabilité & Élevée (montée en charge horizontale) & Modérée (mutualisé, adapté PME) \\
+\hline
+Complexité admin & Élevée (sysadmin requis) & Faible (panel graphique) \\
+\hline
+\end{tabular}
+\end{table}
+
+\medskip
+
+\textbf{Analyse.} OVHcloud~\cite{ovhcloud} offre une grande flexibilité et une
+scalabilité adaptée aux applications à fort trafic ou aux architectures distribuées
+(conteneurs Docker, load balancing, bases managées). En revanche, le déploiement d'une
+application Laravel + React sur un VPS OVHcloud suppose une configuration manuelle
+du serveur web, de PHP-FPM, des certificats, des sauvegardes et de la supervision.
+Cette approche est pertinente pour des équipes disposant de compétences
+d'administration système, mais elle représente un surcoût en temps pour une PME comme
+CIVCO BTP.
+
+\medskip
+
+o2switch~\cite{o2switch}, hébergeur français basé à Grabels, propose une offre
+mutualisée orientée simplicité : PHP récent, bases MySQL, certificats SSL gratuits,
+sauvegardes automatiques et support technique francophone. Pour une application métier
+interne au volume d'utilisateurs modéré (équipes CIVCO BTP et clients portail), cette
+formule couvre les besoins sans nécessiter la gestion d'un serveur virtuel. Le frontend
+React est déployé sous forme de fichiers statiques (\texttt{npm run build}), tandis que
+Laravel gère l'API et les sessions Sanctum sur le même domaine, simplifiant la
+configuration des cookies et du CSRF.
+
+\medskip
+
+\textbf{Choix retenu.} Au terme de cette étude, \textbf{o2switch} a été retenu comme
+plateforme d'hébergement cible pour CIVCO BTP. Ce choix se justifie par :
+
+\begin{itemize}
+  \item un \textbf{rapport qualité/prix} favorable pour une application interne ;
+  \item une \textbf{mise en production plus rapide}, sans administration système
+  avancée ;
+  \item une \textbf{compatibilité native} avec la stack Laravel / MySQL ;
+  \item un \textbf{support en français} et des datacenters localisés en France ;
+  \item des \textbf{sauvegardes et SSL inclus}, répondant aux exigences de sécurité
+  identifiées au Chapitre~3.
+\end{itemize}
+
+OVHcloud reste une alternative crédible si l'application devait évoluer vers une
+architecture plus complexe (montée en charge importante, microservices, conteneurisation
+Docker). Pour la première version de l'outil, la simplicité opérationnelle d'o2switch
+a été privilégiée.
+
+\subsubsection{Configuration : variables d'environnement}
+
+La configuration sensible est centralisée dans le fichier \texttt{.env} du backend.
+Le Tableau~\ref{tab:env_vars} liste les variables principales :
+
+\begin{table}[H]
+\caption{Variables d'environnement principales du fichier \texttt{.env}}
+\label{tab:env_vars}
+\centering
+\small
+\begin{tabular}{|l|p{7.5cm}|}
+\hline
+\textbf{Variable} & \textbf{Rôle} \\
+\hline
+\texttt{APP\_URL} & URL publique de l'application (ex. \texttt{http://127.0.0.1:8000}) \\
+\hline
+\texttt{DB\_CONNECTION / DB\_DATABASE} & Connexion SGBD (MySQL ou PostgreSQL) \\
+\hline
+\texttt{SESSION\_DRIVER} & Pilote de session (fichier ou base de données) \\
+\hline
+\texttt{SANCTUM\_STATEFUL\_DOMAINS} & Domaines autorisés pour les cookies Sanctum \\
+\hline
+\texttt{FRONTEND\_URL} & URL du frontend (pour les redirections et CORS) \\
+\hline
+\texttt{MAIL\_*} & Configuration SMTP (notifications, invitations portail) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Initialisation de la base de données}
+
+Le démarrage d'un environnement neuf suit la séquence standard Laravel :
+
+\begin{enumerate}
+  \item \texttt{composer install} : installation des dépendances PHP.
+  \item \texttt{cp .env.example .env} puis configuration de la base de données.
+  \item \texttt{php artisan key:generate} : génération de la clé d'application.
+  \item \texttt{php artisan migrate --seed} : création du schéma et données de démonstration.
+  \item \texttt{php artisan storage:link} : lien symbolique pour les fichiers publics.
+\end{enumerate}
+
+Les seeders (\texttt{DatabaseSeeder}, \texttt{DemoSeeder}, \texttt{RoleSeeder}) peuplent
+la base avec des utilisateurs de test, des rôles, des permissions, des clients et des
+projets représentatifs du secteur BTP au Maroc.
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Implémentation du backend}
+
+\subsection{Structure du projet}
+
+Le backend suit l'architecture modulaire Laravel, organisée par responsabilité :
+
+\begin{verbatim}
+backend/
++-- app/
+|   +-- Enums/              # Statuts (Project, Quote, Invoice, Client...)
+|   +-- Http/
+|   |   +-- Controllers/Api/V1/   # ~45 controleurs REST
+|   |   +-- Middleware/           # Auth, permissions, contexte
+|   |   +-- Requests/             # Validation par domaine
+|   |   +-- Resources/            # Serialisation JSON
+|   +-- Models/             # Entites Eloquent (~35 modeles)
+|   +-- Services/           # Logique metier (QuoteService, etc.)
++-- database/
+|   +-- migrations/         # ~70 migrations versionnees
+|   +-- seeders/            # Donnees de demo et referentiels
++-- routes/api.php          # Definition des routes /api/v1/
+\-- tests/Feature/          # Tests PHPUnit d'integration
+\end{verbatim}
+
+Cette organisation sépare clairement le transport HTTP (contrôleurs), la validation
+(Requests), la transformation des réponses (Resources) et la logique métier (Services),
+conformément au patron décrit au Chapitre~3.
+
+\subsection{API REST : endpoints principaux}
+
+L'API est regroupée sous le préfixe \texttt{/api/v1/}. Les endpoints principaux sont
+organisés par domaine fonctionnel :
+
+\begin{description}
+  \item[Authentification] \texttt{POST /login}, \texttt{GET /me}, \texttt{POST /logout},
+  \texttt{PATCH /me} (profil utilisateur). Gestion de session via Sanctum.
+  \item[Projets] \texttt{GET/POST /projects}, \texttt{GET/PATCH/DELETE /projects/\{id\}},
+  gestion des phases, équipe, dépenses, médias et commentaires.
+  \item[Clients] \texttt{GET/POST /clients}, archivage, contacts, provisionnement
+  portail (\texttt{POST /clients/\{id\}/portal-account}).
+  \item[Devis] \texttt{GET/POST /quotes}, lignes de détail, conversion en facture,
+  suivi des statuts et impressions.
+  \item[Factures] \texttt{GET/POST /invoices}, paiements, état de facturation.
+  \item[Bons de livraison] \texttt{GET/POST /delivery-forms}, lignes et statuts.
+  \item[Contrats] \texttt{GET/POST /contracts}, compilation, signature, avenants
+  (\texttt{/contract-amendments}).
+  \item[Tâches] \texttt{GET/POST /tasks}, assignation, filtrage par projet et utilisateur.
+  \item[Équipe] \texttt{GET /team/members}, gestion des membres et rôles.
+  \item[Configuration] \texttt{/roles}, \texttt{/document-templates},
+  \texttt{/tenant/document-controls}, thème et badges.
+  \item[Tableau de bord] \texttt{GET /dashboard/summary}, indicateurs agrégés.
+  \item[Recherche] \texttt{GET /search}, recherche globale multi-entités.
+  \item[Portail client] \texttt{/client-portal/*} : projets, devis, contrats,
+  messagerie, acceptation et signature.
+  \item[Historique] \texttt{GET /activity-logs}, journal des actions.
+\end{description}
+
+Chaque route métier sensible est protégée par le middleware \texttt{permission:*},
+qui vérifie que l'utilisateur authentifié dispose du droit requis avant d'exécuter
+l'action.
+
+\subsection{Services métier}
+
+La logique complexe est extraite des contrôleurs vers des classes Service :
+
+\begin{itemize}
+  \item \textbf{QuoteService / InvoiceService} : calcul des totaux, numérotation,
+  conversion devis $\rightarrow$ facture, gestion des statuts.
+  \item \textbf{DeliveryFormService} : production des bons de livraison et liaison
+  aux projets.
+  \item \textbf{DocumentService / DocumentTemplateCompilationService} : génération
+  et compilation des documents à partir de modèles.
+  \item \textbf{DashboardService} : agrégation des indicateurs (projets actifs,
+  tâches en retard, chiffre d'affaires).
+  \item \textbf{AuthContextService} : résolution du contexte utilisateur (rôles,
+  permissions, société courante).
+  \item \textbf{ActivityLogService} : journalisation des actions sensibles.
+  \item \textbf{PrintTrackingService} : suivi des impressions officielles et quotas.
+  \item \textbf{SiteGeocodingService} : géolocalisation des chantiers (Nominatim +
+  coordonnées de repli pour les villes marocaines).
+\end{itemize}
+
+\subsection{Authentification et contrôle d'accès}
+
+L'authentification repose sur \textbf{Laravel Sanctum} en mode SPA :
+
+\begin{enumerate}
+  \item Le frontend obtient un cookie CSRF via \texttt{GET /sanctum/csrf-cookie}.
+  \item L'utilisateur envoie ses identifiants à \texttt{POST /api/v1/login}.
+  \item Laravel valide, crée une session et retourne le profil (\texttt{UserResource})
+  avec rôles et permissions.
+  \item Chaque requête ultérieure inclut le cookie de session ; le middleware
+  \texttt{auth:sanctum} protège les routes.
+  \item Le middleware \texttt{permission:slug} vérifie les droits granulaires
+  (\texttt{project.view}, \texttt{quote.manage}, etc.).
+\end{enumerate}
+
+Le service \texttt{PostLoginRedirectService} oriente l'utilisateur vers la page
+d'accueil adaptée à son profil (tableau de bord admin, liste des projets pour un
+chef de projet, factures pour un comptable).
+
+\subsection{Migrations et modèle de données}
+
+Le schéma de base compte environ 70 migrations, couvrant l'ensemble des entités métier.
+Les migrations sont idempotentes et versionnées : chaque modification de schéma
+produit un nouveau fichier daté, exécutable de façon reproductible sur tout
+environnement.
+
+\medskip
+
+Les relations Eloquent principales ont été implémentées comme suit :
+\begin{itemize}
+  \item \texttt{Client} \texttt{hasMany} \texttt{Project}
+  \item \texttt{Project} \texttt{belongsTo} \texttt{Client}, \texttt{hasMany} \texttt{ProjectPhase},
+  \texttt{Task}, \texttt{Quote}, \texttt{Contract}
+  \item \texttt{Quote} \texttt{hasMany} \texttt{QuoteLine}, \texttt{hasOne} \texttt{Invoice}
+  \item \texttt{User} \texttt{belongsToMany} \texttt{Project} (équipe), \texttt{belongsTo} \texttt{Role}
+\end{itemize}
+
+Les \textbf{API Resources} (\texttt{ProjectResource}, \texttt{QuoteResource}, etc.)
+contrôlent les champs exposés au frontend et permettent d'inclure conditionnellement
+les relations (\texttt{client}, \texttt{lines}, \texttt{teamMembers}).
+
+\subsection{Middleware et sécurité des routes}
+
+Le pipeline de middleware Laravel applique une chaîne de vérifications sur chaque
+requête API protégée :
+
+\begin{enumerate}
+  \item \textbf{auth:sanctum} : vérifie que l'utilisateur est authentifié via session.
+  \item \textbf{EnsureCompanyContext} : résout la société courante à partir de
+  l'en-tête \texttt{X-Company-Id} ou du contexte utilisateur.
+  \item \textbf{permission:slug} : contrôle granulaire par action métier
+  (\texttt{client.view}, \texttt{invoice.manage}, etc.).
+  \item \textbf{ValidateCsrfToken} : protection contre les requêtes forgées sur
+  les verbes mutants (\texttt{POST}, \texttt{PUT}, \texttt{PATCH}, \texttt{DELETE}).
+\end{enumerate}
+
+Cette approche en profondeur (\textit{defense in depth}) garantit qu'aucune action
+métier ne peut être exécutée sans authentification et sans autorisation explicite,
+conformément aux bonnes pratiques de sécurité web~\cite{owasp}.
+
+\subsection{Exemple : création d'un devis}
+
+Le flux de création d'un devis illustre l'interaction entre les couches :
+
+\begin{enumerate}
+  \item Le frontend envoie \texttt{POST /api/v1/quotes} avec le corps JSON
+  (client, projet, lignes, montants).
+  \item \texttt{StoreQuoteRequest} valide les champs (références obligatoires,
+  montants positifs, dates cohérentes).
+  \item \texttt{QuoteController@store} délègue à \texttt{QuoteService::create()}.
+  \item Le service crée l'enregistrement \texttt{Quote} et ses \texttt{QuoteLine}
+  associées dans une transaction base de données.
+  \item Les totaux HT, TVA et TTC sont calculés automatiquement.
+  \item \texttt{QuoteResource} sérialise la réponse JSON pour le frontend.
+  \item \texttt{ActivityLogService} journalise l'action si configuré.
+\end{enumerate}
+
+Ce patron (Request $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$
+Resource) est reproduit sur l'ensemble des modules métier.
+
+\subsection{Modules complémentaires}
+
+En complément des modules principaux, plusieurs fonctionnalités transverses ont été
+implémentées :
+
+\medskip
+
+\textbf{Notifications :} le modèle \texttt{Notification} et le contrôleur associé
+permettent d'informer les utilisateurs des événements importants (nouvelle tâche
+assignée, devis accepté, message reçu). L'interface affiche un badge de notification
+non lue dans l'en-tête.
+
+\medskip
+
+\textbf{Messagerie :} le module \texttt{PortalMessage} gère les échanges entre
+l'équipe interne et les clients externes, scopés par projet. Le service
+\texttt{PortalMessageService} filtre les conversations selon les droits de
+l'utilisateur (\texttt{can\_chat\_with\_client} sur les membres d'équipe).
+
+\medskip
+
+\textbf{Recherche globale :} le composant \texttt{GlobalSearch} et l'endpoint
+\texttt{GET /search} permettent de retrouver rapidement un client, un projet, un
+devis ou une facture par mot-clé, améliorant la productivité au quotidien.
+
+\medskip
+
+\textbf{Contrôle d'impression :} \texttt{PrintTrackingService} gère les quotas
+d'impressions officielles par type de document et par en-tête (avec ou sans papier
+à en-tête). Au-delà du quota, les impressions sont marquées « COPIE - NON OFFICIEL ».
+
+\medskip
+
+\textbf{Journal d'activité :} chaque action sensible (création de projet, validation
+de devis, archivage client) est enregistrée par \texttt{ActivityLogService} avec
+l'identité de l'utilisateur, le type d'action et l'horodatage. Le module
+\texttt{features/history/} expose ces entrées sous forme de fil d'audit consultable
+par l'administrateur.
+
+\medskip
+
+\textbf{Géocodage des chantiers :} lors de la saisie d'une adresse de chantier,
+\texttt{SiteGeocodingService} tente de résoudre automatiquement les coordonnées
+GPS via l'API Nominatim (OpenStreetMap). En cas d'échec, un référentiel de
+coordonnées des principales villes marocaines (\texttt{MoroccoCityCoordinates})
+assure un positionnement approximatif sur la carte Leaflet.
+
+\medskip
+
+\textbf{Modèles de documents :} le module \texttt{DocumentTemplate} permet de
+définir des gabarits de contrats et de documents commerciaux avec des champs
+dynamiques (placeholders). Le service \texttt{DocumentTemplateCompilationService}
+injecte les données du projet et du client lors de la génération du document final.
+
+\medskip
+
+\textbf{Gestion d'équipe :} \texttt{TeamMemberService} et \texttt{TeamQueryService}
+centralisent l'affectation des collaborateurs aux projets, la gestion des rôles
+sur chantier et le contrôle de l'autorisation de messagerie client
+(\texttt{can\_chat\_with\_client}).
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Implémentation du frontend}
+
+\subsection{Architecture React}
+
+Le frontend est une SPA React 19 organisée par domaines métier (\textit{features}) :
+
+\begin{verbatim}
+frontend/src/
++-- api/                    # Modules Axios par ressource
+|   +-- client.js           # Instance Axios + intercepteurs
+|   +-- projects.js, clients.js, quotes.js, invoices.js...
++-- components/             # Composants transverses (Sidebar, Modal...)
++-- context/
+|   +-- AuthContext.jsx     # Session, roles, permissions
+|   +-- ThemeContext.jsx    # Theme sombre, couleurs societe
+|   +-- LanguageContext.jsx # i18n FR / EN
++-- features/
+|   +-- dashboard/          # Tableau de bord et widgets
+|   +-- projects/           # Liste, detail, phases, equipe
+|   +-- clients/            # Gestion clients et portail
+|   +-- quotes/             # Devis
+|   +-- invoices/           # Factures
+|   +-- delivery-forms/     # Bons de livraison
+|   +-- tasks/              # Taches
+|   +-- configuration/      # Parametres, roles, modeles
+|   +-- profile/            # Profil utilisateur
++-- routes/
+|   +-- AppRoutes.jsx       # Definition des routes
+|   +-- routePermissions.js # Controle d'acces par route
+\-- i18n/locales/           # Traductions fr.js, en.js
+\end{verbatim}
+
+\subsection{Client HTTP et authentification}
+
+Le module \texttt{api/client.js} centralise la configuration Axios :
+
+\begin{itemize}
+  \item \texttt{baseURL} pointant vers \texttt{/api/v1} (proxifié par Vite).
+  \item \texttt{withCredentials: true} pour transmettre les cookies Sanctum.
+  \item Intercepteur de requête : récupération du jeton CSRF depuis le cookie
+  \texttt{XSRF-TOKEN} et injection dans l'en-tête \texttt{X-XSRF-TOKEN}.
+  \item Intercepteur de réponse : redirection vers \texttt{/login} en cas de
+  \texttt{401 Unauthorized}.
+  \item En-tête \texttt{X-Company-Id} pour le contexte société lorsque requis.
+\end{itemize}
+
+Le \texttt{AuthContext} expose l'état global d'authentification : utilisateur courant,
+rôles, permissions, fonctions \texttt{login} / \texttt{logout}, et helpers de
+vérification des droits consommés par les composants \texttt{PermissionGate} et
+\texttt{AdminRoute}.
+
+\subsection{Routage et contrôle d'accès}
+
+\texttt{AppRoutes.jsx} définit l'arborescence de navigation :
+
+\begin{itemize}
+  \item Routes publiques : \texttt{/login}.
+  \item Routes authentifiées : \texttt{/} (dashboard), \texttt{/projects},
+  \texttt{/clients}, \texttt{/quotes}, \texttt{/invoices}, \texttt{/tasks},
+  \texttt{/map}, \texttt{/configuration}, \texttt{/history}.
+  \item Portail client : \texttt{/portal/*} (interface dédiée aux clients externes).
+  \item Protection : composants \texttt{ProtectedRoute}, \texttt{AdminRoute} et
+  fonction \texttt{canAccessRoute()} qui croise le chemin demandé avec les
+  permissions de l'utilisateur.
+\end{itemize}
+
+\subsection{Composants transverses}
+
+Plusieurs composants partagés structurent l'expérience utilisateur :
+
+\begin{itemize}
+  \item \textbf{Sidebar} : navigation principale, filtrée selon les permissions.
+  \item \textbf{AppLayout} : enveloppe commune (sidebar + en-tête + contenu).
+  \item \textbf{GlobalSearch} : recherche unifiée clients, projets, documents.
+  \item \textbf{CommercialPrintSheet} : génération et impression des documents
+  commerciaux (devis, factures, BL) avec suivi des impressions.
+  \item \textbf{PrintOptionsModal} : choix d'impression (avec/sans en-tête,
+  copie officielle).
+\end{itemize}
+
+\subsection{Internationalisation}
+
+L'application supporte le français (par défaut) et l'anglais via \texttt{LanguageContext}
+et les fichiers \texttt{i18n/locales/fr.js} et \texttt{en.js}. Les libellés de
+l'interface, les messages d'erreur et les intitulés de menus sont externalisés,
+facilitant l'ajout de nouvelles langues.
+
+\subsection{Détail des modules frontend}
+
+Chaque module \textit{feature} suit une structure cohérente : une page liste
+(\texttt{*Page.jsx}), une ou plusieurs pages détail (\texttt{*DetailPage.jsx}),
+des composants locaux (\texttt{components/}) et un module API dédié
+(\texttt{api/*.js}).
+
+\medskip
+
+\textbf{Module Projets} (\texttt{features/projects/}) : \texttt{ProjectsPage} affiche
+la liste filtrable des chantiers ; \texttt{ProjectDetailPage} regroupe les onglets
+phases, tâches, équipe, documents et contrats. Le composant \texttt{ProjectAmendmentsTab}
+gère les avenants contractuels.
+
+\medskip
+
+\textbf{Module Clients} (\texttt{features/clients/}) : \texttt{ClientsPage} avec
+recherche et filtres ; \texttt{NewClientModal} pour la création ; \texttt{ClientPortalPanel}
+pour la gestion de l'accès portail. Le composant \texttt{ConfirmArchiveModal} sécurise
+l'archivage.
+
+\medskip
+
+\textbf{Module Documents commerciaux} : \texttt{QuotesPage}, \texttt{QuoteDetailPage},
+\texttt{InvoicesPage}, \texttt{DeliveryFormDetailPage}. Les composants d'impression
+(\texttt{CommercialPrintSheet}, \texttt{DeliveryFormPrintSheet}) génèrent les
+versions PDF imprimables.
+
+\medskip
+
+\textbf{Module Configuration} (\texttt{features/configuration/}) : panneaux dédiés
+pour les rôles (\texttt{RolesSettingsPanel}), les modèles de contrats
+(\texttt{ContractTemplateSettingsPanel}), les contrôles d'impression
+(\texttt{DocumentControlsSettingsPanel}) et les modèles de documents
+(\texttt{DocumentTemplatesSettingsPanel}).
+
+\subsection{Gestion d'état et hooks}
+
+L'état applicatif repose principalement sur React Context :
+
+\begin{itemize}
+  \item \textbf{AuthContext} : session utilisateur, permissions, fonctions login/logout.
+  \item \textbf{ThemeContext} : couleurs de la société injectées en variables CSS.
+  \item \textbf{LanguageContext} : bascule FR / EN de l'interface.
+  \item \textbf{usePolicyPrint / useProjectTasks} : hooks métier encapsulant la
+  logique d'impression et de chargement des tâches projet.
+\end{itemize}
+
+React Query (\texttt{@tanstack/react-query}) est installé et prêt pour le cache
+des requêtes API ; son adoption progressive permettra d'optimiser les rechargements
+de listes et fiches détail.
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Déroulement du développement et livrables}
+
+\subsection{Phases de réalisation}
+
+Le développement a suivi la planification définie au Chapitre~1, avec une
+progression par modules fonctionnels. Chaque phase a produit un incrément
+démontrable lors des réunions de suivi hebdomadaires avec l'encadrant professionnel.
+
+\begin{table}[H]
+\caption{Phases de développement et modules livrés}
+\label{tab:livrables}
+\centering
+\small
+\begin{tabular}{|l|p{5.5cm}|p{5.5cm}|}
+\hline
+\textbf{Phase} & \textbf{Modules livrés} & \textbf{Validation} \\
+\hline
+Fondations & Auth Sanctum, RBAC, navigation React, layout & Connexion multi-profils \\
+\hline
+Cœur métier & Projets, clients, phases, équipe & CRUD complet, carte \\
+\hline
+Documents & Devis, factures, BL, impression & Cycle commercial bout en bout \\
+\hline
+Opérations & Tâches, contrats, avenants, dépenses & Suivi opérationnel \\
+\hline
+Collaboration & Portail client, messagerie, notifications & Parcours client externe \\
+\hline
+Gouvernance & Configuration, historique, recherche globale & Administration complète \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Synthèse quantitative des livrables}
+
+Au terme du stage, l'application comprend les éléments quantitatifs suivants,
+illustrant l'ampleur de la réalisation :
+
+\begin{itemize}
+  \item Plus de \textbf{70 migrations} de base de données versionnées.
+  \item Environ \textbf{40 contrôleurs API} et \textbf{25 services métier}.
+  \item Plus de \textbf{30 modules frontend} (\textit{features} et composants).
+  \item Une suite de \textbf{7 classes de tests} PHPUnit couvrant les flux critiques.
+  \item Plus de \textbf{200 routes API} protégées par middleware d'authentification
+  et de permissions.
+  \item Support \textbf{bilingue} (français / anglais) sur l'ensemble de l'interface.
+\end{itemize}
+
+\subsection{Bonnes pratiques adoptées}
+
+Plusieurs bonnes pratiques de génie logiciel ont été appliquées tout au long du
+développement :
+
+\begin{itemize}
+  \item \textbf{Séparation des responsabilités} : contrôleurs fins, logique métier
+  dans les services, validation dans les Form Requests.
+  \item \textbf{Conventions de nommage} : respect des standards Laravel (PascalCase
+  pour les classes, snake\_case pour les colonnes) et React (PascalCase pour les
+  composants).
+  \item \textbf{Versionnement Git} : branches par fonctionnalité, commits atomiques,
+  messages descriptifs.
+  \item \textbf{Suivi Kanban (Trello)} : chaque module ou correction était modélisé
+  sous forme de carte, déplacée au fil de l'avancement entre les colonnes du tableau.
+  \item \textbf{Revue de code} : validation des choix techniques avec l'encadrant
+  professionnel avant intégration des modules sensibles (facturation, permissions).
+  \item \textbf{Documentation inline} : commentaires sur les règles métier non
+  évidentes, docblocks sur les méthodes de service exposées à l'API.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Interfaces principales}
+
+Cette section présente les écrans clés de l'application. Les captures d'écran seront
+insérées ultérieurement ; les descriptions ci-dessous reflètent l'implémentation
+actuelle.
+
+\subsection{Page de connexion}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{login.png}
+  \caption{Page de connexion : authentification par email et mot de passe}
+  \label{fig:login}
+\end{figure}
+
+La page de connexion (Figure~\ref{fig:login}) permet à tout utilisateur interne de
+CIVCO BTP de s'authentifier. Après validation, l'utilisateur est redirigé vers la
+page d'accueil correspondant à son profil métier.
+
+\medskip
+
+L'écran affiche le logo de l'entreprise, un formulaire email/mot de passe et une
+option « Se souvenir de moi ». Les erreurs d'authentification (identifiants
+incorrects, compte désactivé) sont affichées de manière explicite. Le design sombre
+et épuré a été choisi pour réduire la fatigue visuelle lors d'une utilisation
+quotidienne prolongée.
+
+\subsection{Tableau de bord}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{dashboard.png}
+  \caption{Tableau de bord : vue synthétique de l'activité (projets, tâches, indicateurs)}
+  \label{fig:dashboard}
+\end{figure}
+
+Le tableau de bord (Figure~\ref{fig:dashboard}) agrège les informations essentielles :
+nombre de projets en cours, tâches prioritaires, graphiques d'avancement (Recharts)
+et accès rapide aux modules. Les widgets affichés dépendent des permissions de
+l'utilisateur connecté.
+
+\medskip
+
+Les widgets sont configurés dynamiquement : un administrateur voit l'ensemble des
+indicateurs (projets actifs, factures en attente, tâches en retard), tandis qu'un
+technicien ne voit que ses tâches assignées et les projets auxquels il participe.
+Les graphiques Recharts illustrent l'évolution de l'avancement et la répartition
+des projets par statut.
+
+\subsection{Gestion des projets}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{projects.png}
+  \caption{Module Projets : liste des chantiers et fiche détail (phases, équipe, documents)}
+  \label{fig:projects}
+\end{figure}
+
+Le module Projets (Figure~\ref{fig:projects}) permet de créer, consulter et modifier
+les chantiers. La fiche détail est organisée en onglets : informations générales,
+phases, tâches, équipe, devis/factures liés, contrats, dépenses et médias.
+
+\medskip
+
+La liste des projets propose des filtres par statut, client et nature de chantier.
+La fiche détail centralise toutes les informations d'un chantier : depuis un seul
+écran, le chef de projet peut consulter l'avancement des phases, réaffecter un
+collaborateur, joindre un document ou créer un devis lié au projet.
+
+\subsection{Gestion des clients}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{clients.png}
+  \caption{Module Clients : fiches clients, contacts et archivage}
+  \label{fig:clients}
+\end{figure}
+
+Le module Clients (Figure~\ref{fig:clients}) centralise les maîtres d'ouvrage et
+clients commerciaux. L'administrateur peut provisionner un accès portail pour un
+client externe directement depuis la fiche client.
+
+\medskip
+
+Chaque fiche client regroupe les coordonnées, les contacts associés, les badges
+métier (Gros Œuvre, Urgent, etc.), l'historique des projets et l'état du compte
+portail. L'archivage est sécurisé par une modale de confirmation pour éviter les
+suppressions accidentelles.
+
+\subsection{Documents commerciaux}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{quotes.png}
+  \caption{Module Devis : création avec lignes de détail et calcul automatique des totaux}
+  \label{fig:quotes}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{invoices.png}
+  \caption{Module Factures : suivi des factures et état de paiement}
+  \label{fig:invoices}
+\end{figure}
+
+Les modules Devis et Factures (Figures~\ref{fig:quotes} et~\ref{fig:invoices})
+permettent la production des documents commerciaux, leur impression (avec suivi
+des copies officielles) et la conversion devis $\rightarrow$ facture en un clic.
+
+\medskip
+
+Le formulaire de création de devis permet d'ajouter dynamiquement des lignes de
+prestation (description, quantité, prix unitaire HT, taux de TVA). Les totaux sont
+recalculés en temps réel. L'impression s'effectue via un composant React dédié
+(\texttt{CommercialPrintSheet}) qui génère une version formatée prête à l'envoi au
+client, avec suivi du quota d'impressions officielles.
+
+\subsection{Planification des tâches}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{tasks.png}
+  \caption{Module Tâches : planification, assignation et suivi par projet}
+  \label{fig:tasks}
+\end{figure}
+
+Le module Tâches (Figure~\ref{fig:tasks}) offre une vue tableau des missions
+opérationnelles, filtrable par statut, projet et assigné. Les chefs de projet
+peuvent créer et assigner des tâches ; les utilisateurs internes consultent
+leurs tâches propres.
+
+\medskip
+
+Le module propose une vue tableau avec tri par date d'échéance, filtre par statut
+(à faire, en cours, terminé) et code couleur pour les tâches en retard. La création
+d'une tâche associe obligatoirement un projet, une phase et un responsable, garantissant
+la traçabilité de l'assignation.
+
+\subsection{Carte des chantiers}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{map.png}
+  \caption{Carte des projets : visualisation géographique des chantiers (Leaflet)}
+  \label{fig:map}
+\end{figure}
+
+La carte (Figure~\ref{fig:map}) affiche les projets géolocalisés sur une carte
+interactive Leaflet, utile pour visualiser la répartition géographique des
+chantiers de CIVCO BTP.
+
+\medskip
+
+Chaque marqueur sur la carte correspond à un projet géolocalisé. Un clic affiche un
+résumé (référence, client, statut, avancement) et un lien vers la fiche détail.
+Cette visualisation est particulièrement utile pour la direction et les chefs de
+projet qui gèrent plusieurs chantiers répartis sur différentes zones géographiques
+du Grand Casablanca et au-delà.
+
+\subsection{Portail client}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{portal.png}
+  \caption{Portail client : consultation des projets, acceptation de devis et signature}
+  \label{fig:portal}
+\end{figure}
+
+Le portail client (Figure~\ref{fig:portal}) offre une interface simplifiée aux
+clients externes : consultation de l'avancement, acceptation de devis, signature
+de contrats et messagerie avec l'équipe projet.
+
+\medskip
+
+L'interface portail est volontairement distincte de l'ERP interne : navigation
+réduite à quatre entrées (tableau de bord, discussions, calendrier, devis), sans
+accès aux modules de gestion internes (projets, facturation, configuration).
+Les routes React sont regroupées sous le préfixe \texttt{/portal/*} et protégées
+par le middleware d'authentification ; un utilisateur possédant le rôle
+\texttt{client\_extern} est automatiquement redirigé vers le portail après
+connexion, tandis qu'un collaborateur interne ne peut pas y accéder.
+
+\medskip
+
+\textbf{Tableau de bord client.} L'écran principal (Figure~\ref{fig:portal})
+présente trois blocs d'information. Le widget \textit{Avancement du chantier}
+affiche un indicateur circulaire (\texttt{ProgressRing}) alimenté par le champ
+\texttt{progress\_percent} du projet, accompagné de la référence chantier, du
+statut, de la ville et de la date de fin prévue. Le panneau \textit{Étapes de
+la semaine} liste les jalons et tâches à échéance sur les sept prochains jours,
+filtrés par projet sélectionné. Enfin, le fil \textit{Chantier en direct}
+(\texttt{ChantierLiveFeed}) expose les photos terrain publiées par l'équipe
+CIVCO BTP, rafraîchies périodiquement pour offrir une visibilité continue
+sur l'avancement des travaux.
+
+\medskip
+
+\textbf{Parcours documentaire et contractuel.} Depuis l'onglet \textit{Devis},
+le client consulte les propositions commerciales qui le concernent et peut
+accepter un devis en un clic ; le statut est immédiatement mis à jour côté
+serveur. Pour les contrats, le composant \texttt{ClientContractSignature}
+intègre un pad de signature tactile (canvas HTML5) : la signature est capturée,
+transmise à l'API et associée au document contractuel, déclenchant la mise à
+jour du statut et la notification de l'équipe projet.
+
+\medskip
+
+\textbf{Provisionnement et sécurité.} L'accès portail est créé par
+l'administrateur depuis la fiche client (module Clients, Chapitre~4) : un
+identifiant de connexion est généré, associé au client concerné via le champ
+\texttt{client\_id} de l'utilisateur, et activé ou désactivé à la demande.
+Toutes les requêtes API du portail sont filtrées par ce lien client $\rightarrow$
+projet : un client externe ne voit que ses propres chantiers, devis et
+échanges, conformément au principe de moindre privilège défini au Chapitre~3.
+
+\subsection{Configuration}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{config.png}
+  \caption{Module Configuration : rôles, modèles de documents, contrôles d'impression}
+  \label{fig:config}
+\end{figure}
+
+Le module Configuration (Figure~\ref{fig:config}) est réservé à l'administrateur :
+gestion des rôles et permissions, modèles de contrats et documents, paramètres
+d'impression, thème visuel et référentiels (badges, lots, secteurs).
+
+\medskip
+
+Le panneau de configuration est organisé en onglets thématiques : rôles et permissions,
+modèles de contrats, contrôles d'impression, modèles de documents et paramètres
+généraux. L'administrateur peut créer un nouveau rôle métier, lui attribuer un
+sous-ensemble de permissions et l'assigner aux utilisateurs concernés, sans
+intervention technique sur le code.
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Tests et validation}
+
+La validation de l'application s'appuie sur deux dispositifs complémentaires : une
+\textbf{suite de tests automatisés} PHPUnit au niveau du backend, et une
+\textbf{campagne de tests manuels} couvrant les parcours utilisateurs de bout en bout.
+
+\subsection{Tests automatisés backend}
+
+Le projet inclut une suite de tests d'intégration PHPUnit dans \texttt{tests/Feature/} :
+
+\begin{description}
+  \item[AuthTest] Connexion, déconnexion, accès au profil utilisateur, rejet des
+  identifiants invalides.
+  \item[ClientProjectTest] CRUD clients et projets, relations, contraintes d'accès.
+  \item[QuoteInvoiceTest] Création de devis, lignes de détail, conversion en facture,
+  calcul des totaux.
+  \item[DocumentTest] Upload et gestion des documents attachés aux projets.
+  \item[ExpenseTest] Enregistrement des dépenses de chantier.
+  \item[DashboardTest] Agrégation des indicateurs du tableau de bord.
+  \item[RoleAccessTest] Vérification des redirections post-login et des permissions
+  par profil (comptable, commercial, chef de projet, administrateur).
+\end{description}
+
+Les tests utilisent \texttt{RefreshDatabase} et les seeders de démonstration pour
+garantir un environnement isolé et reproductible. La commande \texttt{php artisan test}
+exécute l'ensemble de la suite.
+
+\subsection{Campagne de tests manuels}
+
+Une checklist de tests manuels a été établie pour valider les parcours que les tests
+automatisés ne couvrent pas entièrement :
+
+\begin{itemize}
+  \item \textbf{Authentification} : connexion, déconnexion, expiration de session,
+  redirection selon le profil.
+  \item \textbf{Projets} : création complète (client, phases, équipe, géolocalisation),
+  modification, consultation par un utilisateur non-admin.
+  \item \textbf{Documents commerciaux} : cycle devis $\rightarrow$ acceptation $\rightarrow$
+  facture $\rightarrow$ paiement ; impression avec et sans en-tête.
+  \item \textbf{Contrats} : compilation depuis un modèle, signature portail client.
+  \item \textbf{Tâches} : création, assignation, changement de statut, visibilité
+  selon les permissions.
+  \item \textbf{Portail client} : connexion client, consultation projet, acceptation
+  devis, messagerie.
+  \item \textbf{Configuration} : création de rôle, attribution de permissions,
+  modification du thème.
+  \item \textbf{Responsive} : consultation sur poste de bureau et tablette.
+\end{itemize}
+
+\subsection{Validation qualitative}
+
+L'application a été validée en conditions réelles au sein de CIVCO BTP, avec les
+observations suivantes :
+
+\begin{itemize}
+  \item \textbf{Adéquation métier} : les modules couvrent les processus quotidiens
+  identifiés au Chapitre~1 (suivi de chantier, production documentaire, planification).
+  \item \textbf{Ergonomie} : l'interface sombre et la navigation par sidebar ont été
+  appréciées par les testeurs internes pour un usage prolongé.
+  \item \textbf{Performance} : les listes et fiches détail se chargent en moins de
+  500~ms en environnement local ; le tableau de bord agrège les indicateurs sans
+  latence perceptible.
+  \item \textbf{Sécurité} : les tests de contournement de permissions (accès direct
+  à une URL sans droit) sont correctement bloqués côté API avec une réponse
+  \texttt{403 Forbidden}.
+  \item \textbf{Impression} : le mécanisme de suivi des copies officielles et le
+  filigrane « COPIE - NON OFFICIEL » fonctionnent conformément aux exigences métier.
+\end{itemize}
+
+\subsection{Synthèse des tests}
+
+Le Tableau~\ref{tab:test_summary} récapitule la couverture de validation par module.
+
+\begin{table}[H]
+\caption{Synthèse de la couverture de tests par module}
+\label{tab:test_summary}
+\centering
+\small
+\begin{tabular}{|l|c|c|p{5.5cm}|}
+\hline
+\textbf{Module} & \textbf{Auto.} & \textbf{Manuel} & \textbf{Points vérifiés} \\
+\hline
+Authentification & $\checkmark$ & $\checkmark$ & Login, logout, session, redirection \\
+\hline
+Projets & $\checkmark$ & $\checkmark$ & CRUD, phases, équipe, carte \\
+\hline
+Clients & $\checkmark$ & $\checkmark$ & CRUD, archivage, portail \\
+\hline
+Devis / Factures & $\checkmark$ & $\checkmark$ & Lignes, conversion, impression \\
+\hline
+Tâches & --- & $\checkmark$ & Assignation, statuts, permissions \\
+\hline
+Contrats & --- & $\checkmark$ & Compilation, signature, avenants \\
+\hline
+Configuration & --- & $\checkmark$ & Rôles, modèles, thème \\
+\hline
+Portail client & --- & $\checkmark$ & Consultation, acceptation, messagerie \\
+\hline
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────────────
+\section{Difficultés rencontrées et solutions}
+
+\subsection{Gestion des permissions granulaires}
+
+La mise en place du \textbf{RBAC} avec plus de trente permissions a nécessité une
+coordination entre le backend (middleware, seeders) et le frontend (PermissionGate,
+routePermissions). La solution retenue centralise la résolution des permissions
+dans \texttt{AuthContextService} côté API et \texttt{permissionResolver.js} côté
+React, garantissant une source de vérité unique.
+
+\subsection{Impression documentaire}
+
+La génération de PDF côté client (composants React dédiés) et le suivi des quotas
+d'impression officielle ont demandé un mécanisme de comptage persistant
+(\texttt{PrintTrackingService}) et une interface de choix avant chaque impression
+(\texttt{PrintOptionsModal}).
+
+\subsection{Géolocalisation des chantiers}
+
+L'intégration de la carte Leaflet avec géocodage automatique des adresses de chantier
+a été réalisée via \texttt{SiteGeocodingService}, qui interroge l'API Nominatim avec
+un repli sur un référentiel de coordonnées des villes marocaines
+(\texttt{MoroccoCityCoordinates}) en cas d'échec.
+
+\subsection{Synchronisation frontend / backend}
+
+La cohérence entre les permissions affichées dans l'interface et celles vérifiées
+côté API a nécessité un travail de synchronisation : chaque route frontend dans
+\texttt{routePermissions.js} doit correspondre à un contrôle \texttt{permission:*}
+sur l'endpoint associé. Les tests \texttt{RoleAccessTest} et les tests manuels
+multi-profils ont permis de détecter et corriger les écarts.
+
+\section*{Conclusion}
+
+Ce chapitre a présenté la réalisation concrète de l'application de gestion de
+projets BTP développée pour CIVCO BTP. Au-delà de la conception formalisée au
+chapitre précédent, nous avons décrit l'environnement d'exécution, l'organisation
+du code, les modules livrés et les dispositifs de validation retenus pour garantir
+la fiabilité de la solution en conditions d'usage réelles.
+
+\medskip
+
+\textbf{Environnement et architecture.} L'application repose sur une stack
+\textbf{Laravel 13 / React 19 / Vite / MySQL}, orchestrée en développement par
+deux processus parallèles (\texttt{php artisan serve} et \texttt{npm run dev}).
+Le proxy Vite assure la communication transparente entre la SPA et l'API, tandis
+que \textbf{Laravel Sanctum} gère l'authentification par session sécurisée.
+Cette séparation frontend / backend a permis de maintenir une frontière nette :
+l'interface React ne contient aucune règle métier critique ; la validation, les
+calculs financiers et la persistance sont systématiquement assurés côté serveur.
+
+\medskip
+
+\textbf{Implémentation backend.} L'API REST expose plus de quarante contrôleurs
+sous le préfixe \texttt{/api/v1/}, structurés par domaine (projets, clients,
+devis, factures, tâches, contrats, configuration). Chaque endpoint sensible est
+protégé par un middleware de permission (\texttt{permission:*}) et validé par
+un Form Request dédié. Les services métier (\texttt{PrintTrackingService},
+\texttt{DocumentTemplateCompilationService}, \texttt{TeamMemberService}, etc.)
+centralisent les règles de gestion, tandis que les API Resources normalisent
+les réponses JSON consommées par le frontend.
+
+\medskip
+
+\textbf{Interface utilisateur.} Le frontend React est organisé en modules par
+domaine fonctionnel, avec une sidebar filtrée selon le profil connecté. Les
+écrans principaux ont été implémentés et illustrés dans ce chapitre :
+authentification (Figure~\ref{fig:login}), tableau de bord
+(Figure~\ref{fig:dashboard}), gestion des projets et des clients
+(Figures~\ref{fig:projects} et~\ref{fig:clients}), documents commerciaux
+(Figures~\ref{fig:quotes} et~\ref{fig:invoices}), planification des tâches
+(Figure~\ref{fig:tasks}), carte géographique des chantiers (Figure~\ref{fig:map}),
+portail client (Figure~\ref{fig:portal}) et module de configuration
+(Figure~\ref{fig:config}). Cette couverture correspond au périmètre fonctionnel
+défini au Chapitre~3 et aux processus quotidiens de CIVCO BTP.
+
+\medskip
+
+\textbf{Validation et déploiement.} La qualité de la solution est assurée par
+une suite de tests PHPUnit (authentification, CRUD métier, conversion
+devis $\rightarrow$ facture, contrôle d'accès par rôle) complétée par une
+campagne de tests manuels sur les parcours de bout en bout. L'étude comparative
+d'hébergement a orienté le choix vers \textbf{o2switch}, retenu pour sa simplicité
+de mise en production, son support francophone et son rapport qualité/prix adapté
+à une PME du secteur BTP.
+
+\medskip
+
+\textbf{Bilan.} Les principales difficultés --- permissions granulaires,
+impression documentaire, géolocalisation des chantiers et synchronisation
+frontend / backend --- ont été résolues par des services dédiés et une
+source de vérité unique côté API. L'application est fonctionnelle, testée et
+prête pour un déploiement chez CIVCO BTP. Le chapitre suivant conclut ce rapport
+en synthétisant les apports du projet et en esquissant les perspectives
+d'évolution (notifications temps réel, application mobile, intégration comptable).
+
+\newpage

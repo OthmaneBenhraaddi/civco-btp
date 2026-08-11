@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info:
+  title: CivCo Document Renderer
+  version: 1.0.0
+  description: Internal Strangler Fig contract for HTML template compilation.
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        '200':
+          description: Service is up
+  /internal/v1/render:
+    post:
+      summary: Compile a document template
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+      responses:
+        '200':
+          description: Compiled HTML
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenderResponse'
+        '401':
+          description: Missing or invalid internal token
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    RenderRequest:
+      type: object
+      required: [template_html]
+      properties:
+        template_html:
+          type: string
+        variables:
+          type: object
+          additionalProperties: true
+        options:
+          $ref: '#/components/schemas/RenderOptions'
+    RenderOptions:
+      type: object
+      properties:
+        header:
+          type: boolean
+        header_html:
+          type: string
+          nullable: true
+        watermark:
+          type: string
+          nullable: true
+        locale:
+          type: string
+        signature_html:
+          type: string
+          nullable: true
+    RenderResponse:
+      type: object
+      required: [html]
+      properties:
+        html:
+          type: string

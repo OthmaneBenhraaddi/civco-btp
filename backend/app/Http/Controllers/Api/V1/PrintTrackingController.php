@@ -24,6 +24,7 @@ class PrintTrackingController extends Controller
                 $request->validated('document_type'),
                 $request->integer('document_id'),
                 $this->companyId($request),
+                $request->boolean('has_header', true),
             );
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);

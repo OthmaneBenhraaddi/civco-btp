@@ -1,0 +1,161 @@
+\subsection{Définition et principes des SPA}
+
+Une \textbf{SPA} (\textit{Single Page Application}) est une application web dont
+l'interface est construite dynamiquement en JavaScript. Contrairement aux sites
+classiques où chaque clic déclenche un rechargement HTML complet, la SPA charge le
+shell de l'application une fois, puis met à jour le DOM (\textit{Document Object Model})
+au fil des interactions utilisateur.
+
+\medskip
+
+Ce modèle repose sur le \textbf{routing côté client} : la bibliothèque React Router
+associe chaque URL à un composant React (\texttt{/projects}, \texttt{/clients},
+\texttt{/invoices}), sans solliciter le serveur pour le HTML. Seules les données
+nécessaires sont récupérées via l'API REST.
+
+\subsection{React : bibliothèque declarative}
+
+\textbf{React}~\cite{react}, développé par Meta, est une bibliothèque JavaScript pour
+construire des interfaces utilisateur par \textbf{composants} réutilisables. Chaque
+composant encapsule structure (JSX), état et comportement.
+
+\medskip
+
+Les principes fondamentaux de React sont :
+
+\begin{itemize}
+  \item \textbf{Composants fonctionnels} : fonctions JavaScript retournant du JSX,
+  composées hiérarchiquement (Sidebar, Dashboard, ProjectDetailPage, etc.).
+  \item \textbf{État local} (\texttt{useState}) : données modifiables au sein d'un
+  composant (formulaires, filtres, modales).
+  \item \textbf{Effets de bord} (\texttt{useEffect}) : chargement de données API au
+  montage du composant ou lors d'un changement de paramètre.
+  \item \textbf{Context API} : partage d'état global (authentification, thème, langue)
+  sans propager les props à travers toute l'arborescence.
+\end{itemize}
+
+Cette approche declarative simplifie la construction d'interfaces complexes : l'état
+de l'interface est une fonction de l'état applicatif.
+
+\subsection{Écosystème React du projet}
+
+L'application CIVCO BTP s'appuie sur plusieurs bibliothèques complémentaires :
+
+\begin{table}[H]
+\caption{Composants de l'écosystème frontend}
+\label{tab:react_ecosystem}
+\centering
+\small
+\begin{tabular}{|l|l|p{7.5cm}|}
+\hline
+\textbf{Outil} & \textbf{Rôle} & \textbf{Usage dans le projet} \\
+\hline
+Vite~\cite{vite} & Build tool & Compilation rapide, HMR en développement \\
+\hline
+React Router & Routing & Navigation entre modules ERP \\
+\hline
+Axios & Client HTTP & Appels API REST avec intercepteurs \\
+\hline
+Tailwind CSS~\cite{tailwindcss} & Styles utilitaires & Interface sombre cohérente \\
+\hline
+Recharts & Graphiques & Tableau de bord, KPIs \\
+\hline
+Leaflet & Cartographie & Carte des projets / chantiers \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Communication avec le backend}
+
+Le \textit{frontend} React consomme l'API Laravel via des modules dédiés
+(\texttt{api/projects.js}, \texttt{api/clients.js}, etc.). Un client Axios centralisé
+configure :
+
+\begin{itemize}
+  \item l'envoi automatique des cookies de session (Sanctum) ;
+  \item le jeton CSRF pour les requêtes \texttt{POST}, \texttt{PUT} et \texttt{DELETE} ;
+  \item la gestion des erreurs \texttt{401} (redirection vers la page de connexion).
+\end{itemize}
+
+Ce patron \textit{API-first} garantit que toute action utilisateur (créer un devis,
+archiver un client, assigner une tâche) transite par la couche métier Laravel, où les
+règles de validation et de permissions sont appliquées.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  box/.style={rectangle, rounded corners=4pt, fill=ensamBlue!12, draw=ensamBlue,
+              minimum width=3.2cm, minimum height=1.0cm, align=center,
+              font=\small\bfseries},
+  arr/.style={-{Stealth[length=6pt]}, thick, draw=gray!70},
+  lbl/.style={font=\footnotesize, text=gray!70}
+]
+  \node[box] (browser) at (0, 0)   {Navigateur\\React SPA};
+  \node[box] (api)     at (5.5, 0) {API Laravel\\REST + Sanctum};
+  \node[box] (db)      at (11, 0)  {Base de\\données};
+
+  \draw[arr] (browser) -- (api) node[midway, above, lbl] {JSON / HTTPS};
+  \draw[arr] (api)     -- (db)  node[midway, above, lbl] {Eloquent / SQL};
+\end{tikzpicture}
+}%
+\caption{Flux de communication React $\rightarrow$ Laravel $\rightarrow$ SGBD}
+\label{fig:react_flow}
+\end{figure}
+
+\subsection{Comparaison React / Vue / Angular}
+
+\begin{table}[H]
+\caption{Comparaison des principaux frameworks frontend (2025-2026)}
+\label{tab:spa_compare}
+\centering
+\small
+\begin{tabular}{|l|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Critère} & \textbf{React} & \textbf{Vue.js} & \textbf{Angular} \\
+\hline
+Flexibilité & Élevée (bibliothèque) & Élevée (progressif) & Opinionated (framework complet) \\
+\hline
+Courbe d'apprentissage & Modérée & Faible & Élevée \\
+\hline
+Marché de l'emploi & Très large & Large & Large (entreprise) \\
+\hline
+Écosystème SPA & React Router, Vite & Vue Router, Vite & Router intégré \\
+\hline
+\end{tabular}
+\end{table}
+
+React est retenu pour sa flexibilité, son adoption industrielle et la disponibilité de
+bibliothèques adaptées aux tableaux de bord métier (graphiques, cartes, composants
+modulaires), comme le montre le Tableau~\ref{tab:spa_compare}.
+
+\subsection{Organisation du code frontend}
+
+Le code React est structuré par \textbf{features} (\texttt{features/projects/},
+\texttt{features/clients/}, \texttt{features/invoices/}), chacune regroupant pages,
+composants et utilitaires propres au module. Les composants transverses (Sidebar,
+PermissionGate, modales) vivent dans \texttt{components/}. Cette organisation par
+domaine facilite la navigation dans le code et l'ajout de nouvelles fonctionnalités
+sans impacter les modules existants.
+
+\subsection{Interface utilisateur et Tailwind CSS}
+
+L'interface adopte un design sombre professionnel, cohérent sur tous les modules.
+\textbf{Tailwind CSS}~\cite{tailwindcss} est un framework CSS utilitaire : les classes
+(\texttt{flex}, \texttt{rounded-lg}, \texttt{bg-gray-800}) s'appliquent directement
+dans le JSX. Cette approche accélère le prototypage et garantit une cohérence visuelle
+sur les écrans de l'application (listes, fiches détail, modales, tableaux de bord).
+
+\medskip
+
+Le \textbf{tableau de bord} illustre l'intérêt de React pour la visualisation métier :
+graphiques (Recharts), widgets configurables, indicateurs \textbf{KPI} et accès rapide
+aux projets en cours. La carte des chantiers (Leaflet) offre une vue géographique des
+projets, pertinente pour une entreprise disposant de plusieurs sites simultanés.
+
+\subsection{Internationalisation}
+
+L'application supporte le \textbf{français} (langue par défaut) et l'\textbf{anglais}
+via un contexte de langue et des fichiers de traduction (\texttt{locales/fr.js},
+\texttt{locales/en.js}). Cette préparation facilite l'usage de l'outil par des
+collaborateurs anglophones ou une future extension à d'autres contextes linguistiques.

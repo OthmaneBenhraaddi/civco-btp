@@ -5,18 +5,51 @@ import { BENTO_CARD_CLASS, BTN_PRIMARY } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 
 const DEFAULT_LIMITS = {
-  max_official_devis: 2,
-  max_official_invoices: 2,
-  max_official_delivery_forms: 2,
-  max_official_contracts: 2,
+  max_official_devis_with_header: 2,
+  max_official_devis_without_header: 2,
+  max_official_invoices_with_header: 2,
+  max_official_invoices_without_header: 2,
+  max_official_delivery_forms_with_header: 2,
+  max_official_delivery_forms_without_header: 2,
+  max_official_contracts_with_header: 2,
+  max_official_contracts_without_header: 2,
 }
 
-const LIMIT_FIELDS = [
-  { key: 'max_official_devis', labelKey: 'configuration.documentControls.devis' },
-  { key: 'max_official_invoices', labelKey: 'configuration.documentControls.invoices' },
-  { key: 'max_official_delivery_forms', labelKey: 'configuration.documentControls.deliveryForms' },
-  { key: 'max_official_contracts', labelKey: 'configuration.documentControls.contracts' },
+const LIMIT_GROUPS = [
+  {
+    titleKey: 'configuration.documentControls.devis',
+    withKey: 'max_official_devis_with_header',
+    withoutKey: 'max_official_devis_without_header',
+  },
+  {
+    titleKey: 'configuration.documentControls.invoices',
+    withKey: 'max_official_invoices_with_header',
+    withoutKey: 'max_official_invoices_without_header',
+  },
+  {
+    titleKey: 'configuration.documentControls.deliveryForms',
+    withKey: 'max_official_delivery_forms_with_header',
+    withoutKey: 'max_official_delivery_forms_without_header',
+  },
+  {
+    titleKey: 'configuration.documentControls.contracts',
+    withKey: 'max_official_contracts_with_header',
+    withoutKey: 'max_official_contracts_without_header',
+  },
 ]
+
+function normalizeLimits(raw = {}) {
+  return {
+    max_official_devis_with_header: Number(raw.max_official_devis_with_header ?? raw.max_official_devis ?? 2),
+    max_official_devis_without_header: Number(raw.max_official_devis_without_header ?? raw.max_official_devis ?? 2),
+    max_official_invoices_with_header: Number(raw.max_official_invoices_with_header ?? raw.max_official_invoices ?? 2),
+    max_official_invoices_without_header: Number(raw.max_official_invoices_without_header ?? raw.max_official_invoices ?? 2),
+    max_official_delivery_forms_with_header: Number(raw.max_official_delivery_forms_with_header ?? raw.max_official_delivery_forms ?? 2),
+    max_official_delivery_forms_without_header: Number(raw.max_official_delivery_forms_without_header ?? raw.max_official_delivery_forms ?? 2),
+    max_official_contracts_with_header: Number(raw.max_official_contracts_with_header ?? raw.max_official_contracts ?? 2),
+    max_official_contracts_without_header: Number(raw.max_official_contracts_without_header ?? raw.max_official_contracts ?? 2),
+  }
+}
 
 export default function DocumentControlsSettingsPanel() {
   const { t } = useTranslation()
@@ -32,7 +65,7 @@ export default function DocumentControlsSettingsPanel() {
 
     try {
       const data = await tenantDocumentControlsApi.fetchDocumentControls()
-      setLimits({ ...DEFAULT_LIMITS, ...(data.document_controls ?? {}) })
+      setLimits(normalizeLimits(data.document_controls ?? {}))
     } catch (err) {
       setError(extractErrorMessage(err, t('configuration.documentControls.loadError')))
     } finally {
@@ -61,7 +94,7 @@ export default function DocumentControlsSettingsPanel() {
 
     try {
       const data = await tenantDocumentControlsApi.updateDocumentControls(limits)
-      setLimits({ ...DEFAULT_LIMITS, ...(data.document_controls ?? {}) })
+      setLimits(normalizeLimits(data.document_controls ?? {}))
       setSuccess(t('configuration.documentControls.saveSuccess'))
     } catch (err) {
       setError(extractErrorMessage(err, t('configuration.documentControls.saveError')))
@@ -93,19 +126,42 @@ export default function DocumentControlsSettingsPanel() {
         <p className="text-sm text-slate-500">{t('common.loading')}</p>
       ) : (
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {LIMIT_FIELDS.map((field) => (
-              <label key={field.key} className="block space-y-2">
-                <span className="text-sm font-medium text-slate-200">{t(field.labelKey)}</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  className="w-full rounded-lg border border-white/10 bg-[#111214] px-3 py-2 text-sm text-white"
-                  value={limits[field.key]}
-                  onChange={(event) => handleChange(field.key, event.target.value)}
-                />
-              </label>
+          <div className="space-y-4">
+            {LIMIT_GROUPS.map((group) => (
+              <div
+                key={group.titleKey}
+                className="rounded-xl border border-white/[0.06] bg-[#0a0b0d]/35 p-4"
+              >
+                <p className="mb-3 text-sm font-medium text-slate-200">{t(group.titleKey)}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      {t('configuration.documentControls.withHeader')}
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      className="w-full rounded-lg border border-white/10 bg-[#111214] px-3 py-2 text-sm text-white"
+                      value={limits[group.withKey]}
+                      onChange={(event) => handleChange(group.withKey, event.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      {t('configuration.documentControls.withoutHeader')}
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      className="w-full rounded-lg border border-white/10 bg-[#111214] px-3 py-2 text-sm text-white"
+                      value={limits[group.withoutKey]}
+                      onChange={(event) => handleChange(group.withoutKey, event.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
             ))}
           </div>
 

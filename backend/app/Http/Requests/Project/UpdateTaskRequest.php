@@ -20,6 +20,10 @@ class UpdateTaskRequest extends FormRequest
         return [
             'title' => ['sometimes', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
+            'quantity' => ['nullable', 'numeric', 'min:0'],
+            'unit' => ['nullable', 'string', 'max:20'],
+            'unit_price' => ['nullable', 'numeric'],
+            'planned_start_date' => ['nullable', 'date'],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'progress_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'assigned_to_user_id' => [

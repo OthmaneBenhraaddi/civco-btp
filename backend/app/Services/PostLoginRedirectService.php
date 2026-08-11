@@ -3,18 +3,21 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Support\TenantLoginUrl;
 use App\Support\TenantRequestResolver;
 
 class PostLoginRedirectService
 {
+    public function __construct(
+        private readonly PermissionResolver $permissionResolver,
+    ) {}
+
     /**
      * SPA path (with ?tenant= in local dev) for post-login navigation.
      */
     public function pathFor(User $user): string
     {
         if ($user->isSuperAdmin()) {
-            return '/super-admin';
+            return '/super-admin/overview';
         }
 
         $user->loadMissing('tenant');
@@ -23,9 +26,7 @@ class PostLoginRedirectService
             return $this->withTenantContext('/portal', $user);
         }
 
-        $path = $user->role === 'admin' ? '/' : '/projects';
-
-        return $this->withTenantContext($path, $user);
+        return $this->withTenantContext($this->defaultPathFor($user), $user);
     }
 
     /**
@@ -43,14 +44,15 @@ class PostLoginRedirectService
             return null;
         }
 
+        $dashboardPath = $this->defaultPathFor($user);
+
         if (TenantRequestResolver::usesLocalQueryFallback()) {
             $scheme = (string) config('tenancy.login_scheme', 'http');
             $host = (string) config('tenancy.local_frontend_host', '127.0.0.1');
             $port = (string) config('tenancy.frontend_port', '5173');
             $portSegment = $port !== '' ? ":{$port}" : '';
-            $path = $user->role === 'admin' ? '/' : '/projects';
 
-            return "{$scheme}://{$host}{$portSegment}{$path}?tenant=".urlencode($user->tenant->subdomain);
+            return "{$scheme}://{$host}{$portSegment}{$dashboardPath}?tenant=".urlencode($user->tenant->subdomain);
         }
 
         $scheme = (string) config('tenancy.login_scheme', 'http');
@@ -58,9 +60,41 @@ class PostLoginRedirectService
         $baseDomain = (string) config('tenancy.base_domain', 'monerp.com');
         $portSegment = $port !== '' ? ":{$port}" : '';
         $subdomain = $user->tenant->subdomain;
-        $dashboardPath = $user->role === 'admin' ? '/' : '/projects';
 
         return "{$scheme}://{$subdomain}.{$baseDomain}{$portSegment}{$dashboardPath}";
+    }
+
+    private function defaultPathFor(User $user): string
+    {
+        if ($user->role === 'admin') {
+            return '/';
+        }
+
+        $company = $user->tenant_id !== null
+            ? $user->companies()->orderByDesc('company_user.is_primary')->first()
+            : $user->primaryCompany();
+
+        if ($company === null) {
+            return '/';
+        }
+
+        $permissions = $this->permissionResolver->expand(
+            $user->permissionSlugsForCompany($company->id),
+        );
+
+        foreach ([
+            'project.view' => '/projects',
+            'invoice.view' => '/invoices',
+            'quote.view' => '/quotes',
+            'client.view' => '/clients',
+            'dashboard.view' => '/',
+        ] as $permission => $path) {
+            if (in_array($permission, $permissions, true)) {
+                return $path;
+            }
+        }
+
+        return '/';
     }
 
     private function withTenantContext(string $path, User $user): string

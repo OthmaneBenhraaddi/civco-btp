@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\CheckUserStatus;
+use App\Http\Middleware\EnsureCompanyContext;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\IdentifyTenantBySubdomain;
+use App\Http\Middleware\ResolveLocalTenantFallback;
+use App\Http\Middleware\ResolveStealthMode;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,21 +31,22 @@ return Application::configure(basePath: dirname(__DIR__))
             return '/';
         });
         $middleware->alias([
-            'company' => \App\Http\Middleware\EnsureCompanyContext::class,
-            'permission' => \App\Http\Middleware\CheckPermission::class,
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
-            'user.status' => \App\Http\Middleware\CheckUserStatus::class,
-            'tenant.subdomain' => \App\Http\Middleware\IdentifyTenantBySubdomain::class,
-            'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'company' => EnsureCompanyContext::class,
+            'permission' => CheckPermission::class,
+            'admin' => EnsureUserIsAdmin::class,
+            'user.status' => CheckUserStatus::class,
+            'tenant.subdomain' => IdentifyTenantBySubdomain::class,
+            'super_admin' => EnsureSuperAdmin::class,
         ]);
 
         $middleware->appendToGroup('web', [
-            \App\Http\Middleware\CheckUserStatus::class,
+            CheckUserStatus::class,
         ]);
 
         $middleware->appendToGroup('api', [
-            \App\Http\Middleware\CheckUserStatus::class,
-            \App\Http\Middleware\ResolveLocalTenantFallback::class,
+            CheckUserStatus::class,
+            ResolveLocalTenantFallback::class,
+            ResolveStealthMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

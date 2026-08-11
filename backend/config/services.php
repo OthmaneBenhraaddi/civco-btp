@@ -40,4 +40,16 @@ return [
         'ca_bundle' => env('NOMINATIM_CA_BUNDLE'),
     ],
 
+    'document_renderer' => [
+        'url' => env('DOCUMENT_RENDERER_URL'),
+        'token' => env('DOCUMENT_RENDERER_SECRET'),
+        'timeout' => env('DOCUMENT_RENDERER_TIMEOUT', 10),
+    ],
+
+    'notification_dispatcher' => [
+        'url' => env('NOTIFICATION_DISPATCHER_URL'),
+        'token' => env('NOTIFICATION_DISPATCHER_SECRET'),
+        'timeout' => env('NOTIFICATION_DISPATCHER_TIMEOUT', 10),
+    ],
+
 ];

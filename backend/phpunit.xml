@@ -29,8 +29,13 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="DOCUMENT_RENDERER_URL" value=""/>
+        <env name="DOCUMENT_RENDERER_SECRET" value=""/>
+        <env name="NOTIFICATION_DISPATCHER_URL" value=""/>
+        <env name="NOTIFICATION_DISPATCHER_SECRET" value=""/>
     </php>
 </phpunit>

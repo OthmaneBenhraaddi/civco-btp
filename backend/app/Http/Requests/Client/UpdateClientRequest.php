@@ -25,6 +25,7 @@ class UpdateClientRequest extends FormRequest
             'country' => ['nullable', 'string', 'size:2'],
             'notes' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
+            'is_official' => ['sometimes', 'boolean'],
             'badge_ids' => ['sometimes', 'array'],
             'badge_ids.*' => ['integer', 'exists:badges,id'],
         ];

@@ -52,21 +52,32 @@ export default function ContractTemplateSettingsPanel() {
     setError('')
 
     try {
-      const [templatesData, contractsData, projectsData] = await Promise.all([
+      const [templatesData, contractsData] = await Promise.all([
         contractsApi.fetchContractTemplates(),
         contractsApi.fetchContracts({ per_page: 20 }),
-        projectsApi.fetchProjects({ per_page: 100 }),
       ])
 
       setTemplates(templatesData)
       setContracts(unwrapResource(contractsData))
-      setProjects(unwrapResource(projectsData))
     } catch (err) {
       setError(extractErrorMessage(err, t('contracts.loadError')))
     } finally {
       setLoading(false)
     }
   }, [t])
+
+  const loadProjectsIfNeeded = useCallback(async () => {
+    if (projects.length > 0) {
+      return
+    }
+
+    try {
+      const projectsData = await projectsApi.fetchProjects({ per_page: 100 })
+      setProjects(unwrapResource(projectsData))
+    } catch {
+      // Preview/compile dropdowns stay empty if this fails.
+    }
+  }, [projects.length])
 
   useEffect(() => {
     loadData()
@@ -263,6 +274,7 @@ export default function ContractTemplateSettingsPanel() {
                 <select
                   className={FIELD_CLASS}
                   value={previewProjectId}
+                  onFocus={loadProjectsIfNeeded}
                   onChange={(e) => setPreviewProjectId(e.target.value)}
                 >
                   <option value="">{t('contracts.noProjectPreview')}</option>
@@ -319,6 +331,7 @@ export default function ContractTemplateSettingsPanel() {
                     <select
                       className="filter-select"
                       value={compileProjectId}
+                      onFocus={loadProjectsIfNeeded}
                       onChange={(e) => setCompileProjectId(e.target.value)}
                     >
                       <option value="">{t('contracts.selectProject')}</option>

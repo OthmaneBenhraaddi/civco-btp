@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\TaskStatus;
+use App\Models\Concerns\AppliesStealthViaProjectPhase;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
-    use BelongsToTenant;
+    use AppliesStealthViaProjectPhase, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',
@@ -17,8 +18,12 @@ class Task extends Model
         'assigned_to_user_id',
         'title',
         'description',
+        'quantity',
+        'unit',
+        'unit_price',
         'status',
         'progress_percent',
+        'planned_start_date',
         'due_date',
         'completed_at',
         'sort_order',
@@ -29,6 +34,9 @@ class Task extends Model
         return [
             'status' => TaskStatus::class,
             'progress_percent' => 'decimal:2',
+            'quantity' => 'decimal:3',
+            'unit_price' => 'decimal:2',
+            'planned_start_date' => 'date',
             'due_date' => 'date',
             'completed_at' => 'datetime',
         ];

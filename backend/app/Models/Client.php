@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ClientStatus;
+use App\Models\Concerns\AppliesStealthClientFilter;
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
-    use BelongsToCompany, BelongsToTenant;
+    use AppliesStealthClientFilter, BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',
@@ -27,6 +29,9 @@ class Client extends Model
         'country',
         'notes',
         'is_active',
+        'is_official',
+        'status',
+        'archived_at',
         'client_role_slug',
     ];
 
@@ -34,7 +39,15 @@ class Client extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_official' => 'boolean',
+            'status' => ClientStatus::class,
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public function isArchived(): bool
+    {
+        return ($this->status ?? ClientStatus::Active) === ClientStatus::Archived;
     }
 
     public function projects(): HasMany

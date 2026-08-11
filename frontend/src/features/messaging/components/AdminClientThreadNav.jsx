@@ -81,12 +81,25 @@ export default function AdminClientThreadNav({
     })
   }
 
+  function preferredThreadKey(group) {
+    const threads = group.threads ?? []
+    const projectThread = threads.find((thread) => thread.project_id != null)
+
+    if (projectThread) {
+      return buildThreadKey(projectThread.project_id)
+    }
+
+    const generalThread = threads.find((thread) => thread.project_id == null)
+
+    return buildThreadKey(generalThread?.project_id ?? null)
+  }
+
   function handleClientClick(group) {
     const isExpanded = expandedClientIds.has(group.client_user_id)
     toggleClient(group.client_user_id)
 
     if (!isExpanded) {
-      onSelectThread(group.client_user_id, buildThreadKey(null))
+      onSelectThread(group.client_user_id, preferredThreadKey(group))
     }
   }
 

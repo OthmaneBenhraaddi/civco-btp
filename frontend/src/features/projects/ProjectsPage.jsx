@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { LIVE_SYNC_INTERVAL_MS, useAutoRefresh } from '../../hooks/useAutoRefresh'
 import * as clientsApi from '../../api/clients'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
+import { filterOfficialClients, filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
 import { buildProjectApiPayload } from './constants/projectFormConfig'
 import NewProjectModal from './components/NewProjectModal'
 import {
@@ -18,18 +19,30 @@ import {
 } from '../history/auditLogActions'
 
 export default function ProjectsPage() {
-  const { hasPermission, user, roles } = useAuth()
+  const { isAdmin, user, roles } = useAuth()
+  const { stealthMode } = useStealthMode()
+  const stealthModeRef = useRef(stealthMode)
+  stealthModeRef.current = stealthMode
   const { t } = useTranslation()
   const [projects, setProjects] = useState([])
+  const projectsBaselineRef = useRef([])
   const [clients, setClients] = useState([])
+  const clientsBaselineRef = useRef([])
   const [meta, setMeta] = useState(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [clientsLoading, setClientsLoading] = useState(false)
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => window.clearTimeout(timer)
+  }, [search])
 
   const loadProjects = useCallback(async ({ silent = false, page: nextPage = page } = {}) => {
     if (!silent) {
@@ -39,13 +52,18 @@ export default function ProjectsPage() {
 
     try {
       const data = await projectsApi.fetchProjects({
-        search,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
         page: nextPage,
       })
-      setProjects(data.data ?? [])
+      const list = data.data ?? []
+      setProjects(list)
       setMeta(data.meta ?? null)
       setPage(nextPage)
+
+      if (!stealthModeRef.current) {
+        projectsBaselineRef.current = list
+      }
     } catch (err) {
       if (!silent) {
         setError(extractErrorMessage(err, t('projects.loadError')))
@@ -55,22 +73,75 @@ export default function ProjectsPage() {
         setLoading(false)
       }
     }
-  }, [page, search, statusFilter, t])
+  }, [page, debouncedSearch, statusFilter, t])
 
   useEffect(() => {
     loadProjects({ page: 1 })
-  }, [search, statusFilter])
+  }, [debouncedSearch, statusFilter])
 
-  useAutoRefresh(loadProjects, [loadProjects], { runOnMount: false })
+  useAutoRefresh(loadProjects, [loadProjects], { runOnMount: false, intervalMs: 60000 })
+
+  const loadClientOptions = useCallback(() => {
+    setClientsLoading(true)
+
+    return clientsApi.fetchClientsForPicker()
+      .then((data) => {
+        const list = data.data ?? []
+        setClients(list)
+        if (!stealthModeRef.current) {
+          clientsBaselineRef.current = list
+        }
+        return list
+      })
+      .catch(() => {
+        setClients([])
+        return []
+      })
+      .finally(() => {
+        setClientsLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
-    clientsApi.fetchClients({ per_page: 100 })
-      .then((data) => setClients(data.data ?? []))
-      .catch(() => setClients([]))
-  }, [])
+    if (isAdmin) {
+      loadClientOptions()
+    }
+  }, [isAdmin, loadClientOptions])
+
+  useEffect(() => {
+    if (modalOpen && clients.length === 0 && !clientsLoading) {
+      loadClientOptions()
+    }
+  }, [modalOpen, clients.length, clientsLoading, loadClientOptions])
+
+  useStealthModeRefresh(({ active }) => {
+    if (!active) {
+      if (projectsBaselineRef.current.length > 0) {
+        setProjects(projectsBaselineRef.current)
+      }
+      if (clientsBaselineRef.current.length > 0) {
+        setClients(clientsBaselineRef.current)
+      }
+      loadProjects({ page: meta?.current_page ?? page, silent: true })
+      loadClientOptions()
+    }
+  })
+
+  const visibleProjects = useMemo(
+    () => (stealthMode ? filterOfficialLinkedRecords(projects) : projects),
+    [projects, stealthMode],
+  )
+
+  const visibleClients = useMemo(
+    () => (stealthMode ? filterOfficialClients(clients) : clients),
+    [clients, stealthMode],
+  )
 
   function openCreate() {
     setModalOpen(true)
+    if (clients.length === 0) {
+      loadClientOptions()
+    }
   }
 
   async function handleCreateProject(form) {
@@ -112,20 +183,23 @@ export default function ProjectsPage() {
     }
   }
 
+  const canCreateProject = isAdmin && !clientsLoading && visibleClients.length > 0
+  const showNeedClientHint = isAdmin && !clientsLoading && visibleClients.length === 0
+
   return (
     <div className="list-page">
       <header className="page-header">
         <div>
           <h1>{t('projects.title')}</h1>
         </div>
-        <PermissionGate permission="project.create">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+        {isAdmin ? (
+          <button type="button" onClick={openCreate} disabled={!canCreateProject}>
             {t('projects.new')}
           </button>
-        </PermissionGate>
+        ) : null}
       </header>
 
-      {clients.length === 0 ? (
+      {showNeedClientHint ? (
         <p className="hint">{t('projects.needClient')}</p>
       ) : null}
 
@@ -148,7 +222,7 @@ export default function ProjectsPage() {
 
       {error ? <p className="error">{error}</p> : null}
 
-      {loading && projects.length === 0 ? (
+      {loading && visibleProjects.length === 0 ? (
         <p>{t('common.loading')}</p>
       ) : (
         <div className="table-wrap">
@@ -164,12 +238,12 @@ export default function ProjectsPage() {
               </tr>
             </thead>
             <tbody>
-              {projects.length === 0 ? (
+              {visibleProjects.length === 0 ? (
                 <tr>
                   <td colSpan={6}>{t('projects.empty')}</td>
                 </tr>
               ) : (
-                projects.map((project) => (
+                visibleProjects.map((project) => (
                   <tr key={project.id}>
                     <td>{project.reference}</td>
                     <td>
@@ -185,7 +259,7 @@ export default function ProjectsPage() {
                       >
                         {t('projects.open')}
                       </Link>
-                      {hasPermission('project.delete') ? (
+                      {isAdmin ? (
                         <button
                           type="button"
                           className="ghost danger inline-flex items-center justify-center px-3 py-1.5 leading-none"
@@ -206,7 +280,7 @@ export default function ProjectsPage() {
       <NewProjectModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        clients={clients}
+        clients={visibleClients}
         onSubmit={handleCreateProject}
         saving={saving}
       />

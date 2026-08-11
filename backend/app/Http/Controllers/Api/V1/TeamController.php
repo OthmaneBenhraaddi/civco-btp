@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Team\StoreTeamMemberRequest;
+use App\Http\Requests\Team\UpdateTeamMemberRoleRequest;
 use App\Http\Resources\TeamMemberResource;
 use App\Http\Resources\TenantTeamOptionResource;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\TeamMemberService;
 use App\Services\TeamQueryService;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +24,7 @@ class TeamController extends Controller
     public function __construct(
         private readonly TeamMemberService $teamMemberService,
         private readonly TeamQueryService $teamQueryService,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -48,6 +51,17 @@ class TeamController extends Controller
 
         if ($tenantId !== null) {
             $query->where('tenant_id', $tenantId);
+        }
+
+        if ($request->filled('search')) {
+            $term = '%'.$request->string('search')->trim().'%';
+            $query->where(function ($builder) use ($term): void {
+                $builder
+                    ->where('email', 'like', $term)
+                    ->orWhere('first_name', 'like', $term)
+                    ->orWhere('last_name', 'like', $term)
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$term]);
+            });
         }
 
         if (! $actor->isSuperAdmin()) {
@@ -105,7 +119,7 @@ class TeamController extends Controller
                 $request->string('last_name')->toString(),
                 $request->string('email')->toString(),
                 $request->string('password')->toString(),
-                $request->string('role')->toString(),
+                $request->integer('role_id'),
                 $request->input('cin'),
                 $request->input('phone'),
                 $request->input('job_title'),
@@ -137,6 +151,72 @@ class TeamController extends Controller
             'status' => $nextStatus,
             'is_active' => $nextStatus === UserStatus::Active,
         ]);
+
+        $user->loadMissing(['companies', 'tenant:id,name,subdomain', 'roles:id,name,slug']);
+
+        $this->activityLogService->logTeamMemberAccessToggled($user, $nextStatus, $actor);
+
+        return new TeamMemberResource($user->fresh()->load(['tenant:id,name,subdomain', 'roles:id,name,slug']));
+    }
+
+    public function updateRole(UpdateTeamMemberRoleRequest $request, User $user): JsonResponse|TeamMemberResource
+    {
+        $actor = $request->user();
+
+        $this->teamQueryService->assertCanChangeMemberRole($actor, $user);
+
+        $companyId = $actor->primaryCompany()?->id;
+
+        if ($companyId === null) {
+            throw new AccessDeniedHttpException('Aucune société active pour modifier le rôle.');
+        }
+
+        $previousRoleName = $user->roles()
+            ->wherePivot('company_id', $companyId)
+            ->value('roles.name')
+            ?? $user->job_title
+            ?? '—';
+
+        try {
+            $member = $this->teamMemberService->updateRoleForCompany(
+                $user,
+                $companyId,
+                $request->integer('role_id'),
+            );
+        } catch (InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        $newRoleName = $member->roles->first()?->name ?? 'Membre';
+
+        $this->activityLogService->logTeamMemberRoleChanged(
+            $member,
+            (string) $previousRoleName,
+            (string) $newRoleName,
+            $actor,
+        );
+
+        return new TeamMemberResource($member);
+    }
+
+    public function archive(Request $request, User $user): TeamMemberResource
+    {
+        $actor = $request->user();
+
+        if (! $actor->isAdmin() && ! $actor->isSuperAdmin()) {
+            throw new AccessDeniedHttpException('Action réservée aux administrateurs.');
+        }
+
+        $this->teamQueryService->assertCanArchiveMember($actor, $user);
+
+        $user->update([
+            'status' => UserStatus::Archived,
+            'is_active' => false,
+        ]);
+
+        $user->loadMissing(['companies', 'tenant:id,name,subdomain', 'roles:id,name,slug']);
+
+        $this->activityLogService->logTeamMemberArchived($user, $actor);
 
         return new TeamMemberResource($user->fresh()->load(['tenant:id,name,subdomain', 'roles:id,name,slug']));
     }

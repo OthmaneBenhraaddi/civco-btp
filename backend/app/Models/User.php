@@ -13,15 +13,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['first_name', 'last_name', 'email', 'phone', 'cin', 'job_title', 'is_active', 'role', 'password', 'tenant_id', 'client_id', 'status'])]
+#[Fillable(['first_name', 'last_name', 'email', 'phone', 'cin', 'job_title', 'is_active', 'role', 'password', 'tenant_id', 'client_id', 'status', 'stealth_shortcut'])]
 #[Hidden(['password', 'remember_token', 'provisioned_password'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /** @var array<int, list<string>> */
+    private array $permissionSlugCache = [];
 
     protected function casts(): array
     {
@@ -30,6 +34,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'status' => UserStatus::class,
             'password' => 'hashed',
+            'stealth_shortcut' => 'array',
         ];
     }
 
@@ -101,7 +106,7 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->tenant_id === null;
+        return $this->tenant_id === null && $this->role === 'super_admin';
     }
 
     public function isActive(): bool
@@ -120,7 +125,7 @@ class User extends Authenticatable
         }
 
         if ($this->tenant_id === null) {
-            return true;
+            return $this->isSuperAdmin();
         }
 
         $tenant = $this->relationLoaded('tenant') ? $this->tenant : $this->tenant()->first();
@@ -162,17 +167,34 @@ class User extends Authenticatable
 
     public function permissionSlugsForCompany(int $companyId): array
     {
-        return $this->rolesForCompany($companyId)
-            ->with('permissions')
-            ->get()
-            ->flatMap(fn (Role $role) => $role->permissions->pluck('slug'))
-            ->unique()
-            ->values()
+        if (isset($this->permissionSlugCache[$companyId])) {
+            return $this->permissionSlugCache[$companyId];
+        }
+
+        $slugs = DB::table('permissions')
+            ->join('role_permission', 'permissions.id', '=', 'role_permission.permission_id')
+            ->join('user_role', 'role_permission.role_id', '=', 'user_role.role_id')
+            ->where('user_role.user_id', $this->id)
+            ->where('user_role.company_id', $companyId)
+            ->distinct()
+            ->orderBy('permissions.slug')
+            ->pluck('permissions.slug')
             ->all();
+
+        $this->permissionSlugCache[$companyId] = $slugs;
+
+        return $slugs;
     }
 
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function assignedProjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class, 'project_user')
+            ->withPivot(['role_label', 'assigned_at', 'can_chat_with_client'])
+            ->withTimestamps();
     }
 }

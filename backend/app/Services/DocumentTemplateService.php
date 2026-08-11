@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Contracts\Documents\DocumentRenderer;
+use App\Dto\Documents\RenderRequest;
 use App\Enums\DeliveryFormStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\QuoteStatus;
@@ -18,6 +20,10 @@ class DocumentTemplateService
 {
     private const BRAND_NAME = 'BTP Pro';
 
+    public function __construct(
+        private readonly DocumentRenderer $documentRenderer,
+    ) {}
+
     /**
      * Compile a template by replacing {{placeholder}} and {placeholder} tokens.
      *
@@ -25,23 +31,10 @@ class DocumentTemplateService
      */
     public function compile(string $template, array $variables): string
     {
-        $normalized = [];
-
-        foreach ($variables as $key => $value) {
-            $normalized[(string) $key] = (string) ($value ?? '');
-        }
-
-        $compiled = preg_replace_callback(
-            '/\{\{\s*([\w.]+)\s*\}\}|\{\s*([\w.]+)\s*\}/',
-            static function (array $matches) use ($normalized): string {
-                $key = $matches[1] !== '' ? $matches[1] : $matches[2];
-
-                return $normalized[$key] ?? $matches[0];
-            },
-            $template,
-        );
-
-        return $compiled ?? $template;
+        return $this->documentRenderer->render(new RenderRequest(
+            templateHtml: $template,
+            variables: $variables,
+        ))->html;
     }
 
     /**

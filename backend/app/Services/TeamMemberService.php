@@ -11,16 +11,12 @@ use InvalidArgumentException;
 
 class TeamMemberService
 {
+    /** @var list<string> */
+    private const NON_ASSIGNABLE_ROLE_SLUGS = ['super_admin', 'client_extern'];
+
     public function __construct(
         private readonly AdminCredentialService $adminCredentialService,
     ) {}
-
-    /** @var array<string, string> */
-    private const ROLE_SLUG_MAP = [
-        'admin' => 'admin',
-        'technicien' => 'collaborator',
-        'comptable' => 'accountant',
-    ];
 
     public function createForCompany(
         int $companyId,
@@ -29,24 +25,25 @@ class TeamMemberService
         string $lastName,
         string $email,
         string $password,
-        string $teamRole,
+        int $roleId,
         ?string $cin = null,
         ?string $phone = null,
         ?string $jobTitle = null,
     ): User {
-        $roleSlug = self::ROLE_SLUG_MAP[$teamRole] ?? null;
-
-        if ($roleSlug === null) {
-            throw new InvalidArgumentException('Rôle d\'équipe invalide.');
-        }
-
         $role = Role::query()
-            ->whereNull('company_id')
-            ->where('slug', $roleSlug)
+            ->where('id', $roleId)
+            ->where(function ($builder) use ($companyId): void {
+                $builder->whereNull('company_id')
+                    ->orWhere('company_id', $companyId);
+            })
             ->first();
 
         if ($role === null) {
-            throw new InvalidArgumentException('Rôle système introuvable.');
+            throw new InvalidArgumentException('Rôle invalide ou inaccessible pour cette société.');
+        }
+
+        if (in_array($role->slug, self::NON_ASSIGNABLE_ROLE_SLUGS, true)) {
+            throw new InvalidArgumentException('Ce rôle ne peut pas être assigné à un membre d\'équipe.');
         }
 
         return DB::transaction(function () use (
@@ -56,13 +53,12 @@ class TeamMemberService
             $lastName,
             $email,
             $password,
-            $teamRole,
             $role,
             $cin,
             $phone,
             $jobTitle,
         ): User {
-            $resolvedJobTitle = $jobTitle ?: $this->defaultJobTitleForRole($teamRole);
+            $resolvedJobTitle = $jobTitle ?: $role->name;
 
             $user = User::query()->create([
                 'tenant_id' => $tenantId,
@@ -74,7 +70,7 @@ class TeamMemberService
                 'password' => Hash::make($password),
                 'is_active' => true,
                 'status' => UserStatus::Active,
-                'role' => $teamRole === 'admin' ? 'admin' : 'user',
+                'role' => $role->slug === 'admin' ? 'admin' : 'user',
                 'job_title' => $resolvedJobTitle,
                 'email_verified_at' => now(),
             ]);
@@ -94,12 +90,45 @@ class TeamMemberService
         });
     }
 
-    private function defaultJobTitleForRole(string $teamRole): string
+    public function updateRoleForCompany(User $member, int $companyId, int $roleId): User
     {
-        return match ($teamRole) {
-            'admin' => 'Administrateur',
-            'comptable' => 'Comptable',
-            default => 'Technicien',
-        };
+        $role = Role::query()
+            ->where('id', $roleId)
+            ->where(function ($builder) use ($companyId): void {
+                $builder->whereNull('company_id')
+                    ->orWhere('company_id', $companyId);
+            })
+            ->first();
+
+        if ($role === null) {
+            throw new InvalidArgumentException('Rôle invalide ou inaccessible pour cette société.');
+        }
+
+        if (in_array($role->slug, self::NON_ASSIGNABLE_ROLE_SLUGS, true)) {
+            throw new InvalidArgumentException('Ce rôle ne peut pas être assigné à un membre d\'équipe.');
+        }
+
+        return DB::transaction(function () use ($member, $companyId, $role): User {
+            $previousRoleName = $member->roles()
+                ->wherePivot('company_id', $companyId)
+                ->value('roles.name');
+
+            $member->roles()->sync([
+                $role->id => ['company_id' => $companyId],
+            ]);
+
+            $updates = [
+                'role' => $role->slug === 'admin' ? 'admin' : 'user',
+            ];
+
+            if ($previousRoleName !== null
+                && trim((string) $member->job_title) === trim((string) $previousRoleName)) {
+                $updates['job_title'] = $role->name;
+            }
+
+            $member->update($updates);
+
+            return $member->fresh()->load(['companies', 'roles', 'tenant:id,name,subdomain']);
+        });
     }
 }

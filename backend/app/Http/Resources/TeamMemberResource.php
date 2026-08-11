@@ -2,18 +2,22 @@
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use App\Services\AdminCredentialService;
 use App\Support\ProvisionedCredentialPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\User */
+/** @mixin User */
 class TeamMemberResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         $viewer = $request->user();
-        $canViewCredentials = ProvisionedCredentialPolicy::canRevealToViewer($viewer);
+        $canViewCredentials = ProvisionedCredentialPolicy::canRevealTeamMemberCredentials(
+            $viewer,
+            $this->tenant_id !== null ? (int) $this->tenant_id : null,
+        );
 
         $storedPassword = $canViewCredentials
             ? app(AdminCredentialService::class)->reveal($this->resource)

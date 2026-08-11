@@ -4,8 +4,8 @@ import { useTranslation } from '../i18n/LanguageContext'
 import { appendTenantQuery } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin } from '../utils/authIdentity'
 import {
+  canAccessRoute,
   getHomePathForRole,
-  isAdminOnlyPath,
   isClientOnlyPath,
   isClientUser,
   isEntityBoundAdminPath,
@@ -13,9 +13,11 @@ import {
 } from '../routes/routeAccess'
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading, isAdmin, isSuperAdmin, user, roles } = useAuth()
+  const { isAuthenticated, loading, isAdmin, isSuperAdmin, user, roles, permissions } = useAuth()
   const { t } = useTranslation()
   const location = useLocation()
+
+  const routeContext = { user, roles, permissions, isAdmin, isSuperAdmin }
 
   if (loading) {
     return (
@@ -36,19 +38,23 @@ export default function ProtectedRoute() {
   }
 
   if (!clientUser && isClientOnlyPath(location.pathname)) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
   }
 
-  if (!isAdmin && isAdminOnlyPath(location.pathname)) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+  if (!canAccessRoute(location.pathname, routeContext)) {
+    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
   }
 
   if (!isSuperAdmin && isSuperAdminOnlyPath(location.pathname)) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
+  }
+
+  if (isPlatformSuperAdmin(user) && location.pathname === '/team') {
+    return <Navigate to="/super-admin/members" replace />
   }
 
   if (isPlatformSuperAdmin(user) && isEntityBoundAdminPath(location.pathname)) {
-    return <Navigate to="/super-admin" replace />
+    return <Navigate to="/super-admin/overview" replace />
   }
 
   return <Outlet />

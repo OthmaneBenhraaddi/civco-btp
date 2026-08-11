@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ContractAmendmentStatus;
 use App\Enums\ProjectStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
 use App\Http\Controllers\Concerns\ResolvesTenantContext;
@@ -34,7 +35,15 @@ class ProjectController extends Controller
     {
         $query = Project::query()
             ->forCompany($this->companyId($request))
-            ->with(['client:id,name', 'lots'])
+            ->with(['client:id,name,is_official'])
+            ->withSum([
+                'amendments as amendments_amount_delta_sum' => fn ($builder) => $builder
+                    ->where('status', ContractAmendmentStatus::Validated),
+            ], 'amount_change')
+            ->withSum([
+                'amendments as amendments_duration_delta_sum' => fn ($builder) => $builder
+                    ->where('status', ContractAmendmentStatus::Validated),
+            ], 'duration_change_days')
             ->orderByDesc('created_at');
 
         $query = $this->applyProjectVisibilityScope($query, $request);
@@ -96,7 +105,7 @@ class ProjectController extends Controller
             return $project;
         });
 
-        return (new ProjectResource($project->load(['client', 'lots'])))
+        return (new ProjectResource($project->load(['client', 'lots', 'amendments'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -112,6 +121,7 @@ class ProjectController extends Controller
                 'phases.tasks.assignedTo',
                 'teamMembers',
                 'progressSnapshots.recordedBy',
+                'amendments',
             ])
         );
     }
@@ -133,7 +143,7 @@ class ProjectController extends Controller
             }
         });
 
-        return new ProjectResource($project->fresh()->load(['client', 'lots']));
+        return new ProjectResource($project->fresh()->load(['client', 'lots', 'amendments']));
     }
 
     public function destroy(Request $request, Project $project): JsonResponse

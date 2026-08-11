@@ -4,6 +4,7 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
 import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
+import PrintOptionsModal from '../../components/print/PrintOptionsModal'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { usePolicyCommercialPrint } from '../../hooks/usePolicyCommercialPrint'
@@ -213,8 +214,14 @@ export default function InvoiceDetailPage() {
     copyStrength,
     printing,
     handlePrint,
+    hasHeader,
+    setHasHeader,
+    printOptionsOpen,
+    closePrintOptions,
+    confirmPrint,
     tenantLogoUrl,
     tenantName,
+    company,
   } = usePolicyCommercialPrint({
     documentType: 'invoice',
     documentId: Number(id),
@@ -257,13 +264,9 @@ export default function InvoiceDetailPage() {
             <button
               type="button"
               className="ghost"
-              onClick={async () => {
+              onClick={() => {
                 setError('')
-                try {
-                  await handlePrint()
-                } catch (err) {
-                  setError(extractErrorMessage(err, t('print.printError')))
-                }
+                handlePrint()
               }}
               disabled={printing}
             >
@@ -493,6 +496,22 @@ export default function InvoiceDetailPage() {
       </PermissionGate>
     </div>
 
+    <PrintOptionsModal
+      open={printOptionsOpen}
+      hasHeader={hasHeader}
+      onHasHeaderChange={setHasHeader}
+      confirming={printing}
+      onClose={closePrintOptions}
+      onConfirm={async () => {
+        setError('')
+        try {
+          await confirmPrint()
+        } catch (err) {
+          setError(extractErrorMessage(err, t('print.printError')))
+        }
+      }}
+    />
+
     <div className="print-only">
       <PolicyPrintWrapper watermarkLabel={isCopy ? t('print.copyWatermark') : null}>
         <CommercialPrintSheet
@@ -522,8 +541,10 @@ export default function InvoiceDetailPage() {
           isCopy={isCopy}
           copyStrength={copyStrength}
           watermarkLabel={isCopy ? t('print.copyWatermark') : null}
-          tenantLogoUrl={tenantLogoUrl ?? documentPreview?.tenant?.logo_url}
-          tenantName={tenantName ?? documentPreview?.tenant?.name}
+          includeHeader={hasHeader}
+          tenantLogoUrl={hasHeader ? (tenantLogoUrl ?? documentPreview?.tenant?.logo_url) : null}
+          tenantName={hasHeader ? (tenantName ?? documentPreview?.tenant?.name) : null}
+          company={hasHeader ? company : null}
           signature={documentPreview?.signature}
         />
       </PolicyPrintWrapper>

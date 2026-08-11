@@ -63,18 +63,14 @@ export default function RolesSettingsPanel() {
   const isSystemRole = Boolean(selectedRole?.is_system)
   const isCustomRole = selectedRole && !selectedRole.is_system
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async ({ force = false } = {}) => {
     setLoading(true)
     setError('')
 
     try {
-      const [rolesResponse, permissionsResponse] = await Promise.all([
-        rolesApi.fetchRoles(),
-        rolesApi.fetchPermissions(),
-      ])
-
-      const nextRoles = rolesResponse.data ?? []
-      const nextPermissions = permissionsResponse.data ?? []
+      const settings = await rolesApi.fetchRoleSettings({ force })
+      const nextRoles = settings.roles?.data ?? settings.roles ?? []
+      const nextPermissions = settings.permissions?.data ?? settings.permissions ?? []
 
       setRoles(nextRoles)
       setPermissions(nextPermissions)
@@ -103,11 +99,14 @@ export default function RolesSettingsPanel() {
       return
     }
 
-    setSelectedPermissionIds((selectedRole.permissions ?? []).map((permission) => permission.id))
+    setSelectedPermissionIds(
+      selectedRole.permission_ids
+        ?? (selectedRole.permissions ?? []).map((permission) => permission.id),
+    )
   }, [selectedRole])
 
   async function persistPermissions(nextIds) {
-    if (!selectedRole || isSystemRole) return
+    if (!selectedRole) return
 
     setSaving(true)
     setError('')
@@ -119,7 +118,10 @@ export default function RolesSettingsPanel() {
       const updated = response.data ?? response
 
       setRoles((current) => current.map((role) => (role.id === updated.id ? updated : role)))
-      setSelectedPermissionIds((updated.permissions ?? []).map((permission) => permission.id))
+      setSelectedPermissionIds(
+        updated.permission_ids
+          ?? (updated.permissions ?? []).map((permission) => permission.id),
+      )
     } catch (err) {
       setError(extractErrorMessage(err, t('roles.saveError')))
     } finally {
@@ -128,7 +130,7 @@ export default function RolesSettingsPanel() {
   }
 
   function togglePermission(permissionId) {
-    if (isSystemRole) return
+    if (!selectedRole) return
 
     const next = new Set(selectedPermissionIds)
     if (next.has(permissionId)) {
@@ -257,7 +259,7 @@ export default function RolesSettingsPanel() {
                     {saving ? ` · ${t('common.saving')}` : ''}
                   </p>
                   {isSystemRole ? (
-                    <p className="mt-2 text-xs text-amber-400/90">{t('roles.systemRoleHint')}</p>
+                    <p className="mt-2 text-xs text-slate-500">{t('roles.systemRoleHint')}</p>
                   ) : null}
                 </div>
                 {isCustomRole ? (
@@ -293,7 +295,7 @@ export default function RolesSettingsPanel() {
                             <span className="text-sm text-slate-300">{label}</span>
                             <PermissionToggle
                               checked={checked}
-                              disabled={isSystemRole || saving}
+                              disabled={saving}
                               onChange={() => togglePermission(permission.id)}
                               label={label}
                             />

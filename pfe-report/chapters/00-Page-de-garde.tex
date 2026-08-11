@@ -1,0 +1,146 @@
+% ============================================================
+%  00 - Page de garde (template EMSI / Honoris — layout officiel)
+%  Logos :
+%    - img/emsi_cover.png  (extrait du template, déjà en place)
+%    - img/civco_cover.png (à ajouter pour remplacer le placeholder)
+% ============================================================
+
+\definecolor{emsiGreen}{RGB}{0, 175, 80}
+\definecolor{emsiGreenDark}{RGB}{45, 124, 82}
+\definecolor{emsiRowBg}{RGB}{241, 247, 244}
+\definecolor{emsiNameBar}{RGB}{213, 238, 224}
+\definecolor{emsiTitleGray}{RGB}{70, 70, 70}
+\definecolor{emsiMuted}{RGB}{100, 100, 100}
+\definecolor{emsiBoxBorder}{RGB}{170, 170, 170}
+
+\newfontfamily\coverSans{Arial}
+
+\newcommand{\coverlabel}[1]{%
+  {\coverSans\scriptsize\bfseries\color{emsiGreenDark}#1}\par\vspace{0.06cm}%
+}
+\newcommand{\covername}[1]{%
+  \noindent
+  \colorbox{emsiNameBar}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+      \centering\vspace{0.1cm}%
+      {\coverSans\small\bfseries\itshape\color{emsiGreenDark}#1}%
+      \vspace{0.1cm}%
+    }%
+  }\par\vspace{0.18cm}%
+}
+
+\newgeometry{top=1.1cm, bottom=1.2cm, left=1.5cm, right=1.5cm}
+
+\begin{titlepage}
+  \thispagestyle{empty}
+  \setlength{\parindent}{0pt}
+
+  % Triangles verts (coins)
+  \begin{tikzpicture}[remember picture, overlay]
+    \fill[emsiGreen]
+      (current page.north west) -- ++(0,-6.6cm) -- ++(6.6cm,6.6cm) -- cycle;
+    \fill[emsiGreen]
+      (current page.south east) -- ++(0,4.2cm) -- ++(-4.2cm,-4.2cm) -- cycle;
+    \draw[emsiMuted!40, line width=0.5pt]
+      ([yshift=1.7cm]current page.south west)
+      -- ([yshift=1.7cm]current page.south east);
+  \end{tikzpicture}
+
+  % Logo EMSI — haut droite
+  \noindent\hfill
+  \IfFileExists{img/emsi_cover.png}{%
+    \includegraphics[width=0.52\textwidth]{emsi_cover.png}%
+  }{%
+    \begin{minipage}{0.52\textwidth}\raggedleft
+      {\coverSans\color{emsiGreenDark}\bfseries\fontsize{9}{11}\selectfont
+        ECOLE MAROCAINE DES SCIENCES DE L'INGENIEUR\par}
+      {\coverSans\color{emsiMuted}\fontsize{7}{9}\selectfont
+        Membre de HONORIS UNITED UNIVERSITIES\par}
+    \end{minipage}%
+  }
+
+  \vspace{0.7cm}
+
+  \begin{center}
+    {\fontsize{22}{25}\selectfont\bfseries FINAL-YEAR\par}
+    \vspace{0.05cm}
+    {\fontsize{26}{29}\selectfont\bfseries PROJECT REPORT\par}
+    \vspace{0.28cm}
+    {\coverSans\fontsize{10.5}{12}\selectfont
+      Program: Computer and Network Engineering (IIR), 5th year\par}
+  \end{center}
+
+  \vspace{0.55cm}
+
+  {\color{black}\rule{\textwidth}{0.8pt}}\\[0.32cm]
+  \begin{center}
+    {\coverSans\bfseries\color{emsiTitleGray}\fontsize{15}{19}\selectfont
+      Development of a Web Application for\\[0.12cm]
+      Construction Project Management\\[0.12cm]
+      and Planning\par}
+  \end{center}
+  \vspace{0.28cm}
+  {\color{black}\rule{\textwidth}{0.8pt}}
+
+  \vspace{0.5cm}
+
+  % Boîte infos
+  \begin{tcolorbox}[
+    colback=white,
+    colframe=emsiBoxBorder,
+    boxrule=0.5pt,
+    arc=0pt,
+    sharp corners,
+    left=0mm, right=0mm, top=0mm, bottom=0mm,
+    boxsep=0mm,
+    before skip=0pt,
+    after skip=0pt,
+  ]
+    \begin{minipage}[t]{0.575\linewidth}
+      \begin{tcolorbox}[
+        colback=emsiRowBg,
+        colframe=emsiRowBg,
+        boxrule=0pt,
+        arc=0pt,
+        sharp corners,
+        left=3mm, right=3mm, top=2.5mm, bottom=1.5mm,
+        boxsep=0mm,
+        width=\linewidth,
+        before skip=0pt,
+        after skip=0pt,
+      ]
+        \coverlabel{Submitted by:}
+        \covername{Othmane BENHRADDI}
+        \coverlabel{Company Supervisor:}
+        \covername{M. Mohamed BENABDELLAH-CHAOUNI}
+        \coverlabel{Academic Supervisor:}
+        \covername{Pr. Mohammed EL ASSAD}
+        \coverlabel{Jury Members:}
+        \covername{M. El ASSAD And M. OULAD HAJ THAMI\\[0.04cm]And M. ZAKRANI}
+      \end{tcolorbox}
+    \end{minipage}%
+    \begin{minipage}[t]{0.425\linewidth}
+      \vspace{0.35cm}
+      \centering
+      {\coverSans\normalsize\bfseries\color{emsiTitleGray}Host Organization:\par}
+      \vspace{0.35cm}
+      \IfFileExists{img/civco_cover.png}{%
+        \includegraphics[width=3.2cm]{civco_cover.png}\\[0.25cm]
+      }{%
+        {\setlength{\fboxsep}{7pt}%
+        \fbox{\parbox{2.7cm}{\centering
+          {\coverSans\scriptsize\color{emsiMuted}\textit{CivCo logo}}\\[0.05cm]
+          {\coverSans\tiny\color{emsiMuted}\textit{(to be inserted)}}%
+        }}}\\[0.25cm]
+      }%
+      {\coverSans\fontsize{16}{19}\selectfont\bfseries\color{ensamBlue}CIVCO BTP\par}
+      \vspace{0.08cm}
+      {\coverSans\scriptsize\color{emsiMuted}CIVCO BUILDING \& ENGINEERING\par}
+      \vspace{0.35cm}
+    \end{minipage}%
+  \end{tcolorbox}
+
+\end{titlepage}
+
+\restoregeometry
+% Pas de \newpage ici : \include suivant démarre déjà une nouvelle page

@@ -19,3 +19,15 @@ export async function toggleTeamMemberStatus(userId) {
   const { data } = await api.patch(`/api/v1/team/members/${userId}/status`)
   return data
 }
+
+export async function updateTeamMemberRole(userId, roleId) {
+  const { data } = await api.patch(`/api/v1/team/members/${userId}/role`, {
+    role_id: roleId,
+  })
+  return data
+}
+
+export async function archiveTeamMember(userId) {
+  const { data } = await api.patch(`/api/v1/team/members/${userId}/archive`)
+  return data
+}

@@ -4,7 +4,7 @@ import { useTranslation } from '../i18n/LanguageContext'
 import { getHomePathForRole } from '../routes/routeAccess'
 
 export default function GuestRoute() {
-  const { isAuthenticated, loading, user, roles } = useAuth()
+  const { isAuthenticated, loading, user, roles, permissions } = useAuth()
   const { t } = useTranslation()
 
   if (loading) {
@@ -16,7 +16,7 @@ export default function GuestRoute() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
   }
 
   return <Outlet />

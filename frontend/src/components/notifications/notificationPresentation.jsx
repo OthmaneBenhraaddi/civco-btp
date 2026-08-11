@@ -15,6 +15,9 @@ const TYPE_ICON_MAP = {
   chat: { Icon: MessageSquare, tone: 'text-sky-400' },
   quote_signed: { Icon: FileText, tone: 'text-emerald-400' },
   invoice_created: { Icon: Receipt, tone: 'text-amber-400' },
+  project_alert: { Icon: FolderKanban, tone: 'text-indigo-400' },
+  amendment_pending: { Icon: FileText, tone: 'text-amber-400' },
+  amendment_resolved: { Icon: CheckCircle2, tone: 'text-emerald-400' },
 }
 
 const TITLE_ICON_RULES = [

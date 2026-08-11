@@ -10,7 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->unsignedTinyInteger('max_official_prints')->default(2)->after('status');
+            if (! Schema::hasColumn('tenants', 'max_official_prints')) {
+                $table->unsignedTinyInteger('max_official_prints')->default(2)->after('status');
+            }
         });
 
         Schema::create('dispatch_notes', function (Blueprint $table) {
@@ -32,7 +34,10 @@ return new class extends Migration
                 ->after('invoice_id')
                 ->constrained('dispatch_notes')
                 ->nullOnDelete();
-            $table->unsignedInteger('print_count')->default(0)->after('status');
+
+            if (! Schema::hasColumn('delivery_forms', 'generation_count') && ! Schema::hasColumn('delivery_forms', 'print_count')) {
+                $table->unsignedInteger('generation_count')->default(0)->after('status');
+            }
         });
 
         DB::table('delivery_forms')
@@ -48,7 +53,9 @@ return new class extends Migration
         });
 
         Schema::table('contracts', function (Blueprint $table) {
-            $table->unsignedInteger('print_count')->default(0)->after('status');
+            if (! Schema::hasColumn('contracts', 'generation_count') && ! Schema::hasColumn('contracts', 'print_count')) {
+                $table->unsignedInteger('generation_count')->default(0)->after('status');
+            }
         });
     }
 

@@ -1,0 +1,275 @@
+% % ============================================================
+% %   RAPPORT DE FIN D'ÉTUDES — EMSI CASABLANCA — FILIÈRE IIR
+% %   Auteur  : Aymane KANAOUI  |  Compiler: xelatex main.tex
+% % ============================================================
+
+% \documentclass[12pt, a4paper]{report}
+
+% % ── 1. Maths before bidi ─────────────────────────────────────
+% \usepackage{amsmath, amssymb}
+
+% % ── 2. Fonts & Languages (loads bidi) ────────────────────────
+% \usepackage{fontspec}
+% \usepackage{polyglossia}
+% \setmainlanguage{french}
+% \setotherlanguage{english}
+% \setmainfont{DejaVu Serif}
+
+% % ── 3. All packages after polyglossia ────────────────────────
+% \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+% \usepackage{setspace}
+% \usepackage[dvipsnames]{xcolor}
+% \usepackage{graphicx}
+% \usepackage{float}
+% \usepackage{booktabs}
+% \usepackage{tabularx}
+% \usepackage{array}
+% \usepackage{multirow}
+% \usepackage{listings}
+% \usepackage{tcolorbox}
+% \usepackage{caption}
+% \usepackage{csquotes}
+% \usepackage[titles]{tocloft}
+% \usepackage{fancyhdr}
+% \usepackage{chngcntr}
+% \usepackage{arabtex}
+% \usepackage{utf8}
+
+% % ── 4. biblatex after polyglossia ────────────────────────────
+% \usepackage[backend=biber, style=ieee]{biblatex}
+% \addbibresource{references.bib}
+
+% % ── 5. hyperref always last ───────────────────────────────────
+% \usepackage[colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue,
+%   pdfauthor={Aymane KANAOUI},
+%   pdftitle={Rapport PFE - EMSI Casablanca 2026 - IMA Platform}]{hyperref}
+
+% % ── Settings ─────────────────────────────────────────────────
+% \onehalfspacing
+% \graphicspath{{img/}}
+% \captionsetup[figure]{name=Figure, labelsep=endash}
+% \captionsetup[table]{name=Tableau, labelsep=endash, position=above}
+% \counterwithin{figure}{chapter}
+% \counterwithin{table}{chapter}
+% \setlength{\headheight}{14pt}
+% \pagestyle{fancy}
+% \fancyhf{}
+% \fancyhead[L]{\small\leftmark}
+% \fancyhead[R]{\small EMSI Casablanca --- 2025/2026}
+% \fancyfoot[C]{\thepage}
+% \renewcommand{\headrulewidth}{0.4pt}
+% \definecolor{ensamBlue}{RGB}{0, 70, 127}
+
+% % ============================================================
+% \begin{document}
+
+% \pagenumbering{roman}
+% \setcounter{page}{0}
+
+% \include{chapters/00-Page-de-garde}
+% \include{chapters/01-Dedicace}
+% \include{chapters/02-Remerciements}
+% \include{chapters/03-Resume}
+% \include{chapters/04-Acronymes}
+
+% \tableofcontents\newpage
+% \listoffigures
+% \addcontentsline{toc}{chapter}{Liste des figures}
+% \newpage
+% \listoftables
+% \addcontentsline{toc}{chapter}{Liste des tableaux}
+% \newpage
+
+% \pagenumbering{arabic}
+% \setcounter{page}{1}
+
+% \include{chapters/05-Introduction}
+% \include{chapters/06-Contexte}
+% \include{chapters/07-Etat-de-lart}
+% \include{chapters/08-Conception}
+% \include{chapters/09-Realisation}
+% \include{chapters/10-Conclusion}
+
+% \nocite{*}
+% \printbibliography[heading=bibintoc, title={Bibliographie et Webographie}]
+% \newpage
+
+% \appendix
+% \include{chapters/11-Annexe}
+
+% \end{document}
+
+
+
+
+% ============================================================
+%   RAPPORT DE FIN D'ÉTUDES — EMSI CASABLANCA — FILIÈRE IIR
+%   Compiler: xelatex main.tex
+% ============================================================
+
+\documentclass[12pt, a4paper]{report}
+
+% ── 1. Maths ─────────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+% ── 2. Font engine ───────────────────────────────────────────
+\usepackage{fontspec}
+
+% ── 3. All packages ──────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{caption}
+\usepackage{csquotes}
+\usepackage[titles]{tocloft}
+\usepackage{fancyhdr}
+\usepackage{chngcntr}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, shapes.geometric, positioning, fit, backgrounds, calc, shadows}
+
+% ── 4. polyglossia — French + English only (no Arabic here) ──
+%     Adding Arabic via polyglossia auto-loads bidi, which then
+%     conflicts with biblatex. We load bidi manually below.
+\usepackage{polyglossia}
+\setmainlanguage{french}
+\setotherlanguage{english}
+\setmainfont{Times New Roman}
+\newfontfamily\arabicfont[Script=Arabic, Scale=1.1]{Amiri}
+
+% ── 5. biblatex after polyglossia ────────────────────────────
+\usepackage[backend=biber, style=ieee]{biblatex}
+\addbibresource{references.bib}
+
+% ── 6. hyperref before bidi ──────────────────────────────────
+\usepackage[colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue,
+  pdfauthor={Othmane BENHRADDI},
+  pdftitle={Rapport PFE - EMSI Casablanca 2026 - Gestion et Planification Projets BTP}]{hyperref}
+
+% ── 7. bidi manually last — all packages already loaded ──────
+\usepackage{bidi}
+\newenvironment{arabicblock}{\begin{RTL}\arabicfont\relax}{\end{RTL}}
+
+% ── Inline tech logo helper ──────────────────────────────────
+\newcommand{\techlogo}[1]{\raisebox{-0.4ex}{\includegraphics[height=1.8em]{#1}}\;}
+\providecommand{\screenshotplaceholder}[1]{%
+  \fbox{\parbox{0.92\textwidth}{\centering\vspace{2.6cm}%
+  \textit{#1}\\[0.2cm]{\footnotesize Capture d'écran à insérer}%
+  \vspace{2.6cm}}}%
+}
+
+% ── Line-break tolerance (prevents overfull hbox) ────────────
+\setlength{\emergencystretch}{3em}
+\tolerance=500
+\hbadness=500
+
+% ── Settings ─────────────────────────────────────────────────
+\onehalfspacing
+\graphicspath{{img/}}
+\captionsetup[figure]{name=Figure, labelsep=colon}
+\captionsetup[table]{name=Tableau, labelsep=colon, position=above}
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+\setlength{\headheight}{14.5pt}
+\addtolength{\topmargin}{-0.5pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\leftmark}
+\fancyhead[R]{\small EMSI Casablanca, 2025/2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{ensamBlue}{RGB}{0, 70, 127}
+
+% ── Chapter titles: « Chapitre N : Titre » ───────────────────
+\makeatletter
+\renewcommand{\@makechapterhead}[1]{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \raggedright \normalfont
+    \ifnum \c@secnumdepth >\m@ne
+      \Huge\bfseries Chapitre~\thechapter~: #1\par\nobreak
+      \vskip 40\p@
+    \else
+      \Huge\bfseries #1\par\nobreak
+      \vskip 40\p@
+    \fi
+  }}
+\makeatother
+\renewcommand{\cftchappresnum}{Chapitre~}
+\renewcommand{\cftchapaftersnum}{~:}
+\setlength{\cftchapnumwidth}{5em}
+
+% Compact headings for \chapter* (Résumé, Abstract, Dédicaces, etc.)
+\makeatletter
+\renewcommand{\@makeschapterhead}[1]{%
+  \vspace*{8\p@}%
+  {\parindent \z@ \raggedright \normalfont
+    \interlinepenalty\@M
+    \Huge \bfseries #1\par\nobreak
+    \vskip 14\p@
+  }}
+\makeatother
+
+% ============================================================
+\begin{document}
+
+% ── Front matter (roman numerals) ───────────────────────────
+\pagenumbering{roman}
+\setcounter{page}{0}
+\raggedbottom
+
+\include{chapters/00-Page-de-garde}
+\include{chapters/01-Dedicace}
+\include{chapters/02-Remerciements}
+\include{chapters/03-Resume}
+\include{chapters/03.02-Resume}
+\include{chapters/03.03-Resume}
+
+\tableofcontents\newpage
+\listoffigures
+\addcontentsline{toc}{chapter}{Liste des figures}
+\newpage
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des tableaux}
+
+\include{chapters/04-Acronymes}
+
+% ── Main matter (arabic numerals) ───────────────────────────
+\pagestyle{fancy}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\include{chapters/05-Introduction}
+\include{chapters/06-Contexte}
+\include{chapters/07-Etat-de-lart}
+\include{chapters/08-Conception}
+\include{chapters/09-Realisation}
+\include{chapters/10-Conclusion}
+
+% ── Bibliography ─────────────────────────────────────────────
+\nocite{*}
+\printbibliography[heading=bibintoc, title={Bibliographie et Webographie}]
+\newpage
+
+% ── Appendix ─────────────────────────────────────────────────
+\appendix
+\makeatletter
+\renewcommand{\@makechapterhead}[1]{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \raggedright \normalfont
+    \Huge\bfseries Annexe~: #1\par\nobreak
+    \vskip 40\p@
+  }}
+\makeatother
+\renewcommand{\cftchappresnum}{Annexe~}
+\renewcommand{\cftchapaftersnum}{}
+\include{chapters/11-Annexe}
+
+\end{document}

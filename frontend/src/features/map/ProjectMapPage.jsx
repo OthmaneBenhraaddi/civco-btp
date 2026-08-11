@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import StatusBadge from '../../components/StatusBadge'
 import RoleBadge from '../../components/RoleBadge'
-import PermissionGate from '../../components/PermissionGate'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
+import { filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
 import MapFitBounds from './MapFitBounds'
 import { buildNeonMarkerIcon, resolveProjectMarkerColor } from './projectMapMarkers'
 
@@ -35,7 +36,7 @@ const MAP_TILE_ATTRIBUTION =
 
 function ProjectMapEmptyState() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { isAdmin, user } = useAuth()
 
   return (
     <div className="project-map-empty flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -46,14 +47,14 @@ function ProjectMapEmptyState() {
         <p className="text-base font-medium text-slate-200">{t('map.empty')}</p>
         <p className="text-sm leading-relaxed text-slate-500">{t('map.emptyHint')}</p>
       </div>
-      <PermissionGate permission="project.create">
+      {isAdmin ? (
         <Link
           to={resolveNavPath('/projects', user)}
           className="inline-flex items-center justify-center rounded-lg border border-slate-600/60 bg-slate-800/90 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
         >
           {t('map.emptyAction')}
         </Link>
-      </PermissionGate>
+      ) : null}
     </div>
   )
 }
@@ -93,14 +94,23 @@ function ProjectMapPopup({ project }) {
 export default function ProjectMapPage() {
   const { t } = useTranslation()
   const { isAdmin } = useAuth()
+  const { stealthMode } = useStealthMode()
+  const stealthModeRef = useRef(stealthMode)
+  stealthModeRef.current = stealthMode
   const { colors } = useTheme()
   const [projects, setProjects] = useState([])
+  const projectsBaselineRef = useRef([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const visibleProjects = useMemo(
+    () => (stealthMode ? filterOfficialLinkedRecords(projects) : projects),
+    [projects, stealthMode],
+  )
+
   const mapProjects = useMemo(
-    () => projects.filter(hasValidMapCoordinates),
-    [projects],
+    () => visibleProjects.filter(hasValidMapCoordinates),
+    [visibleProjects],
   )
 
   const hasMapProjects = mapProjects.length > 0
@@ -112,7 +122,11 @@ export default function ProjectMapPage() {
 
       try {
         const data = await projectsApi.fetchMapProjects()
-        setProjects(data.data ?? [])
+        const list = data.data ?? []
+        setProjects(list)
+        if (!stealthModeRef.current) {
+          projectsBaselineRef.current = list
+        }
       } catch (err) {
         setError(extractErrorMessage(err, t('map.loadError')))
         setProjects([])
@@ -123,6 +137,21 @@ export default function ProjectMapPage() {
 
     loadMapProjects()
   }, [t])
+
+  useStealthModeRefresh(({ active }) => {
+    if (!active) {
+      if (projectsBaselineRef.current.length > 0) {
+        setProjects(projectsBaselineRef.current)
+      }
+      projectsApi.fetchMapProjects()
+        .then((data) => {
+          const list = data.data ?? []
+          setProjects(list)
+          projectsBaselineRef.current = list
+        })
+        .catch(() => {})
+    }
+  })
 
   const markerIcons = useMemo(() => {
     const iconMap = new Map()

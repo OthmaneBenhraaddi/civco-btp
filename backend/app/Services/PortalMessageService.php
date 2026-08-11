@@ -49,26 +49,40 @@ class PortalMessageService
     {
         $tenantId = $this->requireTenantId($staffUser);
         $clients = $this->clientPortalUsersForTenant($tenantId);
+        $isAdmin = $staffUser->isAdmin();
+        $chatEnabledProjectIds = $isAdmin
+            ? null
+            : $this->chatEnabledProjectIdsForUser($staffUser);
 
-        return $clients->map(function (User $clientUser) use ($staffUser): array {
+        return $clients->map(function (User $clientUser) use ($staffUser, $isAdmin, $chatEnabledProjectIds): ?array {
             $client = $this->resolveClientForPortalUser($clientUser);
             $projects = $this->clientPortalService->activeProjectsForClient($client);
 
-            $threads = [
-                [
+            $threads = [];
+
+            if ($isAdmin) {
+                $threads[] = [
                     'project_id' => null,
                     'label' => 'general',
                     'unread_count' => $this->unreadCountForStaffThread($staffUser, $clientUser, null),
-                ],
-            ];
+                ];
+            }
 
             foreach ($projects as $project) {
+                if (! $isAdmin && ! in_array((int) $project->id, $chatEnabledProjectIds ?? [], true)) {
+                    continue;
+                }
+
                 $threads[] = [
                     'project_id' => $project->id,
                     'reference' => $project->reference,
                     'title' => $project->title,
                     'unread_count' => $this->unreadCountForStaffThread($staffUser, $clientUser, $project->id),
                 ];
+            }
+
+            if ($threads === []) {
+                return null;
             }
 
             $totalUnread = array_sum(array_column($threads, 'unread_count'));
@@ -80,7 +94,7 @@ class PortalMessageService
                 'unread_count' => $totalUnread,
                 'threads' => $threads,
             ];
-        })->sortBy([
+        })->filter()->sortBy([
             fn (array $group) => -$group['unread_count'],
             fn (array $group) => $group['client_name'],
         ])->values()->all();
@@ -120,7 +134,7 @@ class PortalMessageService
                 throw new AccessDeniedHttpException('Conversation non autorisée.');
             }
 
-            $receiver = $this->primaryStaffContact($sender->tenant_id);
+            $receiver = $this->primaryStaffContact((int) $sender->tenant_id, $projectId);
         } else {
             $receiver = $clientUser;
         }
@@ -297,16 +311,63 @@ class PortalMessageService
 
         if ($projectId !== null) {
             $client = $this->resolveClientForPortalUser($clientUser);
-            $exists = Project::query()
+            $project = Project::query()
                 ->where('id', $projectId)
                 ->where('client_id', $client->id)
                 ->where('tenant_id', $clientUser->tenant_id)
-                ->exists();
+                ->first();
 
-            if (! $exists) {
+            if ($project === null) {
                 throw new AccessDeniedHttpException('Projet non accessible pour cette conversation.');
             }
+
+            if (! $actor->isClientPortalUser()) {
+                $this->assertStaffCanChatOnProject($actor, $project);
+            }
+
+            return;
         }
+
+        // Fil de discussion général (hors projet) : réservé aux admins côté équipe.
+        if (! $actor->isClientPortalUser() && ! $actor->isAdmin()) {
+            throw new AccessDeniedHttpException(
+                'Discussion client non autorisée. Demandez à un administrateur d\'activer le chat sur un projet.'
+            );
+        }
+    }
+
+    private function assertStaffCanChatOnProject(User $staffUser, Project $project): void
+    {
+        if ($staffUser->isAdmin()) {
+            return;
+        }
+
+        $canChat = $project->teamMembers()
+            ->where('users.id', $staffUser->id)
+            ->wherePivot('can_chat_with_client', true)
+            ->exists();
+
+        if (! $canChat) {
+            throw new AccessDeniedHttpException(
+                'Vous n\'êtes pas autorisé à discuter avec le client sur ce projet.'
+            );
+        }
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function chatEnabledProjectIdsForUser(User $staffUser): array
+    {
+        return Project::query()
+            ->where('tenant_id', $staffUser->tenant_id)
+            ->whereHas('teamMembers', function ($query) use ($staffUser): void {
+                $query->where('users.id', $staffUser->id)
+                    ->where('project_user.can_chat_with_client', true);
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     private function assertClientPortalUser(User $user): void
@@ -321,8 +382,25 @@ class PortalMessageService
         return Client::query()->findOrFail($clientUser->client_id);
     }
 
-    private function primaryStaffContact(int $tenantId): User
+    private function primaryStaffContact(int $tenantId, ?int $projectId = null): User
     {
+        if ($projectId !== null) {
+            $chatEnabled = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereNull('client_id')
+                ->where('is_active', true)
+                ->whereHas('assignedProjects', function ($query) use ($projectId): void {
+                    $query->where('projects.id', $projectId)
+                        ->where('project_user.can_chat_with_client', true);
+                })
+                ->orderBy('id')
+                ->first();
+
+            if ($chatEnabled !== null) {
+                return $chatEnabled;
+            }
+        }
+
         $admin = User::query()
             ->where('tenant_id', $tenantId)
             ->whereNull('client_id')

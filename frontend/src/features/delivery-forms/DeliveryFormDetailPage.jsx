@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import StatusBadge from '../../components/StatusBadge'
 import DeliveryFormPrintSheet from '../../components/print/DeliveryFormPrintSheet'
 import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
+import PrintOptionsModal from '../../components/print/PrintOptionsModal'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { usePolicyCommercialPrint } from '../../hooks/usePolicyCommercialPrint'
@@ -75,8 +76,14 @@ export default function DeliveryFormDetailPage() {
     copyStrength,
     printing,
     handlePrint,
+    hasHeader,
+    setHasHeader,
+    printOptionsOpen,
+    closePrintOptions,
+    confirmPrint,
     tenantLogoUrl,
     tenantName,
+    company,
   } = usePolicyCommercialPrint({
     documentType: 'delivery_form',
     documentId: Number(id),
@@ -123,7 +130,14 @@ export default function DeliveryFormDetailPage() {
             </div>
           </div>
           <div className="actions">
-            <button type="button" onClick={handlePrint} disabled={printing}>
+            <button
+              type="button"
+              onClick={() => {
+                setError('')
+                handlePrint()
+              }}
+              disabled={printing}
+            >
               {printing ? t('print.printing') : t('print.print')}
             </button>
             {canEdit ? (
@@ -198,6 +212,22 @@ export default function DeliveryFormDetailPage() {
         </div>
       </div>
 
+      <PrintOptionsModal
+        open={printOptionsOpen}
+        hasHeader={hasHeader}
+        onHasHeaderChange={setHasHeader}
+        confirming={printing}
+        onClose={closePrintOptions}
+        onConfirm={async () => {
+          setError('')
+          try {
+            await confirmPrint()
+          } catch (err) {
+            setError(extractErrorMessage(err, t('print.printError')))
+          }
+        }}
+      />
+
       <div className="print-only">
         <PolicyPrintWrapper watermarkLabel={isCopy ? t('print.copyWatermark') : null}>
           <DeliveryFormPrintSheet
@@ -211,8 +241,10 @@ export default function DeliveryFormDetailPage() {
             isCopy={isCopy}
             copyStrength={copyStrength}
             watermarkLabel={isCopy ? t('print.copyWatermark') : null}
-            tenantLogoUrl={tenantLogoUrl ?? documentPreview?.tenant?.logo_url}
-            tenantName={tenantName ?? documentPreview?.tenant?.name}
+            includeHeader={hasHeader}
+            tenantLogoUrl={hasHeader ? (tenantLogoUrl ?? documentPreview?.tenant?.logo_url) : null}
+            tenantName={hasHeader ? (tenantName ?? documentPreview?.tenant?.name) : null}
+            company={hasHeader ? company : null}
             signature={documentPreview?.signature}
           />
         </PolicyPrintWrapper>

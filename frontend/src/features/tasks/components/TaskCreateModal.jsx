@@ -4,8 +4,9 @@ import { useAuth } from '../../../context/AuthContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as projectsApi from '../../../api/projects'
 import { unwrapResource } from '../../../utils/apiHelpers'
+import { mapApiTaskToUiTask, UI_STATUS_TO_API } from '../utils/taskApiMappers'
+import { canManageAllTasks } from '../utils/taskPermissions'
 import { TASK_PRIORITES, TASK_STATUTS } from '../types'
-import { buildAvatarUrl, createTaskId, formatLastUpdatedAt } from '../utils/taskUtils'
 
 const emptyForm = {
   projectId: '',
@@ -25,7 +26,8 @@ export default function TaskCreateModal({
   defaultProjectId = null,
   defaultProjectName = '',
 }) {
-  const { user } = useAuth()
+  const { user, isAdmin, hasPermission } = useAuth()
+  const manageAll = canManageAllTasks({ isAdmin, hasPermission })
   const { t, locale } = useTranslation()
   const [projects, setProjects] = useState([])
   const [users, setUsers] = useState([])
@@ -98,30 +100,35 @@ export default function TaskCreateModal({
     setSaving(true)
 
     const responsableName = form.responsableName.trim()
-    const now = new Date()
+    const assignedUser = users.find((companyUser) => companyUser.full_name === responsableName)
 
-    const task = {
-      id: createTaskId(),
-      projectId: String(selectedProject.id),
-      projectName: selectedProject.title,
-      nom: form.nom.trim(),
-      responsable: {
-        name: responsableName,
-        avatarUrl: buildAvatarUrl(responsableName),
-      },
-      statut: form.statut,
-      echeance: form.echeance,
-      priorite: form.priorite,
-      budget: form.budget === '' ? 0 : Number(form.budget),
-      fichiers: fileNames,
-      notes: form.notes.trim(),
-      lastUpdatedBy: user?.full_name ?? responsableName,
-      lastUpdatedAt: formatLastUpdatedAt(now, locale),
-    }
+    projectsApi.fetchProjectPhases(selectedProject.id)
+      .then((phaseResponse) => {
+        const phases = unwrapResource(phaseResponse)
+        const targetPhase = phases[0]
 
-    onCreated(task)
-    setSaving(false)
-    onClose()
+        if (!targetPhase) {
+          throw new Error('No phase')
+        }
+
+        return projectsApi.createTask(targetPhase.id, {
+          title: form.nom.trim(),
+          description: form.notes.trim() || null,
+          status: UI_STATUS_TO_API[form.statut] ?? 'todo',
+          assigned_to_user_id: assignedUser?.id ?? null,
+          due_date: form.echeance || null,
+        })
+      })
+      .then((response) => {
+        const apiTask = response?.data ?? response
+        const task = mapApiTaskToUiTask(apiTask, selectedProject, locale)
+        onCreated(task)
+        onClose()
+      })
+      .catch(() => {
+        // Keep modal open on failure
+      })
+      .finally(() => setSaving(false))
   }
 
   return (
@@ -168,22 +175,26 @@ export default function TaskCreateModal({
 
           <label>
             {t('tasks.columns.owner')} *
-            <select
-              className="filter-select w-full"
-              value={form.responsableName}
-              onChange={(event) => setForm({ ...form, responsableName: event.target.value })}
-              required
-            >
-              {users.length === 0 ? (
-                <option value={form.responsableName}>{form.responsableName || t('tasks.form.currentUser')}</option>
-              ) : (
-                users.map((companyUser) => (
-                  <option key={companyUser.id} value={companyUser.full_name}>
-                    {companyUser.full_name}
-                  </option>
-                ))
-              )}
-            </select>
+            {manageAll ? (
+              <select
+                className="filter-select w-full"
+                value={form.responsableName}
+                onChange={(event) => setForm({ ...form, responsableName: event.target.value })}
+                required
+              >
+                {users.length === 0 ? (
+                  <option value={form.responsableName}>{form.responsableName || t('tasks.form.currentUser')}</option>
+                ) : (
+                  users.map((companyUser) => (
+                    <option key={companyUser.id} value={companyUser.full_name}>
+                      {companyUser.full_name}
+                    </option>
+                  ))
+                )}
+              </select>
+            ) : (
+              <p className="mt-1 text-sm text-slate-300">{form.responsableName || user?.full_name}</p>
+            )}
           </label>
 
           <div className="form-row">

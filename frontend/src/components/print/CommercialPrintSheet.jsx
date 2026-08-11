@@ -33,16 +33,26 @@ export default function CommercialPrintSheet({
   isCopy = false,
   copyStrength = null,
   watermarkLabel = null,
+  includeHeader = true,
   tenantLogoUrl,
   tenantName,
+  company = null,
   showSignature = true,
   signature,
 }) {
   const { t, locale } = useTranslation()
 
   const title = documentType === 'invoice' ? t('invoices.title') : t('quotes.title')
-  const brandLabel = tenantName ?? t('print.brandName')
+  const brandLabel = tenantName ?? company?.legal_name ?? company?.name ?? t('print.brandName')
   const copyLabel = isCopy ? resolveCopyLabel(copyStrength, t) : null
+  const addressLines = [
+    company?.address_line1,
+    company?.address_line2,
+    [company?.postal_code, company?.city].filter(Boolean).join(' '),
+    company?.siret ? `${t('print.siret')} : ${company.siret}` : null,
+    company?.phone,
+    company?.email,
+  ].filter(Boolean)
 
   return (
     <div className="commercial-print-sheet mx-auto max-w-[210mm] bg-white p-10 text-slate-900">
@@ -54,7 +64,7 @@ export default function CommercialPrintSheet({
 
       <header className="mb-8 flex items-start justify-between gap-6 border-b border-slate-300 pb-6">
         <div className="flex min-w-0 items-start gap-4">
-          {tenantLogoUrl ? (
+          {includeHeader && tenantLogoUrl ? (
             <img
               src={tenantLogoUrl}
               alt={brandLabel}
@@ -62,8 +72,21 @@ export default function CommercialPrintSheet({
             />
           ) : null}
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{brandLabel}</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{title}</h1>
+            {includeHeader ? (
+              <>
+                <p className="policy-print-tenant-header text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  {brandLabel}
+                </p>
+                {addressLines.length > 0 ? (
+                  <div className="mt-1 space-y-0.5 text-[11px] leading-snug text-slate-600">
+                    {addressLines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            <h1 className={`${includeHeader ? 'mt-2' : 'mt-0'} text-2xl font-bold text-slate-900`}>{title}</h1>
             <p className="mt-2 flex flex-wrap items-center gap-3 text-lg font-semibold text-slate-800">
               <span>{reference}</span>
               {copyLabel ? (

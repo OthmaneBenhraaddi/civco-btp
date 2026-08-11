@@ -93,14 +93,35 @@ export default function AdminMessagingWorkspace() {
 
     try {
       const data = await messagingApi.fetchMessagingThreads()
-      setClientGroups(data)
+      const groups = Array.isArray(data) ? data : []
+      setClientGroups(groups)
 
-      setSelectedClientUserId((current) => {
-        if (current && data.some((group) => group.client_user_id === current)) {
-          return current
+      setSelectedClientUserId((currentClientId) => (
+        currentClientId
+          && groups.some((group) => group.client_user_id === currentClientId)
+          ? currentClientId
+          : (groups[0]?.client_user_id ?? null)
+      ))
+
+      setSelectedThreadKey((currentThreadKey) => {
+        const preferredClientId = groups.find((group) => (
+          group.threads?.some((thread) => buildThreadKey(thread.project_id) === currentThreadKey)
+        ))?.client_user_id
+
+        const group = groups.find((item) => item.client_user_id === preferredClientId)
+          ?? groups[0]
+          ?? null
+        const threads = group?.threads ?? []
+
+        if (threads.some((thread) => buildThreadKey(thread.project_id) === currentThreadKey)) {
+          return currentThreadKey
         }
 
-        return data[0]?.client_user_id ?? null
+        // Prefer a project thread: general threads are admin-only for staff.
+        const projectThread = threads.find((thread) => thread.project_id != null)
+        const fallbackThread = projectThread ?? threads[0] ?? null
+
+        return buildThreadKey(fallbackThread?.project_id ?? null)
       })
     } catch (err) {
       if (!silent) {
@@ -128,6 +149,7 @@ export default function AdminMessagingWorkspace() {
       setMessages(data)
 
       if (!silent) {
+        setError('')
         setClientGroups((current) => current.map((group) => {
           if (group.client_user_id !== clientUserId) {
             return group

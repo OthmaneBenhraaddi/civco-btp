@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
 import * as quotesApi from '../../api/quotes'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
+import { filterOfficialClients, filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
 import {
   logQuoteCreated,
   logQuoteDeleted,
@@ -27,9 +29,14 @@ const emptyForm = {
 
 export default function QuotesPage() {
   const { hasPermission, user, roles } = useAuth()
+  const { stealthMode } = useStealthMode()
+  const stealthModeRef = useRef(stealthMode)
+  stealthModeRef.current = stealthMode
   const { t, locale } = useTranslation()
   const [quotes, setQuotes] = useState([])
+  const quotesBaselineRef = useRef([])
   const [clients, setClients] = useState([])
+  const clientsBaselineRef = useRef([])
   const [meta, setMeta] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -39,9 +46,11 @@ export default function QuotesPage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
-  async function loadQuotes(page = 1) {
-    setLoading(true)
-    setError('')
+  async function loadQuotes(page = 1, { silent = false } = {}) {
+    if (!silent) {
+      setLoading(true)
+      setError('')
+    }
 
     try {
       const data = await quotesApi.fetchQuotes({
@@ -49,12 +58,21 @@ export default function QuotesPage() {
         status: statusFilter || undefined,
         page,
       })
-      setQuotes(data.data ?? [])
+      const list = data.data ?? []
+      setQuotes(list)
       setMeta(data.meta ?? null)
+
+      if (!stealthModeRef.current) {
+        quotesBaselineRef.current = list
+      }
     } catch (err) {
-      setError(extractErrorMessage(err, t('quotes.loadError')))
+      if (!silent) {
+        setError(extractErrorMessage(err, t('quotes.loadError')))
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -64,14 +82,42 @@ export default function QuotesPage() {
 
   useEffect(() => {
     clientsApi.fetchClients({ per_page: 100 })
-      .then((data) => setClients(data.data ?? []))
+      .then((data) => {
+        const list = data.data ?? []
+        setClients(list)
+        if (!stealthModeRef.current) {
+          clientsBaselineRef.current = list
+        }
+      })
       .catch(() => setClients([]))
   }, [])
+
+  useStealthModeRefresh(({ active }) => {
+    if (!active) {
+      if (quotesBaselineRef.current.length > 0) {
+        setQuotes(quotesBaselineRef.current)
+      }
+      if (clientsBaselineRef.current.length > 0) {
+        setClients(clientsBaselineRef.current)
+      }
+      loadQuotes(meta?.current_page ?? 1, { silent: true })
+    }
+  })
+
+  const visibleQuotes = useMemo(
+    () => (stealthMode ? filterOfficialLinkedRecords(quotes) : quotes),
+    [quotes, stealthMode],
+  )
+
+  const visibleClients = useMemo(
+    () => (stealthMode ? filterOfficialClients(clients) : clients),
+    [clients, stealthMode],
+  )
 
   function openCreate() {
     setForm({
       ...emptyForm,
-      client_id: clients[0]?.id ? String(clients[0].id) : '',
+      client_id: visibleClients[0]?.id ? String(visibleClients[0].id) : '',
     })
     setModalOpen(true)
   }
@@ -129,13 +175,13 @@ export default function QuotesPage() {
           <p>{t('quotes.subtitle')}</p>
         </div>
         <PermissionGate permission="quote.manage">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+          <button type="button" onClick={openCreate} disabled={visibleClients.length === 0}>
             {t('quotes.new')}
           </button>
         </PermissionGate>
       </header>
 
-      {clients.length === 0 ? (
+      {visibleClients.length === 0 ? (
         <p className="hint">{t('quotes.needClient')}</p>
       ) : null}
 
@@ -173,12 +219,12 @@ export default function QuotesPage() {
               </tr>
             </thead>
             <tbody>
-              {quotes.length === 0 ? (
+              {visibleQuotes.length === 0 ? (
                 <tr>
                   <td colSpan={6}>{t('quotes.empty')}</td>
                 </tr>
               ) : (
-                quotes.map((quote) => (
+                visibleQuotes.map((quote) => (
                   <tr key={quote.id}>
                     <td>
                       <Link to={resolveNavPath(`/quotes/${quote.id}`, user)}>{quote.reference}</Link>
@@ -213,7 +259,7 @@ export default function QuotesPage() {
               required
             >
               <option value="">{t('quotes.selectClient')}</option>
-              {clients.map((client) => (
+              {visibleClients.map((client) => (
                 <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>

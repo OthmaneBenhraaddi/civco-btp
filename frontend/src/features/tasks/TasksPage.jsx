@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import SearchInput from '../../components/SearchInput'
+import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
-import * as projectsApi from '../../api/projects'
-import { appendTask, readTasks } from './taskStore'
+import { useProjectTasks } from '../../hooks/useProjectTasks'
 import { STATUT_FILTER_MAP } from './types'
 import TaskCalendarView from './components/TaskCalendarView'
 import TaskCreateModal from './components/TaskCreateModal'
+import TaskEditModal from './components/TaskEditModal'
 import TaskDashboardView from './components/TaskDashboardView'
 import TaskTableView from './components/TaskTableView'
 import TaskViewTabs from './components/TaskViewTabs'
+import {
+  canCreateTasks,
+  canManageAllTasks,
+  canManageTask,
+  filterVisibleTasks,
+} from './utils/taskPermissions'
 
 const VIEWS = {
   spreadsheet: 'spreadsheet',
@@ -27,21 +34,16 @@ function TasksEmptyProjectState({ t }) {
 
 export default function TasksPage() {
   const { t, locale } = useTranslation()
-  const [projects, setProjects] = useState([])
-  const [projectsLoading, setProjectsLoading] = useState(true)
+  const { user, isAdmin, hasPermission } = useAuth()
+  const taskAccess = { user, isAdmin, hasPermission }
+  const showCreateButton = canCreateTasks(taskAccess)
+  const { tasks, projects, loading: projectsLoading, setTasks, refresh } = useProjectTasks()
   const [selectedProjectId, setSelectedProjectId] = useState(null)
   const [activeView, setActiveView] = useState(VIEWS.spreadsheet)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [tasks, setTasks] = useState(() => readTasks())
   const [createOpen, setCreateOpen] = useState(false)
-
-  useEffect(() => {
-    projectsApi.fetchProjects({ per_page: 100 })
-      .then((data) => setProjects(data.data ?? []))
-      .catch(() => setProjects([]))
-      .finally(() => setProjectsLoading(false))
-  }, [])
+  const [editingTask, setEditingTask] = useState(null)
 
   const selectedProject = useMemo(
     () => projects.find((project) => String(project.id) === String(selectedProjectId)) ?? null,
@@ -56,6 +58,11 @@ export default function TasksPage() {
     { id: VIEWS.calendar, label: t('tasks.views.calendar') },
   ]
 
+  const visibleTasks = useMemo(
+    () => filterVisibleTasks(tasks, taskAccess),
+    [tasks, user?.id, isAdmin, hasPermission],
+  )
+
   const filteredTasks = useMemo(() => {
     if (!hasProjectSelected) {
       return []
@@ -65,7 +72,7 @@ export default function TasksPage() {
     const query = search.trim().toLowerCase()
     const projectKey = String(selectedProjectId)
 
-    return tasks.filter((task) => {
+    return visibleTasks.filter((task) => {
       if (String(task.projectId) !== projectKey) {
         return false
       }
@@ -78,10 +85,20 @@ export default function TasksPage() {
 
       return matchesStatus && matchesSearch
     })
-  }, [hasProjectSelected, search, selectedProjectId, statusFilter, tasks])
+  }, [hasProjectSelected, search, selectedProjectId, statusFilter, visibleTasks])
 
+  function handleTaskUpdated(updatedTask) {
+    setTasks((current) => current.map((task) => (
+      String(task.id) === String(updatedTask.id) ? updatedTask : task
+    )))
+  }
+
+  function handleTaskDeleted(taskId) {
+    setTasks((current) => current.filter((task) => String(task.id) !== String(taskId)))
+  }
   function handleTaskCreated(task) {
-    setTasks(appendTask(task))
+    setTasks((current) => [task, ...current])
+    refresh()
   }
 
   function handleProjectChange(event) {
@@ -91,11 +108,14 @@ export default function TasksPage() {
     setStatusFilter('')
   }
 
+  const hasAnyTaskActions = canManageAllTasks(taskAccess)
+    || visibleTasks.some((task) => canManageTask(task, taskAccess))
+
   return (
     <div className="tasks-page mx-auto flex max-w-[1600px] flex-col gap-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold tracking-tight text-white">{t('tasks.title')}</h1>
-        {hasProjectSelected ? (
+        {hasProjectSelected && showCreateButton ? (
           <button type="button" className="tasks-create-btn" onClick={() => setCreateOpen(true)}>
             {t('tasks.new')}
           </button>
@@ -149,7 +169,13 @@ export default function TasksPage() {
 
             <div className="tasks-view-panel">
               {activeView === VIEWS.spreadsheet && (
-                <TaskTableView tasks={filteredTasks} locale={locale} t={t} />
+                <TaskTableView
+                  tasks={filteredTasks}
+                  locale={locale}
+                  t={t}
+                  canManageTask={hasAnyTaskActions ? (task) => canManageTask(task, taskAccess) : null}
+                  onEditTask={setEditingTask}
+                />
               )}
 
               {activeView === VIEWS.dashboard && (
@@ -170,6 +196,14 @@ export default function TasksPage() {
         onCreated={handleTaskCreated}
         defaultProjectId={selectedProjectId}
         defaultProjectName={selectedProject?.title ?? ''}
+      />
+
+      <TaskEditModal
+        open={Boolean(editingTask)}
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onUpdated={handleTaskUpdated}
+        onDeleted={handleTaskDeleted}
       />
     </div>
   )

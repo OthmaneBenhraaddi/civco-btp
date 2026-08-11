@@ -15,8 +15,15 @@ class TaskResource extends JsonResource
             'project_phase_id' => $this->project_phase_id,
             'title' => $this->title,
             'description' => $this->description,
+            'quantity' => $this->quantity !== null ? (float) $this->quantity : null,
+            'unit' => $this->unit,
+            'unit_price' => $this->unit_price !== null ? (float) $this->unit_price : null,
+            'line_total' => $this->quantity !== null && $this->unit_price !== null
+                ? round((float) $this->quantity * (float) $this->unit_price, 2)
+                : null,
             'status' => $this->status->value,
             'progress_percent' => (float) $this->progress_percent,
+            'planned_start_date' => $this->planned_start_date?->toDateString(),
             'assigned_to_user_id' => $this->assigned_to_user_id,
             'assigned_to' => $this->whenLoaded('assignedTo', fn () => $this->assignedTo === null
                 ? null

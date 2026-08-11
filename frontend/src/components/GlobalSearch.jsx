@@ -126,10 +126,17 @@ function ResultIcon({ result }) {
 
 export default function GlobalSearch() {
   const { t } = useTranslation()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isClientPortalUser, hasPermission, user } = useAuth()
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const modalRef = useRef(null)
+
+  const searchAuthContext = useMemo(() => ({
+    isClientPortalUser,
+    isAdmin,
+    user,
+    hasPermission,
+  }), [isClientPortalUser, isAdmin, user, hasPermission])
 
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -137,11 +144,14 @@ export default function GlobalSearch() {
   const [entityResults, setEntityResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
 
-  const recommendedRoutes = useMemo(() => getRecommendedRoutes(t, isAdmin), [t, isAdmin])
+  const recommendedRoutes = useMemo(
+    () => getRecommendedRoutes(t, searchAuthContext),
+    [t, searchAuthContext],
+  )
 
   const navResults = useMemo(
-    () => findNavRoutes(searchQuery, t, isAdmin),
-    [searchQuery, t, isAdmin],
+    () => findNavRoutes(searchQuery, t, searchAuthContext),
+    [searchQuery, t, searchAuthContext],
   )
 
   const queryResults = useMemo(() => {

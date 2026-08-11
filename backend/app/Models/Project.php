@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\ContractAmendmentStatus;
 use App\Enums\ProjectStatus;
+use App\Models\Concerns\AppliesStealthClientFilter;
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Project extends Model
 {
-    use BelongsToCompany, BelongsToTenant;
+    use AppliesStealthClientFilter, BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',
@@ -83,7 +85,7 @@ class Project extends Model
     public function teamMembers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_user')
-            ->withPivot(['role_label', 'assigned_at'])
+            ->withPivot(['role_label', 'assigned_at', 'can_chat_with_client'])
             ->withTimestamps();
     }
 
@@ -125,6 +127,83 @@ class Project extends Model
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
+    }
+
+    public function amendments(): HasMany
+    {
+        return $this->hasMany(ContractAmendment::class)->latest();
+    }
+
+    public function validatedAmendments(): HasMany
+    {
+        return $this->hasMany(ContractAmendment::class)->validated();
+    }
+
+    public function getTotalBudgetAttribute(): ?float
+    {
+        $delta = $this->amendments_amount_delta;
+
+        if ($this->budget === null && abs($delta) < 0.00001) {
+            return null;
+        }
+
+        return round((float) ($this->budget ?? 0) + $delta, 2);
+    }
+
+    public function getRevisedBudgetAttribute(): ?float
+    {
+        return $this->total_budget;
+    }
+
+    public function getAdjustedEndDateAttribute(): ?string
+    {
+        if ($this->end_date === null) {
+            return null;
+        }
+
+        return $this->end_date->copy()->addDays($this->amendments_duration_delta)->toDateString();
+    }
+
+    public function getRevisedEndDateAttribute(): ?string
+    {
+        return $this->adjusted_end_date;
+    }
+
+    public function getAmendmentsAmountDeltaAttribute(): float
+    {
+        if (array_key_exists('amendments_amount_delta_sum', $this->attributes)) {
+            return round((float) ($this->attributes['amendments_amount_delta_sum'] ?? 0), 2);
+        }
+
+        return round((float) $this->validatedAmendmentsForTotals()->sum('amount_change'), 2);
+    }
+
+    public function getAmendmentsDurationDeltaAttribute(): int
+    {
+        if (array_key_exists('amendments_duration_delta_sum', $this->attributes)) {
+            return (int) ($this->attributes['amendments_duration_delta_sum'] ?? 0);
+        }
+
+        return (int) $this->validatedAmendmentsForTotals()->sum('duration_change_days');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, ContractAmendment>
+     */
+    private function validatedAmendmentsForTotals()
+    {
+        if ($this->relationLoaded('amendments')) {
+            return $this->amendments->filter(
+                fn (ContractAmendment $amendment) => $amendment->status === ContractAmendmentStatus::Validated,
+            );
+        }
+
+        if ($this->relationLoaded('validatedAmendments')) {
+            return $this->validatedAmendments;
+        }
+
+        // List endpoints omit aggregates — avoid N+1 lazy sum queries.
+        return collect();
     }
 
     public function formattedSiteAddress(): ?string

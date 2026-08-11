@@ -1,0 +1,47 @@
+% Diagramme de séquence — création d'un devis (TikZ)
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  actor/.style={rectangle, draw=ensamBlue, fill=ensamBlue!10, minimum width=1.6cm,
+                minimum height=0.7cm, align=center, font=\scriptsize\bfseries},
+  msg/.style={font=\scriptsize},
+  lifeline/.style={draw=gray!50, dashed},
+  arr/.style={-{Stealth[length=4pt]}, thick, ensamBlue}
+]
+  % Acteurs
+  \node[actor] (com) at (0,0)    {Commercial};
+  \node[actor] (ui)  at (3.2,0)  {React SPA};
+  \node[actor] (api) at (6.4,0)  {API Laravel};
+  \node[actor] (db)  at (9.6,0)  {Base de\\données};
+
+  % Lifelines
+  \foreach \x in {com,ui,api,db} {
+    \draw[lifeline] (\x.south) -- ++(0,-11.5);
+  }
+
+  % Messages
+  \draw[arr] (0,-0.8) -- node[msg, above] {1. Connexion} (3.2,-0.8);
+  \draw[arr] (3.2,-1.4) -- node[msg, above] {2. POST /login} (6.4,-1.4);
+  \draw[arr] (6.4,-2.0) -- node[msg, above] {3. Vérif. identifiants} (9.6,-2.0);
+  \draw[arr, dashed] (9.6,-2.6) -- node[msg, above] {4. Session OK} (3.2,-2.6);
+
+  \draw[arr] (0,-3.4) -- node[msg, above] {5. Ouvre module Devis} (3.2,-3.4);
+  \draw[arr] (3.2,-4.0) -- node[msg, above] {6. GET /projects} (6.4,-4.0);
+  \draw[arr, dashed] (6.4,-4.6) -- node[msg, above] {7. Liste projets} (3.2,-4.6);
+
+  \draw[arr] (0,-5.4) -- node[msg, above] {8. Saisit devis + lignes} (3.2,-5.4);
+  \draw[arr] (3.2,-6.0) -- node[msg, above] {9. POST /quotes} (6.4,-6.0);
+  \draw[arr] (6.4,-6.6) -- node[msg, above] {10. Validation FormRequest} (6.4,-7.2);
+  \draw[arr] (6.4,-7.8) -- node[msg, above] {11. INSERT quote + lines} (9.6,-7.8);
+  \draw[arr, dashed] (9.6,-8.4) -- node[msg, above] {12. ID devis} (6.4,-8.4);
+  \draw[arr, dashed] (6.4,-9.0) -- node[msg, above] {13. QuoteResource JSON} (3.2,-9.0);
+  \draw[arr, dashed] (3.2,-9.6) -- node[msg, above] {14. Confirmation UI} (0,-9.6);
+
+  \draw[arr] (0,-10.4) -- node[msg, above] {15. Imprime / envoie au client} (3.2,-10.4);
+  \draw[arr] (3.2,-11.0) -- node[msg, above] {16. POST /prints/track} (6.4,-11.0);
+\end{tikzpicture}%
+}
+\caption{Diagramme de séquence : création et enregistrement d'un devis}
+\label{fig:seq_diagram}
+\end{figure}

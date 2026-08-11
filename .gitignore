@@ -20,6 +20,10 @@ backend/storage/*.key
 backend/storage/pail
 backend/bootstrap/cache/*.php
 !backend/bootstrap/cache/.gitignore
+services/*/bootstrap/cache/*.php
+!services/*/bootstrap/cache/.gitignore
+services/*/storage/*.key
+services/*/storage/logs/*.log
 
 # logs
 *.log
@@ -39,6 +43,7 @@ Thumbs.db
 # php tooling
 .phpunit.result.cache
 .phpunit.cache
+composer.phar
 _ide_helper.php
 Homestead.json
 Homestead.yaml

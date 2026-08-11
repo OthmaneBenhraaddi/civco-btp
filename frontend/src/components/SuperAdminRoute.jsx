@@ -2,9 +2,14 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
 import { getHomePathForRole } from '../routes/routeAccess'
+import { isPlatformSuperAdmin } from '../utils/authIdentity'
+
+function canAccessSuperAdminArea(user) {
+  return isPlatformSuperAdmin(user) || user?.is_super_admin === true
+}
 
 export default function SuperAdminRoute() {
-  const { isSuperAdmin, user, roles, loading } = useAuth()
+  const { user, roles, permissions, loading } = useAuth()
   const { t } = useTranslation()
 
   if (loading) {
@@ -15,8 +20,8 @@ export default function SuperAdminRoute() {
     )
   }
 
-  if (!isSuperAdmin) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles)} replace />
+  if (!canAccessSuperAdminArea(user)) {
+    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
   }
 
   return <Outlet />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import StatusBadge from '../../components/StatusBadge'
 import { useAuth } from '../../context/AuthContext'
@@ -7,21 +7,51 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import * as projectsApi from '../../api/projects'
 import ProjectDocumentsTab from './ProjectDocumentsTab'
 import ProjectExpensesTab from './ProjectExpensesTab'
+import ProjectAmendmentsTab from './ProjectAmendmentsTab'
+import ProjectExcelImportPanel from './components/ProjectExcelImportPanel'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import {
   logProjectUpdated,
   resolveActorLabel,
 } from '../history/auditLogActions'
 import { formatProjectOverviewDescription } from './utils/projectOverview'
+import { formatMoney } from '../../utils/currency'
+import { canManageAllTasks, canManageTask } from '../tasks/utils/taskPermissions'
 
-const TAB_KEYS = ['overview', 'planning', 'team', 'progress', 'documents', 'expenses']
+const TAB_KEYS = ['overview', 'planning', 'team', 'progress', 'documents', 'expenses', 'amendments']
+
+function getVisibleTabs(hasPermission) {
+  return TAB_KEYS.filter((key) => {
+    if (key === 'documents') {
+      return hasPermission('document.view')
+    }
+
+    if (key === 'expenses') {
+      return hasPermission('expense.view')
+    }
+
+    return true
+  })
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams()
   const { hasPermission, user, roles, isAdmin } = useAuth()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { pushToast } = useToast()
   const canUpdate = hasPermission('project.update')
+  const canEditBudget = isAdmin || hasPermission('project.budget')
+  const taskAccess = { user, isAdmin, hasPermission }
+  const manageAllTasks = canManageAllTasks(taskAccess)
+  const canManagePhases = manageAllTasks
+  const visibleTabs = useMemo(() => getVisibleTabs(hasPermission), [hasPermission])
+
+  function canManageProjectTask(task) {
+    return canManageTask(
+      { assignedToUserId: task.assigned_to?.id ?? task.assigned_to_user_id },
+      taskAccess,
+    )
+  }
 
   const [project, setProject] = useState(null)
   const [companyUsers, setCompanyUsers] = useState([])
@@ -41,6 +71,12 @@ export default function ProjectDetailPage() {
     site_city: '',
     site_postal_code: '',
   })
+
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) {
+      setTab(visibleTabs[0] ?? 'overview')
+    }
+  }, [visibleTabs, tab])
 
   async function loadProject(options = { initial: false }) {
     if (options.initial) {
@@ -83,6 +119,10 @@ export default function ProjectDetailPage() {
   }, [id])
 
   async function handleProjectUpdate(field, value) {
+    if (field === 'budget' && !canEditBudget) {
+      return
+    }
+
     if (!canUpdate) {
       return
     }
@@ -303,6 +343,52 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function handleToggleMemberChat(member, nextValue) {
+    const previous = Boolean(member.can_chat_with_client)
+    setProject((current) => {
+      if (!current) {
+        return current
+      }
+
+      const members = unwrapResource(current.team_members).map((item) => (
+        item.id === member.id
+          ? { ...item, can_chat_with_client: nextValue }
+          : item
+      ))
+
+      return { ...current, team_members: members }
+    })
+
+    try {
+      const updated = await projectsApi.toggleTeamMemberChat(id, member.id, nextValue)
+      setProject(updated.data ?? updated)
+      pushToast({
+        action: 'modification',
+        message: nextValue
+          ? t('projects.team.chatEnabledToast', { name: member.full_name })
+          : t('projects.team.chatDisabledToast', { name: member.full_name }),
+      })
+    } catch (err) {
+      setProject((current) => {
+        if (!current) {
+          return current
+        }
+
+        const members = unwrapResource(current.team_members).map((item) => (
+          item.id === member.id
+            ? { ...item, can_chat_with_client: previous }
+            : item
+        ))
+
+        return { ...current, team_members: members }
+      })
+      pushToast({
+        action: 'suppression',
+        message: extractErrorMessage(err, t('projects.team.chatToggleError')),
+      })
+    }
+  }
+
   async function handleAddProgress(event) {
     event.preventDefault()
     if (progressForm.percent === '') {
@@ -362,12 +448,8 @@ export default function ProjectDetailPage() {
       {error ? <p className="error">{error}</p> : null}
       {saving ? <p className="hint">{t('common.saving')}</p> : null}
 
-      {!canUpdate ? (
-        <p className="hint banner-warning">{t('common.noPermission')}</p>
-      ) : null}
-
       <div className="tabs">
-        {TAB_KEYS.map((item) => (
+        {visibleTabs.map((item) => (
           <button
             key={item}
             type="button"
@@ -404,9 +486,14 @@ export default function ProjectDetailPage() {
                 min="0"
                 step="0.01"
                 defaultValue={project.budget ?? ''}
-                disabled={!canUpdate}
+                disabled={!canEditBudget}
                 onBlur={(event) => handleProjectUpdate('budget', event.target.value === '' ? null : Number(event.target.value))}
               />
+              {project.revised_budget != null && Number(project.revised_budget) !== Number(project.budget ?? 0) ? (
+                <span className="mt-1 block text-xs text-emerald-400">
+                  {t('amendments.revisedHint', { value: formatMoney(project.revised_budget, locale) })}
+                </span>
+              ) : null}
             </label>
           </div>
           <p>{formatProjectOverviewDescription(project, t('projects.overview.noDescription'))}</p>
@@ -477,7 +564,14 @@ export default function ProjectDetailPage() {
 
       {tab === 'planning' ? (
         <section className="stack">
-          {canUpdate ? (
+          {canManagePhases ? (
+            <ProjectExcelImportPanel
+              projectId={id}
+              projectReference={project?.reference}
+              onImported={() => loadProject()}
+            />
+          ) : null}
+          {canManagePhases ? (
             <form className="inline-form card" onSubmit={handleAddPhase}>
               <input
                 placeholder={t('projects.planning.newPhase')}
@@ -499,7 +593,7 @@ export default function ProjectDetailPage() {
                   <h3>{phase.name}</h3>
                   <p>{t('projects.planning.phaseProgress', { percent: phase.progress_percent })}</p>
                 </div>
-                {canUpdate ? (
+                {canManagePhases ? (
                   <button type="button" className="ghost danger" onClick={() => handleDeletePhase(phase.id)}>
                     {t('projects.planning.deletePhase')}
                   </button>
@@ -515,9 +609,14 @@ export default function ProjectDetailPage() {
                         <StatusBadge status={task.status} />
                         <span>{taskProgress[task.id] ?? task.progress_percent}%</span>
                         {task.assigned_to ? <span>{task.assigned_to.full_name}</span> : null}
+                        {task.quantity != null && task.unit_price != null ? (
+                          <span>
+                            {task.quantity} {task.unit || 'u'} × {formatMoney(task.unit_price, locale)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
-                    {canUpdate ? (
+                    {canManageProjectTask(task) ? (
                       <div className="task-actions">
                         <input
                           type="range"
@@ -540,7 +639,7 @@ export default function ProjectDetailPage() {
                 ))}
               </ul>
 
-              {canUpdate ? (
+              {canManagePhases ? (
                 <div className="inline-form">
                   <input
                     placeholder={t('projects.planning.newTask')}
@@ -580,7 +679,7 @@ export default function ProjectDetailPage() {
 
       {tab === 'team' ? (
         <section className="stack">
-          {canUpdate ? (
+          {isAdmin ? (
             <form className="inline-form card" onSubmit={handleAddTeamMember}>
               <select
                 value={teamForm.user_id}
@@ -608,25 +707,53 @@ export default function ProjectDetailPage() {
                   <th>{t('projects.team.name')}</th>
                   <th>{t('projects.team.email')}</th>
                   <th>{t('projects.team.role')}</th>
-                  <th>{t('common.actions')}</th>
+                  {isAdmin ? <th>{t('projects.team.chatWithClient')}</th> : null}
+                  {isAdmin ? <th>{t('common.actions')}</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {teamMembers.length === 0 ? (
-                  <tr><td colSpan={4}>{t('projects.team.empty')}</td></tr>
+                  <tr><td colSpan={isAdmin ? 5 : 3}>{t('projects.team.empty')}</td></tr>
                 ) : (
                   teamMembers.map((member) => (
                     <tr key={member.id}>
                       <td>{member.full_name}</td>
                       <td>{member.email}</td>
                       <td>{member.role_label || '—'}</td>
-                      <td>
-                        {canUpdate ? (
+                      {isAdmin ? (
+                        <td>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={Boolean(member.can_chat_with_client)}
+                            aria-label={t('projects.team.chatWithClient')}
+                            onClick={() => handleToggleMemberChat(member, !member.can_chat_with_client)}
+                            className={[
+                              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+                              member.can_chat_with_client ? 'bg-emerald-500/80' : 'bg-slate-700',
+                            ].join(' ')}
+                          >
+                            <span
+                              className={[
+                                'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+                                member.can_chat_with_client ? 'translate-x-5' : 'translate-x-0.5',
+                              ].join(' ')}
+                            />
+                          </button>
+                          <span className="ml-2 text-xs text-slate-400">
+                            {member.can_chat_with_client
+                              ? t('projects.team.chatOn')
+                              : t('projects.team.chatOff')}
+                          </span>
+                        </td>
+                      ) : null}
+                      {isAdmin ? (
+                        <td>
                           <button type="button" className="ghost danger" onClick={() => handleRemoveTeamMember(member.id)}>
                             {t('projects.team.remove')}
                           </button>
-                        ) : null}
-                      </td>
+                        </td>
+                      ) : null}
                     </tr>
                   ))
                 )}
@@ -693,6 +820,14 @@ export default function ProjectDetailPage() {
 
       {tab === 'expenses' ? (
         <ProjectExpensesTab projectId={id} />
+      ) : null}
+
+      {tab === 'amendments' ? (
+        <ProjectAmendmentsTab
+          projectId={id}
+          project={project}
+          onProjectRefresh={() => loadProject()}
+        />
       ) : null}
     </div>
   )

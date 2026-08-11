@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\CompanyVisibility;
+use App\Enums\TenantStatus;
 use App\Models\Company;
 use App\Models\Role;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\ThemeColorService;
 use Illuminate\Database\Seeder;
@@ -14,6 +16,14 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
+        $tenant = Tenant::query()->firstOrCreate(
+            ['subdomain' => 'civco'],
+            [
+                'name' => 'CIVCO BTP',
+                'status' => TenantStatus::Active,
+            ],
+        );
+
         $company = Company::query()->updateOrCreate(
             ['siret' => '12345678901234'],
             [
@@ -38,6 +48,7 @@ class DemoSeeder extends Seeder
         $admin = User::query()->updateOrCreate(
             ['email' => 'admin@btpdemo.fr'],
             [
+                'tenant_id' => $tenant->id,
                 'first_name' => 'Administrateur',
                 'last_name' => 'Système',
                 'phone' => '+212 661 000 101',
@@ -51,6 +62,7 @@ class DemoSeeder extends Seeder
         $yassine = User::query()->updateOrCreate(
             ['email' => 'yassine.mansouri@civco-btp.ma'],
             [
+                'tenant_id' => $tenant->id,
                 'first_name' => 'Yassine',
                 'last_name' => 'Mansouri',
                 'phone' => '+212 661 482 730',
@@ -64,6 +76,7 @@ class DemoSeeder extends Seeder
         $amine = User::query()->updateOrCreate(
             ['email' => 'amine.alami@civco-btp.ma'],
             [
+                'tenant_id' => $tenant->id,
                 'first_name' => 'Amine',
                 'last_name' => 'Alami',
                 'phone' => '+212 662 918 445',

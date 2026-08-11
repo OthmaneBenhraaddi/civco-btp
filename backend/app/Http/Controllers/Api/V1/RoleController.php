@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PermissionResource;
 use App\Http\Resources\RoleResource;
+use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,6 +31,30 @@ class RoleController extends Controller
             ->get();
 
         return RoleResource::collection($roles);
+    }
+
+    public function settings(Request $request): JsonResponse
+    {
+        $companyId = $this->companyId($request);
+
+        $roles = Role::query()
+            ->with('permissions')
+            ->where(function ($builder) use ($companyId): void {
+                $builder->whereNull('company_id')
+                    ->orWhere('company_id', $companyId);
+            })
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name', 'slug', 'description', 'badge_tone', 'is_system']);
+
+        $permissions = Permission::query()
+            ->orderBy('module')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'module']);
+
+        return response()->json([
+            'roles' => RoleResource::collection($roles),
+            'permissions' => PermissionResource::collection($permissions),
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -87,10 +113,6 @@ class RoleController extends Controller
         $role->update(collect($validated)->except('permission_ids')->all());
 
         if (array_key_exists('permission_ids', $validated)) {
-            if ($role->is_system) {
-                abort(422, 'Les permissions des rôles système ne peuvent pas être modifiées.');
-            }
-
             $role->permissions()->sync($validated['permission_ids'] ?? []);
         }
 

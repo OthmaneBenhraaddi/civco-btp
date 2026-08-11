@@ -24,7 +24,8 @@ class RoleSeeder extends Seeder
                 'description' => 'Project planning and tracking',
                 'badge_tone' => 'sky',
                 'permissions' => [
-                    'dashboard.view', 'client.view', 'project.view', 'project.create', 'project.update',
+                    'dashboard.view', 'client.view', 'project.view', 'project.update',
+                    'task.view_all', 'task.update',
                     'document.view', 'document.upload', 'document.archive', 'expense.view', 'expense.manage',
                     'quote.view', 'invoice.view', 'delivery_form.view',
                 ],
@@ -57,6 +58,7 @@ class RoleSeeder extends Seeder
                 'badge_tone' => 'slate',
                 'permissions' => [
                     'dashboard.view', 'project.view', 'project.update',
+                    'task.view_own', 'task.update',
                     'document.view', 'document.upload',
                 ],
             ],

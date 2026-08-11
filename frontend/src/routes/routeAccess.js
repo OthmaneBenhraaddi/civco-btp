@@ -1,5 +1,10 @@
 import { appendTenantQuery, setDevTenantSlug } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin } from '../utils/authIdentity'
+import {
+  canAccessRoute,
+  getDashboardNavPath as getDashboardNavPathFromPermissions,
+  getDefaultHomePath,
+} from './routePermissions'
 
 export function isClientUser(user, roles = []) {
   if (user?.client_id) {
@@ -16,24 +21,10 @@ function syncTenantDevContext(user) {
 }
 
 /** Default landing path after login (preserves local ?tenant= context). */
-export function getHomePathForRole(role, user, roles = []) {
+export function getHomePathForRole(role, user, roles = [], permissions = []) {
   syncTenantDevContext(user)
 
-  let path
-
-  if (isClientUser(user, roles)) {
-    path = '/portal'
-  } else if (isPlatformSuperAdmin(user)) {
-    path = '/super-admin'
-  } else {
-    path = role === 'admin' ? '/' : '/projects'
-  }
-
-  if (isPlatformSuperAdmin(user)) {
-    return path
-  }
-
-  return appendTenantQuery(path)
+  return getDefaultHomePath(user, roles, permissions)
 }
 
 /** Prefer API-provided redirect after login/bootstrap. */
@@ -46,16 +37,17 @@ export function resolveRedirectPath(context) {
     return context.redirect_to
   }
 
-  return getHomePathForRole(context?.user?.role, context?.user, context?.roles)
+  return getHomePathForRole(
+    context?.user?.role,
+    context?.user,
+    context?.roles,
+    context?.permissions,
+  )
 }
 
-/** Dashboard nav target (may differ from post-login home for super admins). */
+/** Dashboard nav target (always the dashboard route for ERP users). */
 export function getDashboardNavPath(user, roles = []) {
-  if (isPlatformSuperAdmin(user)) {
-    return '/'
-  }
-
-  return getHomePathForRole(user?.role, user, roles)
+  return getDashboardNavPathFromPermissions(user, roles)
 }
 
 /** Append tenant query to in-app routes for tenant users. */
@@ -75,26 +67,7 @@ export function isClientOnlyPath(pathname) {
   )
 }
 
-/** Route prefixes reserved for administrators (team members are redirected). */
-export const ADMIN_ROUTE_PREFIXES = [
-  '/clients',
-  '/quotes',
-  '/delivery-forms',
-  '/invoices',
-  '/history',
-  '/roles',
-  '/configuration',
-  '/team',
-  '/discussions',
-]
-
 export const SUPER_ADMIN_ROUTE_PREFIXES = ['/super-admin']
-
-export function isAdminOnlyPath(pathname) {
-  return ADMIN_ROUTE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  )
-}
 
 export function isSuperAdminOnlyPath(pathname) {
   return SUPER_ADMIN_ROUTE_PREFIXES.some(
@@ -104,14 +77,22 @@ export function isSuperAdminOnlyPath(pathname) {
 
 /** Entity-scoped admin routes that platform super admins must not access. */
 export function isEntityBoundAdminPath(pathname) {
-  return pathname === '/discussions' || pathname.startsWith('/discussions/')
-}
-
-/** Team members should not access internal routes when they are client portal users. */
-export function isTeamRoute(pathname) {
-  if (isClientOnlyPath(pathname) || pathname === '/login') {
+  if (pathname.startsWith('/super-admin')) {
     return false
   }
 
-  return !isAdminOnlyPath(pathname) || pathname === '/'
+  return pathname === '/discussions' || pathname.startsWith('/discussions/')
 }
+
+/** @deprecated Use canAccessRoute with permissions instead. */
+export function isAdminOnlyPath(pathname) {
+  return !canAccessRoute(pathname, {
+    user: { role: 'user' },
+    roles: [],
+    permissions: [],
+    isAdmin: false,
+    isSuperAdmin: false,
+  })
+}
+
+export { canAccessRoute, getDefaultHomePath, navItemVisible } from './routePermissions'

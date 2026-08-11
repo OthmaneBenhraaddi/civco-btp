@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import { useTheme } from '../../../context/ThemeContext'
-import { readTasks } from '../../tasks/taskStore'
+import { useProjectTasks } from '../../../hooks/useProjectTasks'
 import { buildTaskChartSeries } from '../dashboardChartData'
 import {
   CHART_AXIS_TICK,
@@ -29,10 +29,10 @@ const INTERVALS = ['monthly', 'weekly', 'daily']
 export default function TaskOverviewBlock() {
   const { t, locale } = useTranslation()
   const { colors } = useTheme()
+  const { tasks } = useProjectTasks()
   const [interval, setInterval] = useState('monthly')
 
   const { totalTasks, chartData } = useMemo(() => {
-    const tasks = readTasks()
     const inProgressCount = tasks.filter((task) => task.statut === 'en_cours' || task.statut === 'bloque').length
     const completedCount = tasks.filter((task) => task.statut === 'termine').length
     const totals = { inProgress: inProgressCount, completed: completedCount }
@@ -41,7 +41,7 @@ export default function TaskOverviewBlock() {
       totalTasks: tasks.length,
       chartData: buildTaskChartSeries(interval, locale, totals),
     }
-  }, [interval, locale])
+  }, [interval, locale, tasks])
 
   return (
     <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>

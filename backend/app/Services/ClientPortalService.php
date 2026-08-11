@@ -27,6 +27,7 @@ class ClientPortalService
                 ProjectStatus::InProgress,
                 ProjectStatus::OnHold,
             ])
+            ->with('amendments')
             ->orderByDesc('updated_at')
             ->get();
     }

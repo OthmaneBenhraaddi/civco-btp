@@ -3,8 +3,13 @@ import StatusBadge from '../../components/StatusBadge'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as superAdminApi from '../../api/superAdmin'
 import { extractErrorMessage } from '../../utils/apiHelpers'
-import EntityCreationWizard from './EntityCreationWizard'
+import EntityEditModal from './EntityEditModal'
 import AdminCredentialsPanel from './AdminCredentialsPanel'
+import AddTenantAdminForm from './AddTenantAdminForm'
+import SuperAdminPageHeader from './components/SuperAdminPageHeader'
+import StatusActionButtons from './components/StatusActionButtons'
+import ProvisionSuccessBanner from './components/ProvisionSuccessBanner'
+import { buildTenantWorkspaceUrl } from './utils/tenantWorkspaceUrl'
 
 const STATUS_FILTERS = [
   { value: '', labelKey: 'superAdmin.filters.all' },
@@ -13,32 +18,7 @@ const STATUS_FILTERS = [
   { value: 'archived', labelKey: 'status.archived' },
 ]
 
-const MANAGEABLE_STATUSES = ['active', 'inactive', 'archived']
-
-function StatusActionButtons({ currentStatus, onSelect, disabled, labels }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {MANAGEABLE_STATUSES.map((status) => (
-        <button
-          key={status}
-          type="button"
-          className={[
-            'rounded-md px-2 py-1 text-[11px] font-medium transition-colors',
-            currentStatus === status
-              ? 'bg-white/10 text-white ring-1 ring-white/20'
-              : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
-          ].join(' ')}
-          disabled={disabled || currentStatus === status}
-          onClick={() => onSelect(status)}
-        >
-          {labels[status]}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-export default function SuperAdminDashboard() {
+export default function SuperAdminEntitiesPage() {
   const { t } = useTranslation()
   const [tenants, setTenants] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
@@ -48,7 +28,9 @@ export default function SuperAdminDashboard() {
   const [updatingTenantId, setUpdatingTenantId] = useState(null)
   const [updatingAdminKey, setUpdatingAdminKey] = useState(null)
   const [error, setError] = useState('')
-  const [provisionResult, setProvisionResult] = useState(null)
+  const [adminProvisionResult, setAdminProvisionResult] = useState(null)
+  const [addingAdminTenantId, setAddingAdminTenantId] = useState(null)
+  const [editingTenant, setEditingTenant] = useState(null)
 
   const statusLabels = {
     active: t('status.active'),
@@ -88,23 +70,6 @@ export default function SuperAdminDashboard() {
     })
   }
 
-  async function handleCreateEntity(payload) {
-    setSaving(true)
-    setError('')
-    setProvisionResult(null)
-
-    try {
-      const result = await superAdminApi.createTenant(payload)
-      setProvisionResult(result)
-      await loadTenants()
-    } catch (err) {
-      setError(extractErrorMessage(err, t('superAdmin.createError')))
-      throw err
-    } finally {
-      setSaving(false)
-    }
-  }
-
   async function handleTenantStatusChange(tenantId, status) {
     setUpdatingTenantId(tenantId)
     setError('')
@@ -116,6 +81,45 @@ export default function SuperAdminDashboard() {
       setError(extractErrorMessage(err, t('superAdmin.updateTenantError')))
     } finally {
       setUpdatingTenantId(null)
+    }
+  }
+
+  async function handleAddAdmin(tenantId, payload) {
+    setSaving(true)
+    setError('')
+    setAdminProvisionResult(null)
+
+    try {
+      const result = await superAdminApi.createTenantAdmin(tenantId, payload)
+      setAdminProvisionResult(result)
+      setAddingAdminTenantId(null)
+      setExpandedIds((current) => new Set([...current, tenantId]))
+      await loadTenants()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('superAdmin.addAdmin.error')))
+      throw err
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleEditTenant(payload) {
+    if (!editingTenant) {
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    try {
+      await superAdminApi.updateTenant(editingTenant.id, payload)
+      setEditingTenant(null)
+      await loadTenants()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('superAdmin.edit.error')))
+      throw err
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -135,53 +139,15 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="list-page">
-      <header className="page-header">
-        <div>
-          <h1>{t('superAdmin.title')}</h1>
-          <p>{t('superAdmin.subtitle')}</p>
-        </div>
-      </header>
+    <div className="list-page mx-auto max-w-[1200px]">
+      <SuperAdminPageHeader
+        title={t('superAdmin.nav.entities')}
+        subtitle={t('superAdmin.entities.subtitle')}
+      />
 
-      {error ? <p className="error">{error}</p> : null}
+      {error ? <p className="error mb-4">{error}</p> : null}
 
-      {provisionResult ? (
-        <div className="card mb-6 border border-emerald-500/30 bg-emerald-500/5 p-4">
-          <h2 className="text-lg font-semibold text-emerald-300">{t('superAdmin.createdTitle')}</h2>
-          <p className="mt-2 text-sm text-slate-300">
-            {t('superAdmin.createdHint', {
-              name: provisionResult.tenant?.name,
-              subdomain: provisionResult.tenant?.subdomain,
-            })}
-          </p>
-          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-500">{t('superAdmin.adminEmail')}</dt>
-              <dd className="font-mono text-sm text-white">{provisionResult.admin?.email}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-500">{t('superAdmin.tempPassword')}</dt>
-              <dd className="font-mono text-sm text-amber-300">{provisionResult.temporary_password}</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-xs uppercase tracking-wide text-slate-500">{t('superAdmin.loginUrl')}</dt>
-              <dd className="text-sm">
-                <a
-                  href={provisionResult.login_url}
-                  className="text-indigo-300 underline-offset-2 hover:underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {provisionResult.login_url}
-                </a>
-              </dd>
-              <p className="mt-2 text-xs text-slate-500">{t('superAdmin.loginUrlHint')}</p>
-            </div>
-          </dl>
-        </div>
-      ) : null}
-
-      <EntityCreationWizard saving={saving} onSubmit={handleCreateEntity} />
+      <ProvisionSuccessBanner result={adminProvisionResult} variant="admin" />
 
       <section className="card p-6">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -214,6 +180,7 @@ export default function SuperAdminDashboard() {
             {tenants.map((tenant) => {
               const expanded = expandedIds.has(tenant.id)
               const admins = tenant.admins ?? []
+              const workspaceUrl = buildTenantWorkspaceUrl(tenant.subdomain, tenant.workspace_url)
 
               return (
                 <article
@@ -233,32 +200,42 @@ export default function SuperAdminDashboard() {
                         <h3 className="text-base font-semibold text-white">{tenant.name}</h3>
                         <StatusBadge status={tenant.status} />
                         <span className="text-xs text-slate-500">
-                          {t('superAdmin.members')}: {tenant.users_count ?? 0}
+                          {t('superAdmin.usersLabel')}: {tenant.users_count ?? 0}
                         </span>
                       </div>
                       <p className="font-mono text-sm text-slate-400">{tenant.subdomain}.monerp.com</p>
-                      <p className="text-sm">
-                        <a
-                          href={tenant.login_url}
-                          className="text-indigo-300 underline-offset-2 hover:underline"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {tenant.login_url}
-                        </a>
-                      </p>
                     </div>
 
-                    <div className="shrink-0 space-y-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                        {t('superAdmin.entityStatusActions')}
-                      </p>
-                      <StatusActionButtons
-                        currentStatus={tenant.status}
-                        disabled={updatingTenantId === tenant.id}
-                        labels={statusLabels}
-                        onSelect={(status) => handleTenantStatusChange(tenant.id, status)}
-                      />
+                    <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]"
+                          onClick={() => setEditingTenant(tenant)}
+                        >
+                          {t('superAdmin.edit.open')}
+                        </button>
+                        <a
+                          href={workspaceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-500/15"
+                        >
+                          {t('superAdmin.quickAccess')}
+                        </a>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 sm:text-right">
+                          {t('superAdmin.entityStatusActions')}
+                        </p>
+                        <StatusActionButtons
+                          currentStatus={tenant.status}
+                          disabled={updatingTenantId === tenant.id}
+                          labels={statusLabels}
+                          onSelect={(status) => handleTenantStatusChange(tenant.id, status)}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -317,6 +294,26 @@ export default function SuperAdminDashboard() {
                             </tbody>
                           </table>
                         )}
+
+                        {addingAdminTenantId === tenant.id ? (
+                          <AddTenantAdminForm
+                            tenant={tenant}
+                            saving={saving}
+                            onSubmit={(payload) => handleAddAdmin(tenant.id, payload)}
+                            onCancel={() => setAddingAdminTenantId(null)}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="mt-4 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/15"
+                            onClick={() => {
+                              setAddingAdminTenantId(tenant.id)
+                              setAdminProvisionResult(null)
+                            }}
+                          >
+                            {t('superAdmin.addAdmin.open')}
+                          </button>
+                        )}
                       </div>
                     ) : null}
                   </div>
@@ -326,6 +323,14 @@ export default function SuperAdminDashboard() {
           </div>
         )}
       </section>
+
+      <EntityEditModal
+        tenant={editingTenant}
+        open={Boolean(editingTenant)}
+        saving={saving}
+        onClose={() => setEditingTenant(null)}
+        onSubmit={handleEditTenant}
+      />
     </div>
   )
 }

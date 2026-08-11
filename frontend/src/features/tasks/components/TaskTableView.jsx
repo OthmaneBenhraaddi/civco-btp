@@ -22,7 +22,7 @@ function ProjectBadge({ name }) {
   )
 }
 
-export default function TaskTableView({ tasks, locale, t }) {
+export default function TaskTableView({ tasks, locale, t, canManageTask, onEditTask }) {
   const [previewState, setPreviewState] = useState({ open: false, files: [] })
 
   function openPreview(files) {
@@ -58,6 +58,7 @@ export default function TaskTableView({ tasks, locale, t }) {
                 <th className="px-4 py-4">{t('tasks.columns.files')}</th>
                 <th className="px-4 py-4">{t('tasks.columns.notes')}</th>
                 <th className="px-4 py-4">{t('tasks.columns.lastUpdated')}</th>
+                {canManageTask ? <th className="px-4 py-4">{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -112,6 +113,19 @@ export default function TaskTableView({ tasks, locale, t }) {
                     <p className="text-slate-300">{task.lastUpdatedBy}</p>
                     <p className="text-xs text-slate-500">{task.lastUpdatedAt}</p>
                   </td>
+                  {canManageTask ? (
+                    <td className="px-4 py-4">
+                      {canManageTask(task) ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-white/10 px-2.5 py-1 text-xs font-medium text-slate-200 hover:bg-white/5"
+                          onClick={() => onEditTask?.(task)}
+                        >
+                          {t('tasks.open')}
+                        </button>
+                      ) : null}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

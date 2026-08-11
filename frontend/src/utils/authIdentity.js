@@ -2,7 +2,7 @@
  * Platform super admin: global operator with no tenant assignment.
  */
 export function isPlatformSuperAdmin(user) {
-  return user != null && user.tenant_id == null && user.is_super_admin === true
+  return user != null && user.tenant_id == null && user.role === 'super_admin'
 }
 
 /**

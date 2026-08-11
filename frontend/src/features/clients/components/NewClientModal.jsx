@@ -33,6 +33,7 @@ export const DEFAULT_CLIENT_WIZARD_FORM = {
   name: '',
   client_type: 'externe',
   is_active: true,
+  is_official: true,
   role_id: 'client_extern',
   badge_ids: [],
   address_line1: '',
@@ -199,6 +200,7 @@ export default function NewClientModal({
           country: form.country,
           notes: buildNotes(),
           is_active: form.is_active,
+          is_official: form.is_official,
           badge_ids: normalizeBadgeIds(form.badge_ids),
           role_id: form.role_id,
         },
@@ -293,6 +295,30 @@ export default function NewClientModal({
                     className={[
                       'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
                       form.is_active ? 'translate-x-5' : 'translate-x-0.5',
+                    ].join(' ')}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#121316] px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">{t('clients.isOfficial')}</p>
+                  <p className="text-xs text-slate-400">{t('clients.isOfficialHint')}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.is_official}
+                  onClick={() => updateForm({ is_official: !form.is_official })}
+                  className={[
+                    'relative h-6 w-11 rounded-full transition-colors duration-200',
+                    form.is_official ? 'bg-sky-500/80' : 'bg-slate-700',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+                      form.is_official ? 'translate-x-5' : 'translate-x-0.5',
                     ].join(' ')}
                   />
                 </button>

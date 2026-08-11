@@ -59,6 +59,14 @@ export function logClientDeleted({ actor, name }) {
   })
 }
 
+export function logClientArchived({ actor, name }) {
+  return appendAuditLog({
+    action: 'modification',
+    actor,
+    message: `A archivé le client: ${name}`,
+  })
+}
+
 export function logInvoiceCreated({ actor, clientName, amountLabel }) {
   return appendAuditLog({
     action: 'creation',

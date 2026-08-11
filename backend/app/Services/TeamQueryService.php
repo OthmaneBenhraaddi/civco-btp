@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -61,6 +62,32 @@ class TeamQueryService
 
         if ($member->isAdmin() && ! $actor->isSuperAdmin()) {
             throw new AccessDeniedHttpException('Seul le super administrateur peut modifier l\'accès d\'un administrateur d\'entité.');
+        }
+    }
+
+    public function assertCanChangeMemberRole(User $actor, User $member): void
+    {
+        $this->assertCanManageMember($actor, $member);
+
+        if ($actor->id === $member->id) {
+            throw new AccessDeniedHttpException('Vous ne pouvez pas modifier votre propre rôle.');
+        }
+
+        if ($member->isAdmin() && ! $actor->isSuperAdmin()) {
+            throw new AccessDeniedHttpException('Seul le super administrateur peut modifier le rôle d\'un administrateur d\'entité.');
+        }
+
+        if (! $actor->isAdmin() || $actor->tenant_id === null) {
+            throw new AccessDeniedHttpException('Seuls les administrateurs d\'entité peuvent modifier les rôles.');
+        }
+    }
+
+    public function assertCanArchiveMember(User $actor, User $member): void
+    {
+        $this->assertCanToggleMemberStatus($actor, $member);
+
+        if (($member->status ?? UserStatus::Active) === UserStatus::Archived) {
+            throw new AccessDeniedHttpException('Ce compte est déjà archivé.');
         }
     }
 }

@@ -3,6 +3,7 @@ import { useDragAutoScroll } from '../../hooks/useDragAutoScroll'
 import KpiCard from '../../components/KpiCard'
 import { BENTO_CARD_CLASS } from '../../theme/designTokens'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { LIVE_SYNC_INTERVAL_MS, useAutoRefresh } from '../../hooks/useAutoRefresh'
 import * as dashboardApi from '../../api/dashboard'
@@ -21,10 +22,15 @@ import {
   reorderDashboardLayout,
   saveDashboardLayout,
 } from './dashboardLayoutStore'
+import {
+  canViewFinancialKpis,
+  canViewOperationalKpis,
+  filterDashboardLayout,
+} from './dashboardWidgetAccess'
 
 export default function DashboardPage() {
   const { t, locale } = useTranslation()
-  const { user, company, isAdmin } = useAuth()
+  const { user, company, isAdmin, hasPermission } = useAuth()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -60,8 +66,16 @@ export default function DashboardPage() {
 
   useAutoRefresh(fetchSummary, [fetchSummary], LIVE_SYNC_INTERVAL_MS)
 
+  useStealthModeRefresh(() => {
+    fetchSummary({ silent: true })
+  })
+
   const activeOrder = editMode ? draftOrder : layoutOrder
-  const packedWidgets = useMemo(() => packDashboardLayout(activeOrder), [activeOrder])
+  const visibleOrder = useMemo(
+    () => filterDashboardLayout(activeOrder, hasPermission),
+    [activeOrder, hasPermission],
+  )
+  const packedWidgets = useMemo(() => packDashboardLayout(visibleOrder), [visibleOrder])
 
   useDragAutoScroll(editMode && Boolean(draggingId))
 
@@ -123,47 +137,63 @@ export default function DashboardPage() {
     const projects = summary.projects ?? {}
     const financial = summary.financial ?? {}
     const recentProjects = summary.recent_projects ?? []
+    const showOperationalKpis = canViewOperationalKpis(hasPermission)
+    const showFinancialKpis = canViewFinancialKpis(hasPermission)
     const revenueParts = formatMoneyParts(financial.total_revenue, locale)
     const outstandingParts = formatMoneyParts(financial.outstanding_balance, locale)
     const expensesParts = formatMoneyParts(financial.total_expenses, locale)
+    const kpiCount = (showOperationalKpis ? 2 : 0) + (showFinancialKpis ? 3 : 0)
+    const kpiGridClass = kpiCount >= 5
+      ? 'sm:grid-cols-2 xl:grid-cols-5'
+      : kpiCount === 3
+        ? 'sm:grid-cols-2 xl:grid-cols-3'
+        : 'sm:grid-cols-2'
 
     return {
-      kpis: (
+      kpis: kpiCount > 0 ? (
         <section className={`${BENTO_CARD_CLASS} p-6`}>
-          <div className="kpi-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <KpiCard
-            label={t('dashboard.kpi.totalProjects')}
-            value={projects.total ?? 0}
-            hint={t('dashboard.kpi.activeProjects', { count: projects.active_count ?? 0 })}
-            variant="operational"
-          />
-          <KpiCard
-            label={t('dashboard.kpi.averageProgress')}
-            value={`${projects.average_progress ?? 0}%`}
-            variant="progress"
-          />
-          <KpiCard
-            label={t('dashboard.kpi.totalRevenue')}
-            moneyAmount={revenueParts.amount}
-            moneyCurrency={revenueParts.currency}
-            variant="financial"
-          />
-          <KpiCard
-            label={t('dashboard.kpi.outstanding')}
-            moneyAmount={outstandingParts.amount}
-            moneyCurrency={outstandingParts.currency}
-            hint={t('dashboard.kpi.overdueInvoices', { count: financial.overdue_invoices_count ?? 0 })}
-            variant="warning"
-          />
-          <KpiCard
-            label={t('dashboard.kpi.totalExpenses')}
-            moneyAmount={expensesParts.amount}
-            moneyCurrency={expensesParts.currency}
-            variant="expense"
-          />
+          <div className={`kpi-grid grid gap-4 ${kpiGridClass}`}>
+          {showOperationalKpis ? (
+            <>
+              <KpiCard
+                label={t('dashboard.kpi.totalProjects')}
+                value={projects.total ?? 0}
+                hint={t('dashboard.kpi.activeProjects', { count: projects.active_count ?? 0 })}
+                variant="operational"
+              />
+              <KpiCard
+                label={t('dashboard.kpi.averageProgress')}
+                value={`${projects.average_progress ?? 0}%`}
+                variant="progress"
+              />
+            </>
+          ) : null}
+          {showFinancialKpis ? (
+            <>
+              <KpiCard
+                label={t('dashboard.kpi.totalRevenue')}
+                moneyAmount={revenueParts.amount}
+                moneyCurrency={revenueParts.currency}
+                variant="financial"
+              />
+              <KpiCard
+                label={t('dashboard.kpi.outstanding')}
+                moneyAmount={outstandingParts.amount}
+                moneyCurrency={outstandingParts.currency}
+                hint={t('dashboard.kpi.overdueInvoices', { count: financial.overdue_invoices_count ?? 0 })}
+                variant="warning"
+              />
+              <KpiCard
+                label={t('dashboard.kpi.totalExpenses')}
+                moneyAmount={expensesParts.amount}
+                moneyCurrency={expensesParts.currency}
+                variant="expense"
+              />
+            </>
+          ) : null}
           </div>
         </section>
-      ),
+      ) : null,
       taskOverview: <TaskOverviewBlock />,
       chantierDistribution: <ChantierDistributionChart byStatus={projects.by_status} />,
       dailySchedule: <DailyScheduleFeed />,
@@ -171,7 +201,7 @@ export default function DashboardPage() {
       financialActivity: <FinancialActivityBlock financial={financial} />,
       recentProjects: <RecentWorkspaceTable projects={recentProjects} />,
     }
-  }, [summary, locale, t])
+  }, [summary, locale, t, hasPermission])
 
   if (loading && !summary) {
     return (
@@ -223,6 +253,11 @@ export default function DashboardPage() {
       </header>
 
       <div className={`dashboard-grid grid grid-cols-12 gap-6 ${editMode ? 'dashboard-grid--edit' : ''}`}>
+        {packedWidgets.length === 0 ? (
+          <p className="col-span-12 rounded-xl border border-slate-800/80 bg-[#0f1013] px-6 py-10 text-center text-sm text-slate-400">
+            {t('dashboard.noWidgetsForRole')}
+          </p>
+        ) : null}
         {packedWidgets.map(({ id: widgetId, colSpan }) => {
           const content = widgetRenderers[widgetId]
           if (!content) {

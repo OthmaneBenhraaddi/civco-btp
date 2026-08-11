@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Contracts\Documents\DocumentRenderer;
+use App\Dto\Documents\RenderOptions;
+use App\Dto\Documents\RenderRequest;
 use App\Enums\ContractStatus;
 use App\Models\Company;
 use App\Models\Contract;
@@ -12,6 +15,10 @@ use App\Support\TenantLogoStorage;
 
 class ContractCompilationService
 {
+    public function __construct(
+        private readonly DocumentRenderer $documentRenderer,
+    ) {}
+
     /**
      * @return array<string, string>
      */
@@ -49,13 +56,36 @@ class ContractCompilationService
 
     public function compileTemplateContent(string $templateContent, Project $project): string
     {
-        $placeholders = $this->buildPlaceholderMap($project);
-        $body = str_replace(array_keys($placeholders), array_values($placeholders), $templateContent);
-
-        return $this->injectDocumentHeader($body, $project);
+        return $this->documentRenderer->render(new RenderRequest(
+            templateHtml: $templateContent,
+            variables: $this->rendererVariables($project),
+            options: new RenderOptions(
+                header: true,
+                headerHtml: $this->buildDocumentHeaderHtml($project),
+            ),
+        ))->html;
     }
 
     public function injectDocumentHeader(string $body, Project $project): string
+    {
+        return $this->buildDocumentHeaderHtml($project).$body;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function rendererVariables(Project $project): array
+    {
+        $variables = [];
+
+        foreach ($this->buildPlaceholderMap($project) as $token => $value) {
+            $variables[trim((string) $token, '{} ')] = (string) $value;
+        }
+
+        return $variables;
+    }
+
+    public function buildDocumentHeaderHtml(Project $project): string
     {
         $project->loadMissing(['company']);
         $tenant = $this->resolveTenant($project);
@@ -72,7 +102,7 @@ class ContractCompilationService
             ? '<img src="'.e($logoUrl).'" alt="'.$tenantName.'" style="max-height:72px;max-width:220px;object-fit:contain;" />'
             : '<div style="font-size:24px;font-weight:700;color:#111827;">'.$tenantName.'</div>';
 
-        $header = <<<HTML
+        return <<<HTML
 <div class="contract-document-header" style="display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:2px solid #e5e7eb;padding-bottom:20px;margin-bottom:28px;">
   <div>{$logoMarkup}</div>
   <div style="text-align:right;font-size:13px;line-height:1.5;color:#374151;">
@@ -83,8 +113,6 @@ class ContractCompilationService
   </div>
 </div>
 HTML;
-
-        return $header.$body;
     }
 
     public function createContractFromTemplate(ContractTemplate $template, Project $project): Contract

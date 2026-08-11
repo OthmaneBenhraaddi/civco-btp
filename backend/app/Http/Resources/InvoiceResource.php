@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Invoice */
+/** @mixin Invoice */
 class InvoiceResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -26,6 +27,7 @@ class InvoiceResource extends JsonResource
             'client' => $this->whenLoaded('client', fn () => [
                 'id' => $this->client->id,
                 'name' => $this->client->name,
+                'is_official' => (bool) ($this->client->is_official ?? true),
             ]),
             'project' => $this->whenLoaded('project', fn () => $this->project ? [
                 'id' => $this->project->id,

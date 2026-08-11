@@ -1,0 +1,46 @@
+% Diagramme d'activité — cycle de vie d'un projet (TikZ)
+\begin{figure}[H]
+\centering
+\resizebox{0.82\textwidth}{!}{%
+\begin{tikzpicture}[
+  startstop/.style={rectangle, rounded corners=8pt, draw=ensamBlue, fill=ensamBlue!15,
+                    minimum width=2.4cm, minimum height=0.7cm, align=center, font=\scriptsize},
+  process/.style={rectangle, draw=ensamBlue, fill=ensamBlue!8, minimum width=2.8cm,
+                  minimum height=0.7cm, align=center, font=\scriptsize},
+  decision/.style={diamond, draw=orange!80, fill=orange!10, aspect=2.2,
+                   inner sep=1pt, align=center, font=\scriptsize},
+  arr/.style={-{Stealth[length=5pt]}, thick, ensamBlue},
+  darr/.style={-{Stealth[length=5pt]}, thick, gray!70}
+]
+  \node[startstop] (start) at (0,0) {Début};
+  \node[process] (create) at (0,-1.2) {Création du projet\\et affectation client};
+  \node[process] (team) at (0,-2.6) {Constitution de l'équipe\\et définition des phases};
+  \node[process] (tasks) at (0,-4.0) {Planification des tâches\\par phase};
+  \node[process] (quote) at (0,-5.4) {Établissement du devis};
+  \node[decision] (accept) at (0,-6.9) {Devis\\accepté ?};
+  \node[process] (contract) at (-3.2,-8.4) {Signature du contrat};
+  \node[process] (exec) at (0,-8.4) {Exécution des travaux\\suivi d'avancement};
+  \node[process] (bl) at (0,-9.8) {Bons de livraison\\et facturation};
+  \node[decision] (done) at (0,-11.3) {Projet\\terminé ?};
+  \node[process] (close) at (0,-12.7) {Clôture et archivage};
+  \node[startstop] (end) at (0,-14.0) {Fin};
+
+  \draw[arr] (start) -- (create);
+  \draw[arr] (create) -- (team);
+  \draw[arr] (team) -- (tasks);
+  \draw[arr] (tasks) -- (quote);
+  \draw[arr] (quote) -- (accept);
+  \draw[arr] (accept.west) -- node[font=\tiny, above] {Oui} ++(-1.5,0) |- (contract.north);
+  \draw[arr] (contract.east) -| (exec.west);
+  \draw[arr] (accept.east) -- node[font=\tiny, right] {Non} ++(1.8,0) |- (quote.east);
+  \draw[arr] (accept) -- node[font=\tiny, right] {Oui} (exec);
+  \draw[arr] (exec) -- (bl);
+  \draw[arr] (bl) -- (done);
+  \draw[arr] (done.west) -- node[font=\tiny, above] {Non} ++(-2.0,0) |- (exec.west);
+  \draw[arr] (done) -- node[font=\tiny, right] {Oui} (close);
+  \draw[arr] (close) -- (end);
+\end{tikzpicture}%
+}
+\caption{Diagramme d'activité : cycle de vie d'un projet de construction}
+\label{fig:activity_diagram}
+\end{figure}

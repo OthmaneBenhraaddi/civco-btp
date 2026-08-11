@@ -1,0 +1,9 @@
+/vendor
+composer.phar
+.env
+.phpunit.result.cache
+.phpunit.cache
+/storage/*.key
+/storage/logs/*.log
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore

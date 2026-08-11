@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ClientStatus;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Concerns\ResolvesCompanyContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\StoreClientRequest;
@@ -16,6 +18,7 @@ use App\Support\TenantManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
@@ -32,11 +35,27 @@ class ClientController extends Controller
         $actor = $request->user();
         $tenantScope = $this->clientQuery->resolveTenantScope($request, $actor);
 
+        $forPicker = $request->boolean('for_picker');
+
         $query = Client::query()
             ->withoutGlobalScope('tenant')
-            ->with(['badges', 'portalUser'])
-            ->withCount('projects')
             ->orderBy('name');
+
+        if ($forPicker) {
+            $query->select([
+                'clients.id',
+                'clients.company_id',
+                'clients.tenant_id',
+                'clients.name',
+                'clients.is_official',
+                'clients.is_active',
+                'clients.status',
+            ]);
+        } else {
+            $query
+                ->with(['badges', 'portalUser'])
+                ->withCount('projects');
+        }
 
         if ($actor->isSuperAdmin()) {
             if ($tenantScope !== null) {
@@ -62,6 +81,17 @@ class ClientController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
+        if ($request->boolean('exclude_archived')) {
+            $query->where(function ($builder): void {
+                $builder->whereNull('status')
+                    ->orWhere('status', '!=', ClientStatus::Archived->value);
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
         return ClientResource::collection(
             $query->paginate($request->integer('per_page', 15))->withQueryString()
         );
@@ -81,6 +111,10 @@ class ClientController extends Controller
             'tenant_id' => $tenantId,
             'country' => $request->input('country', 'FR'),
             'is_active' => $request->boolean('is_active', true),
+            'is_official' => $request->boolean('is_official', true),
+            'status' => $request->boolean('is_active', true)
+                ? ClientStatus::Active
+                : ClientStatus::Inactive,
         ]);
 
         if (is_array($badgeIds)) {
@@ -113,6 +147,14 @@ class ClientController extends Controller
         $badgeIds = $validated['badge_ids'] ?? null;
         unset($validated['badge_ids']);
 
+        if ($client->isArchived()) {
+            unset($validated['is_active'], $validated['status']);
+        } elseif (array_key_exists('is_active', $validated) && ! array_key_exists('status', $validated)) {
+            $validated['status'] = $validated['is_active']
+                ? ClientStatus::Active
+                : ClientStatus::Inactive;
+        }
+
         $client->update($validated);
 
         if (is_array($badgeIds)) {
@@ -126,13 +168,52 @@ class ClientController extends Controller
         );
     }
 
+    public function archive(Request $request, Client $client): ClientResource
+    {
+        $this->ensureClientBelongsToCompany($request, $client);
+        $this->clientQuery->assertCanManageClient($request->user(), $client->tenant_id);
+
+        if ($client->isArchived()) {
+            abort(422, 'Ce client est déjà archivé.');
+        }
+
+        DB::transaction(function () use ($client): void {
+            $client->update([
+                'status' => ClientStatus::Archived,
+                'archived_at' => now(),
+                'is_active' => false,
+            ]);
+
+            $portalUser = $client->portalUser;
+
+            if ($portalUser !== null) {
+                $portalUser->update([
+                    'status' => UserStatus::Archived,
+                    'is_active' => false,
+                ]);
+            }
+        });
+
+        $this->activityLogService->logClientArchived($client->fresh(), $request->user());
+
+        return new ClientResource(
+            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+        );
+    }
+
     public function destroy(Request $request, Client $client): JsonResponse
     {
         $this->ensureClientBelongsToCompany($request, $client);
 
         if ($client->projects()->exists()) {
             return response()->json([
-                'message' => 'Cannot delete a client linked to projects.',
+                'message' => 'Impossible de supprimer un client lié à des projets. Archivez-le à la place.',
+            ], 422);
+        }
+
+        if ($client->quotes()->exists() || $client->invoices()->exists()) {
+            return response()->json([
+                'message' => 'Impossible de supprimer un client lié à des documents. Archivez-le à la place.',
             ], 422);
         }
 
@@ -146,15 +227,23 @@ class ClientController extends Controller
         $this->ensureClientBelongsToCompany($request, $client);
         $this->clientQuery->assertCanManageClient($request->user(), $client->tenant_id);
 
+        if ($client->isArchived()) {
+            abort(422, 'Impossible de gérer le portail d\'un client archivé.');
+        }
+
         $validated = $request->validate([
             'active' => ['required', 'boolean'],
         ]);
 
-        $this->portalProvisioning->setPortalActive(
-            $client,
-            $this->company($request),
-            $validated['active'],
-        );
+        try {
+            $this->portalProvisioning->setPortalActive(
+                $client,
+                $this->company($request),
+                $validated['active'],
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
         return new ClientResource(
             $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])

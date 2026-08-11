@@ -38,3 +38,7 @@ export function userHasPermission(userSlugs, required) {
 
   return false
 }
+
+export function userHasAnyPermission(userSlugs, requiredList) {
+  return requiredList.some((required) => userHasPermission(userSlugs, required))
+}

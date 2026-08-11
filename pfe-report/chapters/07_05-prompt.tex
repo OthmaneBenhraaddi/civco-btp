@@ -1,0 +1,121 @@
+\subsection{Présentation de PHP et Laravel}
+
+\textbf{PHP} est un langage de script côté serveur largement déployé sur le web.
+Historiquement associé au développement de sites dynamiques, il a évolué vers des
+versions modernes (8.x) intégrant un typage strict, des performances accrues (JIT) et
+un écosystème mature de frameworks.
+
+\medskip
+
+\textbf{Laravel}~\cite{laravel} est le framework PHP le plus adopté pour construire des
+applications web et des API. Créé par Taylor Otwell, il impose une structure claire
+autour du patron \textbf{MVC} (\textit{Model-View-Controller}) et propose des
+composants intégrés pour les tâches courantes : routage, validation, authentification,
+files d'attente, envoi de courriels et gestion des fichiers.
+
+\subsection{Architecture MVC dans Laravel}
+
+Le patron \textbf{MVC} répartit les responsabilités :
+
+\begin{itemize}
+  \item \textbf{Modèle} : représentation des entités métier et accès aux données
+  (Eloquent).
+  \item \textbf{Vue} : dans une API, les \textit{Resources} et \textit{Collections}
+  formatent les réponses JSON pour le client.
+  \item \textbf{Contrôleur} : reçoit la requête HTTP, applique la validation, invoque
+  les services métier et retourne la réponse.
+\end{itemize}
+
+Cette organisation facilite la lecture du code et l'ajout de nouveaux modules. Pour
+l'application CIVCO BTP, chaque domaine métier (projets, clients, devis, factures)
+dispose de son contrôleur, de ses modèles et de ses règles de validation.
+
+\subsection{Composants clés de l'écosystème Laravel}
+
+\subsubsection{Routage et validation}
+
+Le fichier de routes (\texttt{routes/api.php}) déclare les points d'entrée de l'API.
+Chaque route est associée à un contrôleur et protégée par des \textit{middleware}
+(vérification d'authentification, contrôle de permissions, contexte entreprise).
+
+Les \textbf{Form Requests} encapsulent les règles de validation des données entrantes
+(ex.~: champs obligatoires d'un devis, formats de dates, montants positifs), garantissant
+l'intégrité des données avant persistance.
+
+\subsubsection{Services et logique métier}
+
+Au-delà des contrôleurs, la logique complexe est extraite dans des classes
+\textbf{Service} (\texttt{QuoteService}, \texttt{PrintTrackingService}, etc.). Ce
+découpage respecte le principe de responsabilité unique : le contrôleur orchestre,
+le service implémente la règle métier.
+
+\subsubsection{Migrations et seeders}
+
+Les \textbf{migrations} versionnent le schéma de la base de données sous forme de fichiers
+PHP exécutables de façon reproductible. Les \textbf{seeders} initialisent des données
+de référence (rôles, permissions, données de démonstration), indispensables pour
+tester l'application en conditions proches du réel.
+
+\subsection{Comparaison avec les alternatives PHP}
+
+\begin{table}[H]
+\caption{Comparaison des frameworks PHP pour une API REST}
+\label{tab:php_frameworks}
+\centering
+\small
+\begin{tabular}{|l|p{4cm}|p{4cm}|p{4cm}|}
+\hline
+\textbf{Framework} & \textbf{Philosophie} & \textbf{Forces} & \textbf{Contexte idéal} \\
+\hline
+\textbf{Laravel} & Convention over configuration & Écosystème complet, Sanctum, Eloquent &
+API + SPA, PME/ETI \\
+\hline
+Symfony & Composants réutilisables & Modularité, robustesse & Grandes applications \\
+\hline
+CodeIgniter & Minimaliste & Légèreté & Petits projets \\
+\hline
+\end{tabular}
+\end{table}
+
+Laravel ressort du Tableau~\ref{tab:php_frameworks} pour un projet de gestion métier
+nécessitant authentification, RBAC, documents et évolutivité --- le profil exact du
+projet CIVCO BTP.
+
+\subsection{Laravel dans le projet CIVCO BTP}
+
+L'API Laravel expose plus de quarante contrôleurs organisés par domaine, des
+\textit{middleware} de contrôle d'accès et un ensemble de services métier. Cette
+structure permet d'ajouter progressivement de nouveaux modules (avenants contractuels,
+modèles de documents, suivi d'impression) sans remettre en cause l'architecture
+existante.
+
+\subsection{Middleware, Resources et couche de présentation API}
+
+\subsubsection{Middleware}
+
+Les \textbf{middleware} Laravel interceptent chaque requête HTTP avant qu'elle
+n'atteigne le contrôleur. Dans le projet, plusieurs middlewares assurent la
+sécurité et le contexte métier :
+
+\begin{itemize}
+  \item \textbf{Authentification Sanctum} : vérifie que l'utilisateur est connecté.
+  \item \textbf{Contrôle de permissions} : valide que l'utilisateur possède la
+  permission requise (\texttt{project.view}, \texttt{quote.manage}, etc.).
+  \item \textbf{Contexte entreprise} : identifie la société courante via l'en-tête
+  \texttt{X-Company-Id}, garantissant l'isolation des données métier.
+\end{itemize}
+
+\subsubsection{API Resources}
+
+Les classes \textbf{Resource} (\texttt{ProjectResource}, \texttt{InvoiceResource},
+etc.) transforment les modèles Eloquent en tableaux JSON normalisés. Elles permettent
+de contrôler précisément les champs exposés à l'interface, d'inclure conditionnellement
+des relations (\texttt{client}, \texttt{lines}, \texttt{teamMembers}) et d'uniformiser
+le format de réponse sur toute l'API.
+
+\subsubsection{Validation et gestion des erreurs}
+
+Lorsqu'une requête échoue la validation, Laravel retourne une réponse \texttt{422}
+avec le détail des champs en erreur. Le frontend React intercepte ces réponses pour
+afficher des messages à l'utilisateur, améliorant l'expérience de saisie sur les
+formulaires de devis, factures et fiches projets.

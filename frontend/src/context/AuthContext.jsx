@@ -81,6 +81,8 @@ export function AuthProvider({ children }) {
         return context
       }
     } catch {
+    } finally {
+      bootstrappingRef.current = false
     }
 
     clearContext()
@@ -139,7 +141,7 @@ export function AuthProvider({ children }) {
   )
 
   const isAdmin = user?.role === 'admin'
-  const isSuperAdmin = isPlatformSuperAdmin(user)
+  const isSuperAdmin = isPlatformSuperAdmin(user) || user?.is_super_admin === true
   const isClientPortalUser = checkIsClientUser(user, roles)
 
   const value = useMemo(

@@ -1,41 +1,70 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { prefetchRoleSettings } from '../../api/roles'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { useAuth } from '../../context/AuthContext'
+import { isPlatformSuperAdmin } from '../../utils/authIdentity'
 import BadgeSettingsPanel from '../clients/BadgeSettingsPanel'
 import ColorSettingsPanel from '../clients/ColorSettingsPanel'
 import LotSettingsPanel from '../clients/LotSettingsPanel'
 import RolesSettingsPanel from '../roles/RolesSettingsPanel'
 import DocumentTypeSettingsPanel from './DocumentTypeSettingsPanel'
 import DocumentControlsSettingsPanel from './DocumentControlsSettingsPanel'
+import DocumentTemplatesSettingsPanel from './DocumentTemplatesSettingsPanel'
 import ContractTemplateSettingsPanel from './ContractTemplateSettingsPanel'
 import EntityLogoSettingsPanel from './EntityLogoSettingsPanel'
+import HiddenStealthSettings from './HiddenStealthSettings'
 
 const TABS = [
-  { id: 'entity', labelKey: 'configuration.tabEntity' },
+  { id: 'entity', labelKey: 'configuration.tabEntity', tenantAdminOnly: true },
   { id: 'badges', labelKey: 'configuration.tabBadges' },
   { id: 'lots', labelKey: 'configuration.tabLots' },
   { id: 'documents', labelKey: 'configuration.tabDocuments' },
-  { id: 'document-controls', labelKey: 'configuration.tabDocumentControls' },
+  { id: 'document-templates', labelKey: 'configuration.tabDocumentTemplates', tenantAdminOnly: true },
+  { id: 'document-controls', labelKey: 'configuration.tabDocumentControls', tenantAdminOnly: true },
   { id: 'colors', labelKey: 'configuration.tabColors' },
-  { id: 'contracts', labelKey: 'configuration.tabContracts' },
-  { id: 'roles', labelKey: 'configuration.tabRoles' },
+  { id: 'contracts', labelKey: 'configuration.tabContracts', tenantAdminOnly: true },
+  { id: 'roles', labelKey: 'configuration.tabRoles', tenantAdminOnly: true },
 ]
 
-const VALID_TAB_IDS = new Set(TABS.map((tab) => tab.id))
+function resolveDefaultTab(visibleTabs, tabFromUrl) {
+  const validIds = new Set(visibleTabs.map((tab) => tab.id))
+
+  if (tabFromUrl && validIds.has(tabFromUrl)) {
+    return tabFromUrl
+  }
+
+  return visibleTabs[0]?.id ?? 'badges'
+}
 
 export default function ConfigurationPage() {
   const { t } = useTranslation()
+  const { isAdmin, user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
-  const [activeTab, setActiveTab] = useState(
-    VALID_TAB_IDS.has(tabFromUrl) ? tabFromUrl : 'entity',
+
+  const canManageTenantSettings = isAdmin && Boolean(user?.tenant_id) && !isPlatformSuperAdmin(user)
+
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => !tab.tenantAdminOnly || canManageTenantSettings),
+    [canManageTenantSettings],
   )
 
+  const [activeTab, setActiveTab] = useState(() => resolveDefaultTab(visibleTabs, tabFromUrl))
+
   useEffect(() => {
-    if (VALID_TAB_IDS.has(tabFromUrl) && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl)
+    const nextTab = resolveDefaultTab(visibleTabs, tabFromUrl)
+
+    if (nextTab !== activeTab) {
+      setActiveTab(nextTab)
     }
-  }, [tabFromUrl, activeTab])
+  }, [tabFromUrl, visibleTabs, activeTab])
+
+  useEffect(() => {
+    if (canManageTenantSettings) {
+      prefetchRoleSettings()
+    }
+  }, [canManageTenantSettings])
 
   function selectTab(tabId) {
     setActiveTab(tabId)
@@ -52,7 +81,7 @@ export default function ConfigurationPage() {
       </header>
 
       <div className="flex flex-wrap gap-2 border-b border-slate-800/80 pb-3">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -66,13 +95,18 @@ export default function ConfigurationPage() {
 
       <div className="mt-6">
         {activeTab === 'entity' ? (
-          <EntityLogoSettingsPanel />
+          <>
+            <EntityLogoSettingsPanel />
+            {canManageTenantSettings ? <HiddenStealthSettings /> : null}
+          </>
         ) : activeTab === 'badges' ? (
           <BadgeSettingsPanel />
         ) : activeTab === 'lots' ? (
           <LotSettingsPanel />
         ) : activeTab === 'documents' ? (
           <DocumentTypeSettingsPanel />
+        ) : activeTab === 'document-templates' ? (
+          <DocumentTemplatesSettingsPanel />
         ) : activeTab === 'document-controls' ? (
           <DocumentControlsSettingsPanel />
         ) : activeTab === 'roles' ? (

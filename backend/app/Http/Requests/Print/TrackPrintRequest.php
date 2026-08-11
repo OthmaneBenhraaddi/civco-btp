@@ -17,6 +17,7 @@ class TrackPrintRequest extends FormRequest
         return [
             'document_type' => ['required', 'string', Rule::in(['invoice', 'quote', 'delivery_form', 'contract'])],
             'document_id' => ['required', 'integer', 'min:1'],
+            'has_header' => ['sometimes', 'boolean'],
         ];
     }
 }

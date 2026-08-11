@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Project */
+/** @mixin Project */
 class ProjectResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -29,6 +30,12 @@ class ProjectResource extends JsonResource
             'actual_start_date' => $this->actual_start_date?->toDateString(),
             'actual_end_date' => $this->actual_end_date?->toDateString(),
             'budget' => $this->budget !== null ? (float) $this->budget : null,
+            'total_budget' => $this->total_budget,
+            'revised_budget' => $this->revised_budget,
+            'adjusted_end_date' => $this->adjusted_end_date,
+            'revised_end_date' => $this->revised_end_date,
+            'amendments_amount_delta' => $this->amendments_amount_delta,
+            'amendments_duration_delta' => $this->amendments_duration_delta,
             'progress_percent' => (float) $this->progress_percent,
             'site_address_line1' => $this->site_address_line1,
             'site_city' => $this->site_city,
@@ -48,6 +55,7 @@ class ProjectResource extends JsonResource
                 'email' => $user->email,
                 'role_label' => $user->pivot->role_label,
                 'assigned_at' => $user->pivot->assigned_at,
+                'can_chat_with_client' => (bool) ($user->pivot->can_chat_with_client ?? false),
             ])),
             'progress_snapshots' => $this->whenLoaded(
                 'progressSnapshots',

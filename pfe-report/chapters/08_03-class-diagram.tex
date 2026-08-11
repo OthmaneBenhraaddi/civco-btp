@@ -1,0 +1,114 @@
+% Diagramme de classes — modèle de données principal (TikZ)
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  class/.style={rectangle, draw=ensamBlue, fill=white, minimum width=3.0cm,
+                align=left, font=\scriptsize, inner sep=4pt},
+  line/.style={draw=gray!70},
+  mult/.style={font=\tiny, fill=white, inner sep=1pt}
+]
+  \node[class] (user) at (0,0) {
+    \textbf{User}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - name: string\\
+    - email: string\\
+    - role\_id: int\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + projects()\\
+    + tasks()
+  };
+  \node[class] (role) at (4.2,0) {
+    \textbf{Role}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - name: string\\
+    - slug: string\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + permissions()
+  };
+  \node[class] (client) at (8.6,0) {
+    \textbf{Client}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - name: string\\
+    - email: string\\
+    - status: enum\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + projects()\\
+    + contacts()
+  };
+  \node[class] (project) at (4.2,-3.8) {
+    \textbf{Project}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - client\_id: int\\
+    - title: string\\
+    - status: enum\\
+    - budget: decimal\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + phases()\\
+    + tasks()\\
+    + quotes()
+  };
+  \node[class] (phase) at (0,-7.6) {
+    \textbf{ProjectPhase}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - project\_id: int\\
+    - name: string\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + tasks()
+  };
+  \node[class] (task) at (4.2,-7.6) {
+    \textbf{Task}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - project\_id: int\\
+    - title: string\\
+    - status: enum\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + assignee()
+  };
+  \node[class] (quote) at (8.6,-3.8) {
+    \textbf{Quote}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - project\_id: int\\
+    - reference: string\\
+    - total\_ttc: decimal\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + lines()\\
+    + invoice()
+  };
+  \node[class] (invoice) at (12.8,-3.8) {
+    \textbf{Invoice}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - quote\_id: int\\
+    - reference: string\\
+    - total\_ttc: decimal\\
+  };
+  \node[class] (contract) at (12.8,-7.6) {
+    \textbf{Contract}\\[2pt]
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    - id: int\\
+    - project\_id: int\\
+    - status: enum\\
+    \rule{2.8cm}{0.4pt}\\[1pt]
+    + amendments()
+  };
+
+  \draw[line] (user.east) -- node[mult, above] {N..1} (role.west);
+  \draw[line] (client.south) -- ++(0,-0.5) -| node[mult, pos=0.25, left] {1} (project.north);
+  \draw[line] (project.south) -- ++(0,-0.4) -| node[mult, pos=0.2, left] {1..*} (phase.north);
+  \draw[line] (project.south) -- (task.north);
+  \draw[line] (project.east) -- node[mult, above] {1..*} (quote.west);
+  \draw[line] (quote.east) -- node[mult, above] {0..1} (invoice.west);
+  \draw[line] (project.east) -- ++(1.2,0) |- node[mult, pos=0.7, right] {0..1} (contract.west);
+\end{tikzpicture}%
+}
+\caption{Diagramme de classes simplifié du modèle de données métier}
+\label{fig:class_diagram}
+\end{figure}

@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import Modal from '../../components/Modal'
+import ConfirmArchiveModal from '../../components/ConfirmArchiveModal'
 import RoleBadge from '../../components/RoleBadge'
 import ClientBadge, { ClientBadgeList } from '../../components/ClientBadge'
 import SearchInput from '../../components/SearchInput'
 import { useAuth } from '../../context/AuthContext'
+import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
 import * as badgesApi from '../../api/badges'
@@ -19,10 +21,11 @@ import * as clientContactsApi from '../../api/clientContacts'
 import * as teamMembersApi from '../../api/teamMembers'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { isPlatformSuperAdmin } from '../../utils/authIdentity'
+import { filterOfficialClients, isOfficialClient } from '../../utils/stealthVisibility'
 import NewClientModal from './components/NewClientModal'
 import {
   logClientCreated,
-  logClientDeleted,
+  logClientArchived,
   logClientUpdated,
   resolveActorLabel,
 } from '../history/auditLogActions'
@@ -38,6 +41,7 @@ const emptyForm = {
   country: 'FR',
   notes: '',
   is_active: true,
+  is_official: true,
   role_id: 'client_extern',
   badge_ids: [],
 }
@@ -54,18 +58,33 @@ function ClientAvatar({ name }) {
   )
 }
 
-function ClientStatusBadge({ active, t }) {
+function ClientStatusBadge({ client, t }) {
+  const status = client.status ?? (client.is_active ? 'active' : 'inactive')
+  const styles = {
+    active: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+    inactive: 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+    archived: 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
+  }
+
   return (
     <span
       className={[
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
-        active
-          ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20'
-          : 'bg-slate-500/10 text-slate-400 ring-slate-500/20',
+        styles[status] ?? styles.inactive,
       ].join(' ')}
     >
-      {active ? t('common.active') : t('common.inactive')}
+      {t(`common.${status}`) === `common.${status}` ? status : t(`common.${status}`)}
     </span>
+  )
+}
+
+function IconArchive({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 7h16v3H4z" strokeLinejoin="round" />
+      <path d="M6 10v8a1 1 0 001 1h10a1 1 0 001-1v-8" strokeLinejoin="round" />
+      <path d="M10 14h4" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -78,11 +97,15 @@ function DetailField({ label, value }) {
   )
 }
 
-function clientCardClasses(isSelected) {
+function clientCardClasses(isSelected, isArchived) {
   const base = [
     'client-list-item flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left',
     'bg-[#16171b] text-white transition-all duration-150 ease-in-out',
   ]
+
+  if (isArchived) {
+    base.push('opacity-60')
+  }
 
   if (isSelected) {
     base.push('border-white/[0.12] ring-1 ring-white/[0.06]')
@@ -95,10 +118,14 @@ function clientCardClasses(isSelected) {
 
 export default function ClientsPage() {
   const { hasPermission, user, roles, isAdmin } = useAuth()
+  const { stealthMode } = useStealthMode()
+  const stealthModeRef = useRef(stealthMode)
+  stealthModeRef.current = stealthMode
   const { t } = useTranslation()
   const location = useLocation()
   const isSuperAdmin = isPlatformSuperAdmin(user)
   const [clients, setClients] = useState([])
+  const clientsBaselineRef = useRef([])
   const [meta, setMeta] = useState(null)
   const [search, setSearch] = useState('')
   const [tenantFilter, setTenantFilter] = useState('')
@@ -111,15 +138,19 @@ export default function ClientsPage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [portalToggling, setPortalToggling] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState(null)
+  const [archiving, setArchiving] = useState(false)
   const [roleMapVersion, setRoleMapVersion] = useState(0)
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [selectedClientDetail, setSelectedClientDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [availableBadges, setAvailableBadges] = useState([])
 
-  async function loadClients(page = 1) {
-    setLoading(true)
-    setError('')
+  async function loadClients(page = 1, { silent = false } = {}) {
+    if (!silent) {
+      setLoading(true)
+      setError('')
+    }
 
     try {
       const params = { search, page }
@@ -128,18 +159,41 @@ export default function ClientsPage() {
       }
 
       const data = await clientsApi.fetchClients(params)
-      setClients(data.data ?? [])
+      const list = data.data ?? []
+      setClients(list)
       setMeta(data.meta ?? null)
+
+      if (!stealthModeRef.current) {
+        clientsBaselineRef.current = list
+      }
     } catch (err) {
-      setError(extractErrorMessage(err, t('clients.loadError')))
+      if (!silent) {
+        setError(extractErrorMessage(err, t('clients.loadError')))
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
+
+  const visibleClients = useMemo(
+    () => (stealthMode ? filterOfficialClients(clients) : clients),
+    [clients, stealthMode],
+  )
 
   useEffect(() => {
     loadClients()
   }, [search, tenantFilter, isSuperAdmin])
+
+  useStealthModeRefresh(({ active }) => {
+    if (!active) {
+      if (clientsBaselineRef.current.length > 0) {
+        setClients(clientsBaselineRef.current)
+      }
+      loadClients(meta?.current_page ?? 1, { silent: true })
+    }
+  })
 
   useEffect(() => {
     if (!isSuperAdmin) return undefined
@@ -184,8 +238,8 @@ export default function ClientsPage() {
       return selectedClientDetail
     }
 
-    return clients.find((client) => client.id === selectedClientId) ?? null
-  }, [clients, selectedClientId, selectedClientDetail])
+    return visibleClients.find((client) => client.id === selectedClientId) ?? null
+  }, [visibleClients, selectedClientId, selectedClientDetail])
 
   async function loadClientDetail(clientId) {
     if (!clientId) {
@@ -210,11 +264,22 @@ export default function ClientsPage() {
   }, [selectedClientId])
 
   useEffect(() => {
-    if (selectedClientId && !clients.some((client) => client.id === selectedClientId)) {
+    if (selectedClientId && !visibleClients.some((client) => client.id === selectedClientId)) {
       setSelectedClientId(null)
       setSelectedClientDetail(null)
     }
-  }, [clients, selectedClientId])
+  }, [visibleClients, selectedClientId])
+
+  useEffect(() => {
+    if (
+      stealthMode
+      && selectedClientDetail
+      && !isOfficialClient(selectedClientDetail)
+    ) {
+      setSelectedClientId(null)
+      setSelectedClientDetail(null)
+    }
+  }, [stealthMode, selectedClientDetail])
 
   void roleMapVersion
 
@@ -257,6 +322,7 @@ export default function ClientsPage() {
       country: source.country ?? 'FR',
       notes: source.notes ?? '',
       is_active: source.is_active ?? true,
+      is_official: source.is_official ?? true,
       role_id: getClientRoleId(source.id),
       badge_ids: normalizeBadgeIds((source.badges ?? []).map((badge) => badge.id)),
     })
@@ -322,28 +388,42 @@ export default function ClientsPage() {
     }
   }
 
-  async function handleDelete(client) {
-    if (!window.confirm(t('clients.deleteConfirm', { name: client.name }))) {
+  async function confirmArchiveClient() {
+    if (!archiveTarget) {
       return
     }
 
+    setArchiving(true)
+    setError('')
+
     try {
-      await clientsApi.deleteClient(client.id)
-      logClientDeleted({
+      const response = await clientsApi.archiveClient(archiveTarget.id)
+      const archived = response.data ?? response
+
+      logClientArchived({
         actor: resolveActorLabel(user, roles, t('layout.profileFallbackName')),
-        name: client.name,
+        name: archived.name ?? archiveTarget.name,
       })
-      if (selectedClientId === client.id) {
-        setSelectedClientId(null)
+
+      setClients((current) => current.map((client) => (
+        client.id === archiveTarget.id ? { ...client, ...archived } : client
+      )))
+
+      if (selectedClientId === archiveTarget.id) {
+        await loadClientDetail(archiveTarget.id)
       }
+
+      setArchiveTarget(null)
       await loadClients(meta?.current_page ?? 1)
     } catch (err) {
-      setError(extractErrorMessage(err, t('clients.deleteError')))
+      setError(extractErrorMessage(err, t('clients.archiveError')))
+    } finally {
+      setArchiving(false)
     }
   }
 
   const selectedRole = selectedClient ? resolveClientRole(selectedClient.id) : null
-
+  const selectedIsArchived = selectedClient?.status === 'archived' || Boolean(selectedClient?.archived_at)
   async function handlePortalToggle(active) {
     if (!selectedClient) return
 
@@ -402,19 +482,20 @@ export default function ClientsPage() {
       ) : (
         <div className="mt-6 flex w-full flex-col items-start gap-6 lg:flex-row">
           <aside className="w-full space-y-1 rounded-2xl border border-white/[0.06] bg-[#16171b] p-2 lg:w-1/3">
-            {clients.length === 0 ? (
+            {visibleClients.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-slate-500">{t('clients.empty')}</p>
             ) : (
-              clients.map((client) => {
+              visibleClients.map((client) => {
                 const role = resolveClientRole(client.id)
                 const isSelected = client.id === selectedClientId
+                const isArchived = client.status === 'archived' || Boolean(client.archived_at)
 
                 return (
                   <button
                     key={client.id}
                     type="button"
                     onClick={() => setSelectedClientId(client.id)}
-                    className={clientCardClasses(isSelected)}
+                    className={clientCardClasses(isSelected, isArchived)}
                   >
                     <ClientAvatar name={client.name} />
                     <span className="min-w-0 flex-1">
@@ -422,6 +503,7 @@ export default function ClientsPage() {
                       <span className="mt-1.5 flex flex-wrap items-center gap-1">
                         <RoleBadge label={getRoleLabel(role, t)} tone={role.badgeTone} />
                         <ClientBadgeList badges={client.badges} />
+                        {isArchived ? <ClientStatusBadge client={client} t={t} /> : null}
                       </span>
                     </span>
                   </button>
@@ -441,13 +523,13 @@ export default function ClientsPage() {
                     <div className="min-w-0">
                       <h2 className="truncate text-xl font-bold text-white">{selectedClient.name}</h2>
                       <div className="mt-1.5">
-                        <ClientStatusBadge active={selectedClient.is_active} t={t} />
+                        <ClientStatusBadge client={selectedClient} t={t} />
                       </div>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    {hasPermission('client.update') ? (
+                    {hasPermission('client.update') && !selectedIsArchived ? (
                       <button
                         type="button"
                         className="client-action-btn ghost"
@@ -456,13 +538,14 @@ export default function ClientsPage() {
                         {t('common.edit')}
                       </button>
                     ) : null}
-                    {hasPermission('client.delete') ? (
+                    {hasPermission('client.delete') && !selectedIsArchived ? (
                       <button
                         type="button"
-                        className="client-action-btn ghost danger"
-                        onClick={() => handleDelete(selectedClient)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
+                        onClick={() => setArchiveTarget(selectedClient)}
                       >
-                        {t('common.delete')}
+                        <IconArchive className="h-3.5 w-3.5" />
+                        {t('common.archive')}
                       </button>
                     ) : null}
                   </div>
@@ -500,7 +583,8 @@ export default function ClientsPage() {
                 <div className="mt-6">
                   <ClientPortalPanel
                     portalUser={selectedClient.portal_user}
-                    canManage={isAdmin && hasPermission('client.update')}
+                    clientEmail={selectedClient.email}
+                    canManage={isAdmin && hasPermission('client.update') && !selectedIsArchived}
                     toggling={portalToggling}
                     onToggle={handlePortalToggle}
                   />
@@ -696,11 +780,32 @@ export default function ClientsPage() {
             />
             {t('common.active')}
           </label>
+          <label className="checkbox text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.is_official}
+              onChange={(event) => setForm({ ...form, is_official: event.target.checked })}
+            />
+            {t('clients.isOfficial')}
+          </label>
+          <p className="text-xs text-slate-500">{t('clients.isOfficialHint')}</p>
           <button type="submit" disabled={saving} className={BTN_PRIMARY}>
             {saving ? t('common.saving') : t('clients.update')}
           </button>
         </form>
       </Modal>
+
+      <ConfirmArchiveModal
+        open={Boolean(archiveTarget)}
+        title={t('clients.archiveConfirmTitle')}
+        message={t('clients.archiveConfirm', { name: archiveTarget?.name ?? '' })}
+        confirming={archiving}
+        confirmLabel={t('common.archive')}
+        cancelLabel={t('common.cancel')}
+        confirmingLabel={t('clients.archiving')}
+        onConfirm={confirmArchiveClient}
+        onClose={() => setArchiveTarget(null)}
+      />
     </div>
   )
 }

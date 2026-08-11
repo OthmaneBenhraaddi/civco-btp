@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\TenantStatus;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SuperAdmin\StoreTenantAdminRequest;
 use App\Http\Requests\SuperAdmin\StoreTenantRequest;
 use App\Http\Requests\SuperAdmin\UpdateTenantAdminStatusRequest;
+use App\Http\Requests\SuperAdmin\UpdateTenantRequest;
 use App\Http\Requests\SuperAdmin\UpdateTenantStatusRequest;
 use App\Http\Resources\TenantAdminResource;
 use App\Http\Resources\TenantResource;
@@ -45,6 +47,18 @@ class SuperAdminController extends Controller
         return TenantResource::collection($query->get());
     }
 
+    public function stats(): JsonResponse
+    {
+        return response()->json([
+            'active_tenants' => Tenant::query()->where('status', TenantStatus::Active)->count(),
+            'total_users' => User::query()
+                ->whereNotNull('tenant_id')
+                ->whereNull('client_id')
+                ->count(),
+            'system_status' => 'operational',
+        ]);
+    }
+
     public function store(StoreTenantRequest $request): JsonResponse
     {
         $result = $this->tenantProvisioningService->provision(
@@ -52,6 +66,7 @@ class SuperAdminController extends Controller
             strtolower($request->string('subdomain')->toString()),
             TenantStatus::from($request->string('status')->toString()),
             $request->file('logo'),
+            $request->brandingPayload(),
         );
 
         $result['tenant']->load(['admins']);
@@ -70,6 +85,41 @@ class SuperAdminController extends Controller
             'temporary_password' => $result['temporary_password'],
             'login_url' => TenantLoginUrl::forSubdomain($result['tenant']->subdomain),
         ], 201);
+    }
+
+    public function storeAdmin(StoreTenantAdminRequest $request, Tenant $tenant): JsonResponse
+    {
+        try {
+            $result = $this->tenantProvisioningService->addAdmin(
+                $tenant,
+                $request->string('first_name')->toString(),
+                $request->string('last_name')->toString(),
+                $request->string('email')->toString(),
+            );
+        } catch (\RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json([
+            'tenant' => new TenantResource($result['tenant']->load(['admins'])->loadCount('users')),
+            'admin' => new TenantAdminResource($result['admin']),
+            'temporary_password' => $result['temporary_password'],
+            'login_url' => TenantLoginUrl::forSubdomain($tenant->subdomain),
+        ], 201);
+    }
+
+    public function update(UpdateTenantRequest $request, Tenant $tenant): TenantResource
+    {
+        $tenant->update([
+            'name' => $request->string('name')->toString(),
+            'subdomain' => strtolower($request->string('subdomain')->toString()),
+            'status' => TenantStatus::from($request->string('status')->toString()),
+            ...$request->brandingPayload(),
+        ]);
+
+        $tenant->load(['admins'])->loadCount('users');
+
+        return new TenantResource($tenant);
     }
 
     public function updateStatus(UpdateTenantStatusRequest $request, Tenant $tenant): TenantResource

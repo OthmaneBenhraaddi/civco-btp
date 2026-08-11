@@ -2,19 +2,24 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ContractAmendmentStatus;
+use App\Enums\ContractStatus;
 use App\Http\Controllers\Concerns\ResolvesClientPortalAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ClientPortal\StoreProjectCommentRequest;
 use App\Http\Requests\Contract\SubmitContractSignatureRequest;
+use App\Http\Requests\ContractAmendment\UpdateContractAmendmentStatusRequest;
 use App\Http\Resources\ClientPortalMilestoneResource;
 use App\Http\Resources\ClientPortalProjectResource;
+use App\Http\Resources\ContractAmendmentResource;
 use App\Http\Resources\ContractResource;
 use App\Http\Resources\ProjectCommentResource;
 use App\Http\Resources\ProjectMediaResource;
-use App\Enums\ContractStatus;
 use App\Models\Contract;
+use App\Models\ContractAmendment;
 use App\Models\Project;
 use App\Services\ClientPortalService;
+use App\Services\ContractAmendmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -25,6 +30,7 @@ class ClientPortalController extends Controller
 
     public function __construct(
         private readonly ClientPortalService $clientPortalService,
+        private readonly ContractAmendmentService $amendmentService,
     ) {}
 
     public function projects(Request $request): AnonymousResourceCollection
@@ -124,5 +130,40 @@ class ClientPortalController extends Controller
         ]);
 
         return new ContractResource($contract->fresh()->load(['project:id,title,reference', 'client:id,name']));
+    }
+
+    public function amendments(Request $request, Project $project): AnonymousResourceCollection
+    {
+        $project = $this->resolveProjectForClient($request, $project);
+
+        return ContractAmendmentResource::collection(
+            $this->amendmentService->visibleToClient($project),
+        );
+    }
+
+    public function respondToAmendment(
+        UpdateContractAmendmentStatusRequest $request,
+        ContractAmendment $amendment,
+    ): ContractAmendmentResource {
+        $amendment->loadMissing('project');
+
+        if ($amendment->project === null) {
+            abort(404);
+        }
+
+        $this->resolveProjectForClient($request, $amendment->project);
+
+        $status = ContractAmendmentStatus::from($request->validated('status'));
+
+        if (! in_array($status, [
+            ContractAmendmentStatus::Validated,
+            ContractAmendmentStatus::Refused,
+        ], true)) {
+            abort(422, 'Le client ne peut qu\'accepter ou refuser un avenant.');
+        }
+
+        $amendment = $this->amendmentService->transition($amendment, $status, asClient: true);
+
+        return new ContractAmendmentResource($amendment);
     }
 }

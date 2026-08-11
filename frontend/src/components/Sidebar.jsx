@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLogout } from '../hooks/useLogout'
 import { useTranslation } from '../i18n/LanguageContext'
-import { getDashboardNavPath, resolveNavPath } from '../routes/routeAccess'
+import { getDashboardNavPath, navItemVisible, resolveNavPath } from '../routes/routeAccess'
 
 const NAV_ITEMS = [
   {
@@ -36,67 +37,63 @@ const NAV_ITEMS = [
     labelKey: 'nav.dashboard',
     Icon: IconDashboard,
     audience: 'erp',
-  },
-  {
-    to: '/super-admin',
-    end: true,
-    labelKey: 'nav.superAdmin',
-    Icon: IconSuperAdmin,
-    platformSuperAdminOnly: true,
+    permission: 'dashboard.view',
   },
   {
     to: '/tasks',
     labelKey: 'nav.tasks',
     Icon: IconTasks,
     audience: 'erp',
+    anyPermissions: ['project.view', 'task.view_all', 'task.view_own', 'manage_tasks'],
   },
   {
     to: '/clients',
     labelKey: 'nav.clients',
     Icon: IconClients,
     audience: 'erp',
-    adminOnly: true,
+    permission: 'client.view',
   },
   {
     to: '/discussions',
     labelKey: 'nav.messaging',
     Icon: IconDiscussions,
     audience: 'erp',
-    adminOnly: true,
-    entityBoundAdminOnly: true,
+    entityBoundStaffOnly: true,
   },
   {
     to: '/map',
     labelKey: 'nav.map',
     Icon: IconMap,
     audience: 'erp',
+    permission: 'project.view',
   },
   {
     to: '/projects',
     labelKey: 'nav.projects',
     Icon: IconProjects,
     audience: 'erp',
+    permission: 'project.view',
   },
   {
     to: '/quotes',
     labelKey: 'nav.quotes',
     Icon: IconQuotes,
     audience: 'erp',
-    adminOnly: true,
+    permission: 'quote.view',
   },
   {
     to: '/delivery-forms',
     labelKey: 'nav.deliveryForms',
     Icon: IconDeliveryForms,
     audience: 'erp',
-    adminOnly: true,
+    permission: 'delivery_form.view',
   },
   {
     to: '/invoices',
     labelKey: 'nav.invoices',
     Icon: IconInvoices,
     audience: 'erp',
-    adminOnly: true,
+    permission: 'invoice.view',
   },
   {
     to: '/history',
@@ -114,11 +111,46 @@ const NAV_ITEMS = [
     tenantAdminOnly: true,
   },
   {
+    to: '/profile',
+    labelKey: 'nav.profile',
+    Icon: IconSettings,
+    audience: 'erp',
+  },
+  {
     to: '/configuration',
     labelKey: 'nav.configuration',
     Icon: IconSettings,
     audience: 'erp',
     adminOnly: true,
+  },
+]
+
+const SUPER_ADMIN_NAV_ITEMS = [
+  {
+    to: '/super-admin',
+    end: true,
+    labelKey: 'nav.superAdminOverview',
+    Icon: IconDashboard,
+  },
+  {
+    to: '/super-admin/entities',
+    labelKey: 'nav.superAdminEntities',
+    Icon: IconSuperAdmin,
+  },
+  {
+    to: '/super-admin/create',
+    labelKey: 'nav.superAdminCreate',
+    Icon: IconPlus,
+  },
+  {
+    to: '/super-admin/members',
+    labelKey: 'nav.superAdminMembers',
+    Icon: IconTeam,
+  },
+  {
+    to: '/super-admin/logs',
+    labelKey: 'nav.superAdminLogs',
+    Icon: IconHistory,
   },
 ]
 
@@ -301,47 +333,75 @@ function navLinkClasses(isActive, collapsed) {
   return base.join(' ')
 }
 
-function canViewPlatformSuperAdminNav(user) {
-  return user != null && user.tenant_id === null && user.is_super_admin === true
+function isNavItemVisible(item, { isClientPortalUser, isAdmin, user, hasPermission }) {
+  return navItemVisible(item, { isClientPortalUser, isAdmin, user, hasPermission })
 }
 
-function isNavItemVisible(item, { isClientPortalUser, isAdmin, user }) {
-  if (item.platformSuperAdminOnly) {
-    return canViewPlatformSuperAdminNav(user)
+function SidebarBrand({ collapsed, tenant, appName, subtitleFallback }) {
+  const logoUrl = tenant?.logo_url ?? null
+  const [logoBroken, setLogoBroken] = useState(false)
+  const showLogo = Boolean(logoUrl) && !logoBroken
+  const brandLabel = tenant?.name || appName
+
+  useEffect(() => {
+    setLogoBroken(false)
+  }, [logoUrl])
+
+  if (collapsed) {
+    if (showLogo) {
+      return (
+        <img
+          src={logoUrl}
+          alt={brandLabel}
+          className="h-8 w-8 rounded-md bg-white/5 object-contain p-0.5"
+          onError={() => setLogoBroken(true)}
+        />
+      )
+    }
+
+    return (
+      <span
+        className="flex h-8 w-8 items-center justify-center rounded-md bg-white/[0.06] text-sm font-semibold text-white"
+        title={appName}
+      >
+        {appName.slice(0, 1)}
+      </span>
+    )
   }
 
-  if (isClientPortalUser) {
-    return item.audience === 'client'
-  }
-
-  if (item.audience === 'client') {
-    return false
-  }
-
-  if (item.entityBoundAdminOnly) {
-    return isAdmin && Boolean(user?.tenant_id) && !canViewPlatformSuperAdminNav(user)
-  }
-
-  if (item.adminOnly && !isAdmin) {
-    return false
-  }
-
-  if (item.tenantAdminOnly) {
-    return isAdmin && (Boolean(user?.tenant_id) || canViewPlatformSuperAdminNav(user))
-  }
-
-  return item.audience === 'erp'
+  return (
+    <div className="min-w-0 space-y-1.5">
+      {showLogo ? (
+        <img
+          src={logoUrl}
+          alt={brandLabel}
+          className="h-10 max-w-[180px] object-contain object-left"
+          onError={() => setLogoBroken(true)}
+        />
+      ) : (
+        <h1 className="truncate text-lg font-semibold tracking-tight text-white">
+          {appName}
+        </h1>
+      )}
+      <p className="truncate text-sm text-slate-400">
+        {tenant?.name ?? subtitleFallback}
+      </p>
+    </div>
+  )
 }
 
 export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose }) {
   const { t } = useTranslation()
-  const { isAdmin, isClientPortalUser, user, tenant, roles } = useAuth()
+  const { isAdmin, isSuperAdmin, isClientPortalUser, user, tenant, roles, hasPermission } = useAuth()
   const logout = useLogout()
-  const visibleNavItems = NAV_ITEMS.filter((item) => isNavItemVisible(item, {
-    isClientPortalUser,
-    isAdmin,
-    user,
-  }))
+  const visibleNavItems = isSuperAdmin
+    ? SUPER_ADMIN_NAV_ITEMS
+    : NAV_ITEMS.filter((item) => isNavItemVisible(item, {
+      isClientPortalUser,
+      isAdmin,
+      user,
+      hasPermission,
+    }))
   const navCollapsed = isCollapsed && !mobileOpen
 
   function resolveItemPath(item) {
@@ -378,32 +438,15 @@ export default function Sidebar({ isCollapsed, mobileOpen = false, onMobileClose
         ].join(' ')}
       >
         <div className={['mb-6 shrink-0', navCollapsed ? 'flex justify-center' : ''].join(' ')}>
-          {!navCollapsed ? (
-            <div className="space-y-2">
-              {tenant?.logo_url ? (
-                <img
-                  src={tenant.logo_url}
-                  alt=""
-                  className="h-10 max-w-[180px] object-contain object-left"
-                />
-              ) : (
-                <h1 className="flex items-baseline gap-1.5 text-lg font-semibold tracking-tight text-white">
-                  <span>{t('layout.brandMain')}</span>
-                  <span className="text-slate-500">{t('layout.brandAccent')}</span>
-                </h1>
-              )}
-              <p className="truncate text-sm text-slate-400">
-                {tenant?.name ?? t('layout.companySubtitle')}
-              </p>
-            </div>
-          ) : tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt="" className="h-8 w-8 rounded object-contain" />
-          ) : (
-            <span className="text-sm font-semibold text-white">{t('layout.brandMain').slice(0, 1)}</span>
-          )}
+          <SidebarBrand
+            collapsed={navCollapsed}
+            tenant={tenant}
+            appName={t('layout.appName')}
+            subtitleFallback={t('layout.companySubtitle')}
+          />
         </div>
 
-        {!navCollapsed && isAdmin ? (
+        {!navCollapsed && isAdmin && !isSuperAdmin ? (
           <div className="mb-4 shrink-0">
             <Link
               to={resolveNavPath('/projects', user)}

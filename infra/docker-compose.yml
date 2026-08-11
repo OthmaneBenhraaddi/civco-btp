@@ -1,0 +1,103 @@
+name: civco
+
+services:
+  documents:
+    build:
+      context: ../services/documents
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: CivCo Documents
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://127.0.0.1:8081
+      APP_KEY: base64:2fl+KTvYkNH75aBNHwtK/VHMD6/UeWzkN/4jkfEPKFg=
+      LOG_CHANNEL: stderr
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      INTERNAL_RENDERER_SECRET: civco-internal-secret
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1:8081/health') === false ? 1 : 0);",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  notifications:
+    build:
+      context: ../services/notifications
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: CivCo Notifications
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://127.0.0.1:8082
+      APP_KEY: base64:2fl+KTvYkNH75aBNHwtK/VHMD6/UeWzkN/4jkfEPKFg=
+      LOG_CHANNEL: stderr
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      INTERNAL_NOTIFICATION_SECRET: civco-internal-secret
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1:8082/health') === false ? 1 : 0);",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  monolith:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://127.0.0.1:8000
+      APP_KEY: base64:2fl+KTvYkNH75aBNHwtK/VHMD6/UeWzkN/4jkfEPKFg=
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /app/database/database.sqlite
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      DOCUMENT_RENDERER_URL: http://documents:8081
+      DOCUMENT_RENDERER_SECRET: civco-internal-secret
+      DOCUMENT_RENDERER_TIMEOUT: "10"
+      NOTIFICATION_DISPATCHER_URL: http://notifications:8082
+      NOTIFICATION_DISPATCHER_SECRET: civco-internal-secret
+      NOTIFICATION_DISPATCHER_TIMEOUT: "10"
+    ports:
+      - "8000:8000"
+    depends_on:
+      documents:
+        condition: service_healthy
+      notifications:
+        condition: service_healthy
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p database && touch database/database.sqlite && php artisan migrate --force --graceful && php artisan serve --host=0.0.0.0 --port=8000",
+      ]

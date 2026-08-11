@@ -23,7 +23,27 @@ class ProjectTeamController extends Controller
             $request->integer('user_id') => [
                 'role_label' => $request->input('role_label'),
                 'assigned_at' => now()->toDateString(),
+                'can_chat_with_client' => false,
             ],
+        ]);
+
+        return new ProjectResource($project->fresh()->load('teamMembers'));
+    }
+
+    public function toggleChat(Request $request, Project $project, User $user): ProjectResource
+    {
+        $this->ensureProjectBelongsToCompany($request, $project);
+
+        if (! $project->teamMembers()->where('users.id', $user->id)->exists()) {
+            abort(404, 'Ce membre n\'est pas assigné à ce projet.');
+        }
+
+        $validated = $request->validate([
+            'can_chat_with_client' => ['required', 'boolean'],
+        ]);
+
+        $project->teamMembers()->updateExistingPivot($user->id, [
+            'can_chat_with_client' => $validated['can_chat_with_client'],
         ]);
 
         return new ProjectResource($project->fresh()->load('teamMembers'));

@@ -12,41 +12,44 @@
 |
 */
 
-use App\Http\Controllers\Api\V1\CommercialDocumentController;
-use App\Http\Controllers\Api\V1\GlobalSearchController;
-use App\Http\Controllers\Api\V1\PermissionController;
-use App\Http\Controllers\Api\V1\ContractTemplateController;
-use App\Http\Controllers\Api\V1\ClientPortalQuoteController;
-use App\Http\Controllers\Api\V1\ClientPortalController;
-use App\Http\Controllers\Api\V1\ClientPortalMessageController;
-use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BadgeController;
 use App\Http\Controllers\Api\V1\ClientContactController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\ClientPortalController;
+use App\Http\Controllers\Api\V1\ClientPortalMessageController;
+use App\Http\Controllers\Api\V1\ClientPortalQuoteController;
+use App\Http\Controllers\Api\V1\CommercialDocumentController;
 use App\Http\Controllers\Api\V1\CompanyUserController;
+use App\Http\Controllers\Api\V1\ContractAmendmentController;
+use App\Http\Controllers\Api\V1\ContractTemplateController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeliveryFormController;
+use App\Http\Controllers\Api\V1\DispatchNoteController;
 use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\Api\V1\DocumentTemplateController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\GlobalSearchController;
 use App\Http\Controllers\Api\V1\InvoiceController;
-use App\Http\Controllers\Api\V1\LotController;
 use App\Http\Controllers\Api\V1\InvoiceLineController;
+use App\Http\Controllers\Api\V1\LotController;
+use App\Http\Controllers\Api\V1\MessagingController;
 use App\Http\Controllers\Api\V1\MessagingPresenceController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
-use App\Http\Controllers\Api\V1\DispatchNoteController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\PrintTrackingController;
-use App\Http\Controllers\Api\V1\ProjectMediaController;
 use App\Http\Controllers\Api\V1\ProjectController;
-use App\Http\Controllers\Api\V1\QuoteController;
-use App\Http\Controllers\Api\V1\QuoteLineController;
+use App\Http\Controllers\Api\V1\ProjectImportController;
+use App\Http\Controllers\Api\V1\ProjectMediaController;
 use App\Http\Controllers\Api\V1\ProjectPhaseController;
 use App\Http\Controllers\Api\V1\ProjectProgressController;
 use App\Http\Controllers\Api\V1\ProjectTeamController;
+use App\Http\Controllers\Api\V1\QuoteController;
+use App\Http\Controllers\Api\V1\QuoteLineController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\SuperAdminController;
@@ -66,6 +69,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
+        Route::patch('/me', [AuthController::class, 'updateProfile']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
@@ -81,6 +85,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/projects/{project}/comments', [ClientPortalController::class, 'storeComment']);
             Route::get('/projects/{project}/contract', [ClientPortalController::class, 'contract']);
             Route::post('/projects/{project}/contract/sign', [ClientPortalController::class, 'signContract']);
+            Route::get('/projects/{project}/amendments', [ClientPortalController::class, 'amendments']);
+            Route::patch('/amendments/{amendment}/status', [ClientPortalController::class, 'respondToAmendment']);
             Route::get('/quotes', [ClientPortalQuoteController::class, 'index']);
             Route::get('/quotes/{quote}', [ClientPortalQuoteController::class, 'show']);
             Route::get('/quotes/{quote}/preview', [ClientPortalQuoteController::class, 'preview']);
@@ -92,23 +98,25 @@ Route::prefix('v1')->group(function (): void {
 
         Route::prefix('super-admin')->middleware('super_admin')->group(function (): void {
             Route::get('/tenants', [SuperAdminController::class, 'index']);
+            Route::get('/stats', [SuperAdminController::class, 'stats']);
             Route::post('/tenants', [SuperAdminController::class, 'store']);
+            Route::patch('/tenants/{tenant}', [SuperAdminController::class, 'update']);
+            Route::post('/tenants/{tenant}/admins', [SuperAdminController::class, 'storeAdmin']);
             Route::patch('/tenants/{tenant}/status', [SuperAdminController::class, 'updateStatus']);
             Route::patch('/tenants/{tenant}/admins/{user}/status', [SuperAdminController::class, 'updateAdminStatus']);
             Route::get('/tenants/{tenant}/admins/{user}/credentials', [SuperAdminController::class, 'showAdminCredentials']);
             Route::post('/tenants/{tenant}/admins/{user}/reset-password', [SuperAdminController::class, 'resetAdminPassword']);
         });
 
-        Route::middleware('admin')->group(function (): void {
-            Route::get('/team/tenant-options', [TeamController::class, 'tenantOptions']);
-            Route::get('/team/members', [TeamController::class, 'index']);
-            Route::patch('/team/members/{user}/status', [TeamController::class, 'toggleStatus']);
+        Route::get('/team/tenant-options', [TeamController::class, 'tenantOptions']);
+        Route::get('/team/members', [TeamController::class, 'index']);
+        Route::patch('/team/members/{user}/status', [TeamController::class, 'toggleStatus']);
+        Route::patch('/team/members/{user}/archive', [TeamController::class, 'archive']);
 
-            Route::prefix('messaging')->group(function (): void {
-                Route::get('/threads', [MessagingController::class, 'threads']);
-                Route::get('/conversations/{clientUser}', [MessagingController::class, 'thread']);
-                Route::post('/messages', [MessagingController::class, 'store']);
-            });
+        Route::prefix('messaging')->group(function (): void {
+            Route::get('/threads', [MessagingController::class, 'threads']);
+            Route::get('/conversations/{clientUser}', [MessagingController::class, 'thread']);
+            Route::post('/messages', [MessagingController::class, 'store']);
         });
 
         Route::middleware('company')->group(function (): void {
@@ -123,6 +131,8 @@ Route::prefix('v1')->group(function (): void {
 
             Route::post('/team/members', [TeamController::class, 'store'])
                 ->middleware('permission:user.create');
+            Route::patch('/team/members/{user}/role', [TeamController::class, 'updateRole'])
+                ->middleware('permission:user.update');
 
             Route::get('/clients', [ClientController::class, 'index'])
                 ->middleware('permission:client.view');
@@ -133,6 +143,8 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/clients/{client}', [ClientController::class, 'update'])
                 ->middleware('permission:client.update');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])
+                ->middleware('permission:client.delete');
+            Route::patch('/clients/{client}/archive', [ClientController::class, 'archive'])
                 ->middleware('permission:client.delete');
             Route::patch('/clients/{client}/portal-status', [ClientController::class, 'togglePortalStatus'])
                 ->middleware(['admin', 'permission:client.update']);
@@ -196,6 +208,11 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
                 ->middleware(['permission:project.delete', 'admin']);
 
+            Route::get('/projects/{project}/import/template', [ProjectImportController::class, 'template'])
+                ->middleware('permission:project.view');
+            Route::post('/projects/{project}/import', [ProjectImportController::class, 'import'])
+                ->middleware('permission:project.update');
+
             Route::get('/projects/{project}/phases', [ProjectPhaseController::class, 'index'])
                 ->middleware('permission:project.view');
             Route::post('/projects/{project}/phases', [ProjectPhaseController::class, 'store'])
@@ -213,6 +230,8 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:project.update');
 
             Route::post('/projects/{project}/team', [ProjectTeamController::class, 'store'])
+                ->middleware(['permission:project.update', 'admin']);
+            Route::patch('/projects/{project}/team/{user}/toggle-chat', [ProjectTeamController::class, 'toggleChat'])
                 ->middleware(['permission:project.update', 'admin']);
             Route::delete('/projects/{project}/team/{user}', [ProjectTeamController::class, 'destroy'])
                 ->middleware(['permission:project.update', 'admin']);
@@ -251,6 +270,19 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:expense.manage');
             Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])
                 ->middleware('permission:expense.manage');
+
+            Route::get('/projects/{project}/amendments', [ContractAmendmentController::class, 'index'])
+                ->middleware('permission:project.view');
+            Route::post('/projects/{project}/amendments', [ContractAmendmentController::class, 'store'])
+                ->middleware('permission:project.update');
+            Route::put('/amendments/{amendment}', [ContractAmendmentController::class, 'update'])
+                ->middleware('permission:project.update');
+            Route::patch('/amendments/{amendment}/status', [ContractAmendmentController::class, 'updateStatus'])
+                ->middleware('permission:project.update');
+            Route::delete('/amendments/{amendment}', [ContractAmendmentController::class, 'destroy'])
+                ->middleware('permission:project.update');
+            Route::get('/amendments/{amendment}/download', [ContractAmendmentController::class, 'download'])
+                ->middleware('permission:project.view');
 
             Route::get('/quotes', [QuoteController::class, 'index'])
                 ->middleware('permission:quote.view');
@@ -330,6 +362,8 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/permissions', [PermissionController::class, 'index'])
                 ->middleware('permission:role.view');
+            Route::get('/roles/settings', [RoleController::class, 'settings'])
+                ->middleware('permission:role.view');
             Route::get('/roles', [RoleController::class, 'index'])
                 ->middleware('permission:role.view');
             Route::post('/roles', [RoleController::class, 'store'])
@@ -348,6 +382,21 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:dashboard.view');
             Route::delete('/audit-logs/{audit_log}', [AuditLogController::class, 'destroy'])
                 ->middleware('permission:dashboard.view');
+
+            Route::get('/document-templates/placeholders', [DocumentTemplateController::class, 'placeholders'])
+                ->middleware('permission:role.manage');
+            Route::get('/document-templates', [DocumentTemplateController::class, 'index'])
+                ->middleware('permission:role.manage');
+            Route::post('/document-templates', [DocumentTemplateController::class, 'store'])
+                ->middleware('permission:role.manage');
+            Route::get('/document-templates/{documentTemplate}', [DocumentTemplateController::class, 'show'])
+                ->middleware('permission:role.manage');
+            Route::put('/document-templates/{documentTemplate}', [DocumentTemplateController::class, 'update'])
+                ->middleware('permission:role.manage');
+            Route::delete('/document-templates/{documentTemplate}', [DocumentTemplateController::class, 'destroy'])
+                ->middleware('permission:role.manage');
+            Route::get('/document-templates/{documentTemplate}/preview', [DocumentTemplateController::class, 'preview'])
+                ->middleware('permission:role.manage');
 
             Route::get('/contract-templates', [ContractTemplateController::class, 'index'])
                 ->middleware('permission:role.manage');

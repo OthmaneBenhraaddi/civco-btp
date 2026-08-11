@@ -32,6 +32,18 @@ export async function fetchProjectContract(projectId) {
   return data.data ?? data
 }
 
+export async function fetchProjectAmendments(projectId) {
+  const { data } = await api.get(`/api/v1/client-portal/projects/${projectId}/amendments`)
+  return data.data ?? data
+}
+
+export async function respondToAmendment(amendmentId, status) {
+  const { data } = await api.patch(`/api/v1/client-portal/amendments/${amendmentId}/status`, {
+    status,
+  })
+  return data.data ?? data
+}
+
 export async function signProjectContract(projectId, signatureData) {
   const { data } = await api.post(`/api/v1/client-portal/projects/${projectId}/contract/sign`, {
     signature_data: signatureData,

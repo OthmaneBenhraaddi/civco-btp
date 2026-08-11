@@ -7,7 +7,7 @@ export async function fetchClients(params = {}) {
 
 /** Clients available in create forms (projects, quotes, invoices, BL). */
 export async function fetchClientsForPicker() {
-  return fetchClients({ per_page: 100 })
+  return fetchClients({ per_page: 100, exclude_archived: 1, is_active: 1, for_picker: 1 })
 }
 
 export async function createClient(payload) {
@@ -22,6 +22,11 @@ export async function updateClient(id, payload) {
 
 export async function deleteClient(id) {
   const { data } = await api.delete(`/api/v1/clients/${id}`)
+  return data
+}
+
+export async function archiveClient(id) {
+  const { data } = await api.patch(`/api/v1/clients/${id}/archive`)
   return data
 }
 

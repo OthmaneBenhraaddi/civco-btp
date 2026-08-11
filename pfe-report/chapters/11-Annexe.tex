@@ -1,0 +1,450 @@
+% ─────────────────────────────────────────────────────────────────────
+%   ANNEXES
+% ─────────────────────────────────────────────────────────────────────
+
+% Configuration globale des listings de code
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{ensamBlue!40},
+  backgroundcolor=\color{ensamBlue!3},
+  xleftmargin=0.5cm,
+  xrightmargin=0.5cm,
+  keywordstyle=\color{ensamBlue}\bfseries,
+  stringstyle=\color{orange!70!black},
+  commentstyle=\color{gray}\itshape,
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=6pt,
+  captionpos=b,
+}
+
+\chapter{Annexes}
+
+% =====================================================================
+\section{Extraits de code source}
+
+Cette annexe présente les extraits de code source les plus représentatifs de
+l'application développée pour CIVCO BTP, sélectionnés pour illustrer les
+contributions techniques décrites dans ce rapport.
+
+% ─────────────────────────────────────────────────────────────────────
+\subsection{Authentification API (\texttt{AuthController.php})}
+
+Le contrôleur d'authentification gère la connexion des utilisateurs internes
+via Laravel Sanctum. La méthode \texttt{login} valide les identifiants, régénère
+la session et retourne le contexte utilisateur (profil, rôles, permissions).
+
+\begin{lstlisting}[language=PHP,
+  caption={AuthController.php : connexion utilisateur (extrait)}]
+public function login(LoginRequest $request,
+    AuthContextService $authContext): JsonResponse
+{
+    $credentials = $request->only('email', 'password');
+
+    if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        throw ValidationException::withMessages([
+            'email' => [__('auth.failed')],
+        ]);
+    }
+
+    $user = Auth::user();
+
+    if (! $user->canAccessApplication()) {
+        Auth::logout();
+        throw ValidationException::withMessages([
+            'email' => [CheckUserStatus::DEACTIVATED_MESSAGE],
+        ]);
+    }
+
+    if ($request->hasSession()) {
+        $request->session()->regenerate();
+    }
+
+    return response()->json($authContext->forUser($user));
+}
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────────────
+\subsection{Conversion devis vers facture (\texttt{QuoteService.php})}
+
+Le service métier \texttt{QuoteService} encapsule la logique de conversion d'un
+devis accepté en facture. L'opération s'exécute dans une transaction base de
+données pour garantir la cohérence des enregistrements.
+
+\begin{lstlisting}[language=PHP,
+  caption={QuoteService.php : conversion devis $\rightarrow$ facture (extrait)}]
+public function convertToInvoice(Quote $quote,
+    ?int $dispatchNoteId = null): Invoice
+{
+    if ($quote->status !== QuoteStatus::Accepted) {
+        throw new InvalidArgumentException(
+            'Only accepted quotes can be converted.');
+    }
+
+    if ($quote->invoice()->exists()) {
+        throw new InvalidArgumentException(
+            'This quote has already been converted.');
+    }
+
+    return DB::transaction(function () use ($quote, $dispatchNoteId) {
+        $quote->load('lines');
+
+        $invoice = Invoice::query()->create([
+            'company_id' => $quote->company_id,
+            'client_id'  => $quote->client_id,
+            'project_id' => $quote->project_id,
+            'quote_id'   => $quote->id,
+            'reference'  => $this->invoiceReferenceService
+                                ->nextForCompany($quote->company_id),
+            'status'     => InvoiceStatus::Draft,
+            'total_ht'   => $quote->total_ht,
+            'total_tax'  => $quote->total_tax,
+            'total_ttc'  => $quote->total_ttc,
+        ]);
+
+        foreach ($quote->lines as $index => $line) {
+            $invoice->lines()->create([
+                'sort_order'      => $index + 1,
+                'description'     => $line->description,
+                'quantity'        => $line->quantity,
+                'unit_price_ht'   => $line->unit_price_ht,
+                'line_total_ht'   => $line->line_total_ht,
+                'line_total_ttc'  => $line->line_total_ttc,
+            ]);
+        }
+
+        return $invoice->load(['client', 'project', 'lines']);
+    });
+}
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────────────
+\subsection{Modèle Projet (\texttt{Project.php})}
+
+Le modèle Eloquent \texttt{Project} centralise les relations métier d'un chantier :
+client, phases, équipe, devis et factures.
+
+\begin{lstlisting}[language=PHP,
+  caption={Project.php : relations Eloquent (extrait)}]
+class Project extends Model
+{
+    protected $fillable = [
+        'company_id', 'client_id', 'reference', 'title',
+        'status', 'budget', 'progress_percent',
+        'start_date', 'end_date', 'latitude', 'longitude',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => ProjectStatus::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'budget' => 'decimal:2',
+            'progress_percent' => 'decimal:2',
+        ];
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function phases(): HasMany
+    {
+        return $this->hasMany(ProjectPhase::class);
+    }
+
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_user');
+    }
+
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
+    }
+}
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────────────
+\subsection{Client HTTP frontend (\texttt{client.js})}
+
+Le module \texttt{api/client.js} configure l'instance Axios partagée par tous
+les modules frontend. Il transmet les cookies Sanctum, le jeton CSRF et le
+contexte société (\texttt{X-Company-Id}).
+
+\begin{lstlisting}[language=Java,
+  caption={client.js : configuration Axios et intercepteurs (extrait)}]
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL ?? '',
+  withCredentials: true,
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  },
+})
+
+api.interceptors.request.use(async (config) => {
+  if (activeCompanyId) {
+    config.headers['X-Company-Id'] = activeCompanyId
+  }
+
+  const method = config.method?.toLowerCase()
+  if (['post', 'put', 'patch', 'delete'].includes(method)) {
+    let token = getCookie('XSRF-TOKEN')
+    if (!token) {
+      await api.get('/sanctum/csrf-cookie')
+      token = getCookie('XSRF-TOKEN')
+    }
+    if (token) {
+      config.headers['X-XSRF-TOKEN'] = token
+    }
+  }
+
+  return config
+})
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    }
+    return Promise.reject(error)
+  }
+)
+\end{lstlisting}
+
+% =====================================================================
+\section{Configuration : variables d'environnement}
+
+Le fichier \texttt{.env} du backend centralise la configuration de l'application.
+Le Tableau~\ref{tab:annexe_env} décrit les variables principales utilisées en
+développement et en production.
+
+\begin{table}[H]
+\caption{Variables d'environnement principales}
+\label{tab:annexe_env}
+\centering
+\small
+\begin{tabular}{|l|p{8.5cm}|}
+\hline
+\textbf{Variable} & \textbf{Rôle} \\
+\hline
+\texttt{APP\_URL} & URL publique du backend Laravel \\
+\hline
+\texttt{DB\_CONNECTION} & Pilote SGBD (\texttt{mysql} ou \texttt{pgsql}) \\
+\hline
+\texttt{DB\_DATABASE} & Nom de la base de données \\
+\hline
+\texttt{SESSION\_DRIVER} & Stockage des sessions (\texttt{database} recommandé) \\
+\hline
+\texttt{SANCTUM\_STATEFUL\_DOMAINS} & Domaines autorisés pour les cookies SPA \\
+\hline
+\texttt{FRONTEND\_URL} & URL du frontend React (CORS et redirections) \\
+\hline
+\texttt{MAIL\_*} & Configuration SMTP pour les notifications \\
+\hline
+\end{tabular}
+\end{table}
+
+\medskip
+
+Exemple de configuration minimale pour un environnement de développement local :
+
+\lstset{
+  language={},
+  keywordstyle=\color{black},
+  stringstyle=\color{black},
+  commentstyle=\color{gray}\itshape,
+}
+
+\begin{lstlisting}[caption={.env : configuration de développement (extrait)}]
+APP_NAME="CIVCO BTP"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=civco_btp
+DB_USERNAME=root
+DB_PASSWORD=
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+
+SANCTUM_STATEFUL_DOMAINS=localhost,127.0.0.1:5173
+
+FRONTEND_URL=http://127.0.0.1:5173
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+\end{lstlisting}
+
+% =====================================================================
+\section{Comptes de démonstration}
+
+Le seeder de démonstration fournit des comptes utilisateurs permettant de
+tester les différents profils métier de CIVCO BTP. Le Tableau~\ref{tab:demo_users}
+liste les identifiants utilisés en environnement de développement.
+
+\begin{table}[H]
+\caption{Comptes de démonstration (mot de passe : \texttt{password})}
+\label{tab:demo_users}
+\centering
+\small
+\begin{tabular}{|l|l|p{5.5cm}|}
+\hline
+\textbf{Email} & \textbf{Profil} & \textbf{Accès principal} \\
+\hline
+\texttt{admin@civco.ma} & Administrateur & Configuration, tous modules \\
+\hline
+\texttt{ingenieur@civco.ma} & Chef de projet & Projets, tâches, équipe \\
+\hline
+\texttt{compta@civco.ma} & Comptable & Factures, paiements \\
+\hline
+\texttt{chantier@civco.ma} & Chef de chantier & Projets, tâches terrain \\
+\hline
+\texttt{tech@civco.ma} & Technicien & Tâches assignées, consultation \\
+\hline
+\end{tabular}
+\end{table}
+
+\medskip
+
+Ces comptes sont créés par la commande \texttt{php artisan migrate --seed} et
+permettent de valider le contrôle d'accès par rôles décrit au Chapitre~3.
+
+% =====================================================================
+\section{Référentiel des endpoints API}
+
+Le Tableau~\ref{tab:api_endpoints} présente les principaux endpoints exposés
+sous le préfixe \texttt{/api/v1/}. Toutes les routes (sauf \texttt{login}) sont
+protégées par le middleware \texttt{auth:sanctum} et soumises à un contrôle de
+permissions.
+
+\begin{table}[H]
+\caption{Principaux endpoints de l'API REST}
+\label{tab:api_endpoints}
+\centering
+\footnotesize
+\begin{tabular}{|l|l|p{5.5cm}|}
+\hline
+\textbf{Méthode} & \textbf{Endpoint} & \textbf{Description} \\
+\hline
+POST & \texttt{/login} & Authentification utilisateur \\
+\hline
+GET & \texttt{/me} & Profil et permissions de l'utilisateur courant \\
+\hline
+GET/POST & \texttt{/projects} & Liste et création de projets \\
+\hline
+GET/PUT & \texttt{/projects/\{id\}} & Consultation et modification d'un projet \\
+\hline
+GET/POST & \texttt{/clients} & Liste et création de clients \\
+\hline
+GET/POST & \texttt{/quotes} & Liste et création de devis \\
+\hline
+POST & \texttt{/quotes/\{id\}/convert} & Conversion devis $\rightarrow$ facture \\
+\hline
+GET/POST & \texttt{/invoices} & Liste et création de factures \\
+\hline
+GET/POST & \texttt{/tasks} & Liste et création de tâches \\
+\hline
+GET/POST & \texttt{/contracts} & Liste et création de contrats \\
+\hline
+GET & \texttt{/dashboard} & Indicateurs du tableau de bord \\
+\hline
+GET & \texttt{/search} & Recherche globale (clients, projets, documents) \\
+\hline
+GET & \texttt{/activity-logs} & Journal des actions (administrateur) \\
+\hline
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Schéma des entités principales}
+
+Le Tableau~\ref{tab:entity_schema} décrit les attributs essentiels des entités
+métier les plus consultées dans l'application.
+
+\begin{table}[H]
+\caption{Attributs principaux des entités métier}
+\label{tab:entity_schema}
+\centering
+\small
+\begin{tabular}{|l|p{10.5cm}|}
+\hline
+\textbf{Entité} & \textbf{Attributs clés} \\
+\hline
+\texttt{Project} & \texttt{reference}, \texttt{title}, \texttt{status}, \texttt{budget},
+\texttt{progress\_percent}, \texttt{start\_date}, \texttt{end\_date},
+\texttt{latitude}, \texttt{longitude}, \texttt{client\_id} \\
+\hline
+\texttt{Client} & \texttt{name}, \texttt{email}, \texttt{phone}, \texttt{status},
+\texttt{is\_official}, \texttt{archived\_at} \\
+\hline
+\texttt{Quote} & \texttt{reference}, \texttt{status}, \texttt{total\_ht},
+\texttt{total\_tax}, \texttt{total\_ttc}, \texttt{project\_id}, \texttt{client\_id} \\
+\hline
+\texttt{Invoice} & \texttt{reference}, \texttt{status}, \texttt{issued\_at},
+\texttt{due\_date}, \texttt{amount\_paid}, \texttt{balance\_due}, \texttt{quote\_id} \\
+\hline
+\texttt{Task} & \texttt{title}, \texttt{status}, \texttt{priority},
+\texttt{due\_date}, \texttt{project\_phase\_id}, \texttt{assigned\_to} \\
+\hline
+\texttt{Contract} & \texttt{reference}, \texttt{status}, \texttt{signed\_at},
+\texttt{project\_id}, \texttt{template\_id} \\
+\hline
+\end{tabular}
+\end{table}
+
+\medskip
+
+Les statuts des entités sont implémentés sous forme d'énumérations PHP
+(\texttt{ProjectStatus}, \texttt{QuoteStatus}, \texttt{InvoiceStatus},
+\texttt{TaskStatus}) garantissant la validité des transitions d'état côté
+serveur.
+
+% =====================================================================
+\section{Guide de démarrage rapide}
+
+Pour reproduire l'environnement de développement décrit au Chapitre~4, les commandes
+suivantes permettent d'initialiser l'application à partir du dépôt source :
+
+\begin{lstlisting}[language={}, caption={Commandes d'initialisation de l'application}]
+# Backend
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+
+# Frontend (dans un second terminal)
+cd frontend
+npm install
+npm run dev
+\end{lstlisting}
+
+\medskip
+
+L'application est alors accessible à l'adresse \texttt{http://127.0.0.1:5173} (frontend)
+avec le proxy Vite redirigeant les appels API vers \texttt{http://127.0.0.1:8000}.
+Les comptes de démonstration listés en section~3 permettent de tester les différents
+profils métier.
+
+\newpage

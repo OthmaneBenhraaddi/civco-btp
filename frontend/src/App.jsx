@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { ToastProvider } from './context/ToastContext'
+import { StealthModeProvider } from './context/StealthModeContext'
 import AppRoutes from './routes/AppRoutes'
 import { initTenantDevContext } from './utils/tenantDevContext'
 import './index.css'
@@ -15,13 +16,15 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <ToastProvider>
-            <div className="h-full overflow-hidden">
-              <AppRoutes />
-            </div>
-          </ToastProvider>
-        </ThemeProvider>
+        <StealthModeProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <div className="h-full overflow-hidden">
+                <AppRoutes />
+              </div>
+            </ToastProvider>
+          </ThemeProvider>
+        </StealthModeProvider>
       </AuthProvider>
     </LanguageProvider>
   )

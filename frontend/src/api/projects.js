@@ -30,6 +30,11 @@ export async function deleteProject(id) {
   return data
 }
 
+export async function fetchProjectPhases(projectId) {
+  const { data } = await api.get(`/api/v1/projects/${projectId}/phases`)
+  return data
+}
+
 export async function createPhase(projectId, payload) {
   const { data } = await api.post(`/api/v1/projects/${projectId}/phases`, payload)
   return data
@@ -65,6 +70,13 @@ export async function addTeamMember(projectId, payload) {
   return data
 }
 
+export async function toggleTeamMemberChat(projectId, userId, canChatWithClient) {
+  const { data } = await api.patch(`/api/v1/projects/${projectId}/team/${userId}/toggle-chat`, {
+    can_chat_with_client: canChatWithClient,
+  })
+  return data
+}
+
 export async function removeTeamMember(projectId, userId) {
   const { data } = await api.delete(`/api/v1/projects/${projectId}/team/${userId}`)
   return data
@@ -91,5 +103,31 @@ export async function uploadProjectMedia(projectId, { title, image }) {
   formData.append('image', image)
 
   const { data } = await api.post(`/api/v1/projects/${projectId}/media`, formData)
+  return data
+}
+
+export async function downloadProjectImportTemplate(projectId, filename = 'modele-import-chantier.xlsx') {
+  const response = await api.get(`/api/v1/projects/${projectId}/import/template`, {
+    responseType: 'blob',
+  })
+
+  const blobUrl = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(blobUrl)
+}
+
+export async function importProjectExcel(projectId, file, onUploadProgress) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { data } = await api.post(`/api/v1/projects/${projectId}/import`, formData, {
+    onUploadProgress,
+  })
+
   return data
 }

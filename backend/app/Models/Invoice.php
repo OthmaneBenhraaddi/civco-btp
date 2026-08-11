@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InvoiceStatus;
+use App\Models\Concerns\AppliesStealthClientFilter;
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Invoice extends Model
 {
-    use BelongsToCompany, BelongsToTenant;
+    use AppliesStealthClientFilter, BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',

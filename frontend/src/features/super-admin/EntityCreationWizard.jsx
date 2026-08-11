@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
+import TenantBrandingFields, {
+  EMPTY_BRANDING_FORM,
+  brandingPayloadFromForm,
+} from './TenantBrandingFields'
 
 const emptyForm = {
   name: '',
   subdomain: '',
   status: 'active',
+  ...EMPTY_BRANDING_FORM,
 }
 
 export default function EntityCreationWizard({ saving, onSubmit }) {
@@ -36,7 +41,7 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
     setLogoPreview(file ? URL.createObjectURL(file) : null)
   }
 
-  function handleNextStep(event) {
+  function handleNextFromStep1(event) {
     event.preventDefault()
     setStepError('')
 
@@ -46,6 +51,18 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
     }
 
     setStep(2)
+  }
+
+  function handleNextFromStep2(event) {
+    event.preventDefault()
+    setStepError('')
+
+    if (!logoFile) {
+      setStepError(t('superAdmin.wizard.logoRequired'))
+      return
+    }
+
+    setStep(3)
   }
 
   async function handleSubmit(event) {
@@ -62,6 +79,7 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
       subdomain: form.subdomain.trim().toLowerCase(),
       status: form.status,
       logo: logoFile,
+      ...brandingPayloadFromForm(form),
     })
 
     resetWizard()
@@ -69,8 +87,8 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
 
   return (
     <section className="card mb-6 p-6 lg:max-w-xl">
-      <div className="mb-6 flex items-center gap-3">
-        {[1, 2].map((value) => (
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        {[1, 2, 3].map((value) => (
           <div key={value} className="flex items-center gap-2">
             <span
               className={[
@@ -83,9 +101,13 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
               {value}
             </span>
             <span className={step === value ? 'text-sm font-medium text-white' : 'text-sm text-slate-500'}>
-              {value === 1 ? t('superAdmin.wizard.step1Title') : t('superAdmin.wizard.step2Title')}
+              {value === 1
+                ? t('superAdmin.wizard.step1Title')
+                : value === 2
+                  ? t('superAdmin.wizard.step2Title')
+                  : t('superAdmin.wizard.step3Title')}
             </span>
-            {value === 1 ? <span className="text-slate-600">→</span> : null}
+            {value < 3 ? <span className="text-slate-600">→</span> : null}
           </div>
         ))}
       </div>
@@ -95,7 +117,7 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
       {stepError ? <p className="error mb-4">{stepError}</p> : null}
 
       {step === 1 ? (
-        <form className="stack" onSubmit={handleNextStep}>
+        <form className="stack" onSubmit={handleNextFromStep1}>
           <label className={LABEL_CLASS}>
             {t('superAdmin.companyName')}
             <input
@@ -139,8 +161,10 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
             {t('superAdmin.wizard.next')}
           </button>
         </form>
-      ) : (
-        <form className="stack" onSubmit={handleSubmit}>
+      ) : null}
+
+      {step === 2 ? (
+        <form className="stack" onSubmit={handleNextFromStep2}>
           <p className="text-sm text-slate-400">{t('superAdmin.wizard.step2Hint')}</p>
 
           <label className={LABEL_CLASS}>
@@ -150,7 +174,7 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
               accept="image/jpeg,image/png,image/webp,image/svg+xml"
               className={FIELD_CLASS}
               onChange={handleLogoChange}
-              required
+              required={!logoFile}
             />
           </label>
 
@@ -176,12 +200,38 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
             >
               {t('superAdmin.wizard.back')}
             </button>
-            <button type="submit" className={BTN_PRIMARY} disabled={saving}>
-              {saving ? t('superAdmin.creating') : t('superAdmin.create')}
+            <button type="submit" className={BTN_PRIMARY}>
+              {t('superAdmin.wizard.next')}
             </button>
           </div>
         </form>
-      )}
+      ) : null}
+
+      {step === 3 ? (
+        <form className="stack" onSubmit={handleSubmit}>
+          <p className="text-sm text-slate-400">{t('superAdmin.wizard.step3Hint')}</p>
+
+          <TenantBrandingFields
+            form={form}
+            onChange={setForm}
+            t={t}
+          />
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+              disabled={saving}
+              onClick={() => setStep(2)}
+            >
+              {t('superAdmin.wizard.back')}
+            </button>
+            <button type="submit" className={BTN_PRIMARY} disabled={saving}>
+              {saving ? t('superAdmin.creating') : t('superAdmin.create.submit')}
+            </button>
+          </div>
+        </form>
+      ) : null}
     </section>
   )
 }

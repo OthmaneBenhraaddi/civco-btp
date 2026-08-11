@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { isPlatformSuperAdmin } from '../../utils/authIdentity'
-import { useAuth } from '../../context/AuthContext'
 
 function PasswordReveal({ password, canReveal, hasStored, t }) {
   const [visible, setVisible] = useState(false)
@@ -39,11 +37,13 @@ export default function ClientPortalPanel({
   canManage,
   toggling,
   onToggle,
+  clientEmail,
 }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
-  const canRevealCredentials = isPlatformSuperAdmin(user)
+  const canRevealCredentials = Boolean(portalUser?.stored_password)
   const isActive = portalUser?.is_active ?? false
+  const hasEmail = Boolean(clientEmail && String(clientEmail).trim())
+  const toggleDisabled = toggling || (!isActive && !hasEmail && !portalUser)
 
   return (
     <div className="rounded-xl border border-slate-800/60 bg-[#0a0b0d]/60 p-4">
@@ -53,6 +53,9 @@ export default function ClientPortalPanel({
             {t('clients.portal.title')}
           </p>
           <p className="mt-1 text-xs text-slate-400">{t('clients.portal.subtitle')}</p>
+          {!hasEmail && !portalUser ? (
+            <p className="mt-2 text-xs text-amber-300/90">{t('clients.portal.emailRequired')}</p>
+          ) : null}
         </div>
         {canManage ? (
           <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
@@ -61,7 +64,7 @@ export default function ClientPortalPanel({
               type="button"
               role="switch"
               aria-checked={isActive}
-              disabled={toggling}
+              disabled={toggleDisabled}
               onClick={() => onToggle(!isActive)}
               className={[
                 'relative h-6 w-11 rounded-full transition-colors disabled:opacity-60',
