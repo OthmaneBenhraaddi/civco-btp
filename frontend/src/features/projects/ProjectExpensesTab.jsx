@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as expensesApi from '../../api/expenses'
@@ -128,14 +129,15 @@ export default function ProjectExpensesTab({ projectId }) {
           <div className="form-row">
             <label>
               {t('expenses.category')} *
-              <select
+              <CutSelect
+                className="w-full"
                 value={form.category}
-                onChange={(event) => setForm({ ...form, category: event.target.value })}
-              >
-                {CATEGORIES.map((item) => (
-                  <option key={item} value={item}>{t(`expenses.categories.${item}`)}</option>
-                ))}
-              </select>
+                onChange={(category) => setForm({ ...form, category })}
+                options={CATEGORIES.map((item) => ({
+                  value: item,
+                  label: t(`expenses.categories.${item}`),
+                }))}
+              />
             </label>
             <label>
               {t('expenses.amount')} *

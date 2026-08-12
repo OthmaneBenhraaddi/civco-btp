@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
 import { useAuth } from '../../../context/AuthContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as projectsApi from '../../../api/projects'
@@ -141,19 +142,19 @@ export default function TaskCreateModal({
           ) : (
             <label>
               {t('tasks.form.project')} *
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={form.projectId}
-                onChange={(event) => setForm({ ...form, projectId: event.target.value })}
-                required
-              >
-                <option value="" disabled>{t('tasks.form.selectProject')}</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title}
-                  </option>
-                ))}
-              </select>
+                onChange={(projectId) => setForm({ ...form, projectId })}
+                placeholder={t('tasks.form.selectProject')}
+                options={[
+                  { value: '', label: t('tasks.form.selectProject') },
+                  ...projects.map((project) => ({
+                    value: String(project.id),
+                    label: project.title,
+                  })),
+                ]}
+              />
             </label>
           )}
 
@@ -168,53 +169,46 @@ export default function TaskCreateModal({
 
           <label>
             {t('tasks.columns.owner')} *
-            <select
-              className="filter-select w-full"
+            <CutSelect
+              className="w-full"
               value={form.responsableName}
-              onChange={(event) => setForm({ ...form, responsableName: event.target.value })}
-              required
-            >
-              {users.length === 0 ? (
-                <option value={form.responsableName}>{form.responsableName || t('tasks.form.currentUser')}</option>
-              ) : (
-                users.map((companyUser) => (
-                  <option key={companyUser.id} value={companyUser.full_name}>
-                    {companyUser.full_name}
-                  </option>
-                ))
-              )}
-            </select>
+              onChange={(responsableName) => setForm({ ...form, responsableName })}
+              options={
+                users.length === 0
+                  ? [{ value: form.responsableName, label: form.responsableName || t('tasks.form.currentUser') }]
+                  : users.map((companyUser) => ({
+                      value: companyUser.full_name,
+                      label: companyUser.full_name,
+                    }))
+              }
+            />
           </label>
 
           <div className="form-row">
             <label>
               {t('tasks.columns.status')}
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={form.statut}
-                onChange={(event) => setForm({ ...form, statut: event.target.value })}
-              >
-                {TASK_STATUTS.map((statut) => (
-                  <option key={statut} value={statut}>
-                    {t(`tasks.statuses.${statut === 'en_cours' ? 'working' : statut === 'termine' ? 'done' : statut === 'bloque' ? 'stuck' : 'not_started'}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={(statut) => setForm({ ...form, statut })}
+                options={TASK_STATUTS.map((statut) => ({
+                  value: statut,
+                  label: t(`tasks.statuses.${statut === 'en_cours' ? 'working' : statut === 'termine' ? 'done' : statut === 'bloque' ? 'stuck' : 'not_started'}`),
+                }))}
+              />
             </label>
 
             <label>
               {t('tasks.columns.priority')}
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={form.priorite}
-                onChange={(event) => setForm({ ...form, priorite: event.target.value })}
-              >
-                {TASK_PRIORITES.map((priorite) => (
-                  <option key={priorite} value={priorite}>
-                    {t(`tasks.priorities.${priorite === 'haute' ? 'high' : priorite === 'moyenne' ? 'medium' : 'low'}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={(priorite) => setForm({ ...form, priorite })}
+                options={TASK_PRIORITES.map((priorite) => ({
+                  value: priorite,
+                  label: t(`tasks.priorities.${priorite === 'haute' ? 'high' : priorite === 'moyenne' ? 'medium' : 'low'}`),
+                }))}
+              />
             </label>
           </div>
 

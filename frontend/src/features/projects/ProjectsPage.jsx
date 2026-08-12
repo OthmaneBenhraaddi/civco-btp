@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
@@ -102,37 +105,40 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="list-page">
-      <header className="page-header">
-        <div>
-          <h1>{t('projects.title')}</h1>
-        </div>
+    <PageShell
+      compact
+      title={t('projects.title')}
+      actions={(
         <PermissionGate permission="project.create">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+          <NeonButton onClick={openCreate} className={clients.length === 0 ? 'pointer-events-none opacity-40' : ''}>
             {t('projects.new')}
-          </button>
+          </NeonButton>
         </PermissionGate>
-      </header>
-
+      )}
+    >
       {clients.length === 0 ? (
-        <p className="hint">{t('projects.needClient')}</p>
+        <p className="hint mb-4">{t('projects.needClient')}</p>
       ) : null}
 
-      <div className="toolbar">
+      <div className="toolbar mb-4">
         <SearchInput
           placeholder={t('projects.search')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('projects.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="planned">{t('status.planned')}</option>
-          <option value="in_progress">{t('status.in_progress')}</option>
-          <option value="on_hold">{t('status.on_hold')}</option>
-          <option value="completed">{t('status.completed')}</option>
-          <option value="cancelled">{t('status.cancelled')}</option>
-        </select>
+        <CutSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('projects.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'planned', label: t('status.planned') },
+            { value: 'in_progress', label: t('status.in_progress') },
+            { value: 'on_hold', label: t('status.on_hold') },
+            { value: 'completed', label: t('status.completed') },
+            { value: 'cancelled', label: t('status.cancelled') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -199,6 +205,6 @@ export default function ProjectsPage() {
         onSubmit={handleCreateProject}
         saving={saving}
       />
-    </div>
+    </PageShell>
   )
 }

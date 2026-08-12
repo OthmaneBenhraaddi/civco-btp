@@ -146,7 +146,7 @@ export default function QuoteDetailPage() {
   }
 
   return (
-    <div>
+    <div className="list-page">
       <p className="breadcrumb">
         <Link to="/quotes">{t('quotes.title')}</Link> / {quote.reference}
       </p>

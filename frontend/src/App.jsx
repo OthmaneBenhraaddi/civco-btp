@@ -3,6 +3,7 @@ import { LanguageProvider } from './i18n/LanguageContext'
 import { ToastProvider } from './context/ToastContext'
 import AppRoutes from './routes/AppRoutes'
 import './index.css'
+import './design/prodigy.css'
 
 function App() {
   return (

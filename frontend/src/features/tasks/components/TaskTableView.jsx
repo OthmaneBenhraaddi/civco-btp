@@ -35,7 +35,7 @@ export default function TaskTableView({ tasks, locale, t }) {
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800/70 bg-[#0f1013] px-6 py-12 text-center text-sm text-slate-400">
+      <div className="pg-panel px-6 py-12 text-center text-sm text-[var(--pg-text-dim)]">
         {t('tasks.empty')}
       </div>
     )
@@ -43,7 +43,7 @@ export default function TaskTableView({ tasks, locale, t }) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-slate-800/70 bg-[#0f1013] shadow-2xl">
+      <div className="table-wrap overflow-hidden">
         <div className="overflow-x-auto">
           <table className="task-table w-full min-w-[1200px] text-left text-sm">
             <thead>

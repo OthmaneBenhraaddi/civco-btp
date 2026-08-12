@@ -4,6 +4,9 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
@@ -121,37 +124,39 @@ export default function QuotesPage() {
   }
 
   return (
-    <div className="list-page">
-      <header className="page-header">
-        <div>
-          <h1>{t('quotes.title')}</h1>
-          <p>{t('quotes.subtitle')}</p>
-        </div>
+    <PageShell
+      compact
+      title={t('quotes.title')}
+      actions={(
         <PermissionGate permission="quote.manage">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+          <NeonButton onClick={openCreate} className={clients.length === 0 ? 'pointer-events-none opacity-40' : ''}>
             {t('quotes.new')}
-          </button>
+          </NeonButton>
         </PermissionGate>
-      </header>
-
+      )}
+    >
       {clients.length === 0 ? (
-        <p className="hint">{t('quotes.needClient')}</p>
+        <p className="hint mb-4">{t('quotes.needClient')}</p>
       ) : null}
 
-      <div className="toolbar">
+      <div className="toolbar mb-4">
         <SearchInput
           placeholder={t('quotes.search')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('quotes.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="sent">{t('status.sent')}</option>
-          <option value="accepted">{t('status.accepted')}</option>
-          <option value="rejected">{t('status.rejected')}</option>
-          <option value="expired">{t('status.expired')}</option>
-        </select>
+        <CutSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('quotes.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'sent', label: t('status.sent') },
+            { value: 'accepted', label: t('status.accepted') },
+            { value: 'rejected', label: t('status.rejected') },
+            { value: 'expired', label: t('status.expired') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -206,16 +211,16 @@ export default function QuotesPage() {
         <form className="stack" onSubmit={handleSubmit}>
           <label>
             {t('quotes.client')} *
-            <select
+            <CutSelect
+              className="w-full"
               value={form.client_id}
-              onChange={(event) => setForm({ ...form, client_id: event.target.value })}
-              required
-            >
-              <option value="">{t('quotes.selectClient')}</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
+              onChange={(client_id) => setForm({ ...form, client_id })}
+              placeholder={t('quotes.selectClient')}
+              options={[
+                { value: '', label: t('quotes.selectClient') },
+                ...clients.map((client) => ({ value: String(client.id), label: client.name })),
+              ]}
+            />
           </label>
           <div className="form-row">
             <label>
@@ -248,6 +253,6 @@ export default function QuotesPage() {
           </button>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   )
 }

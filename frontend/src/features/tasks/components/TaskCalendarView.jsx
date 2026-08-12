@@ -57,7 +57,7 @@ export default function TaskCalendarView({ tasks, locale, t }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-[#16171B] shadow-xl shadow-black/25">
+    <div className="pg-panel shadow-xl shadow-black/25">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 px-5 py-4">
         <h3 className="text-base font-semibold capitalize text-zinc-100">{monthLabel}</h3>
         <div className="flex gap-2">

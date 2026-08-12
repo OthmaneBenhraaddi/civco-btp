@@ -4,6 +4,9 @@ import PermissionGate from '../../components/PermissionGate'
 import Modal from '../../components/Modal'
 import RoleBadge from '../../components/RoleBadge'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
@@ -60,26 +63,18 @@ function ClientStatusBadge({ active, t }) {
 
 function DetailField({ label, value }) {
   return (
-    <div className="rounded-lg bg-[#0a0b0d]/40 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{label}</p>
+    <div className="pg-panel-muted p-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--pg-text-dim)]">{label}</p>
       <p className="mt-1 text-sm text-slate-200">{value || '—'}</p>
     </div>
   )
 }
 
 function clientCardClasses(isSelected) {
-  const base = [
-    'client-list-item flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left',
-    'transition-all duration-150 ease-in-out',
-  ]
-
-  if (isSelected) {
-    base.push('border-slate-700/40 bg-white/[0.06] text-white')
-  } else {
-    base.push('border-transparent bg-transparent hover:bg-white/[0.03]')
-  }
-
-  return base.join(' ')
+  return [
+    'client-list-item pg-list-item flex w-full items-start gap-3',
+    isSelected ? 'is-active' : '',
+  ].join(' ')
 }
 
 export default function ClientsPage() {
@@ -226,17 +221,17 @@ export default function ClientsPage() {
   const selectedRole = selectedClient ? resolveClientRole(selectedClient.id) : null
 
   return (
-    <div className="clients-page list-page">
-      <header className="page-header">
-        <div>
-          <h1>{t('clients.title')}</h1>
-        </div>
+    <PageShell
+      className="clients-page"
+      compact
+      title={t('clients.title')}
+      actions={(
         <PermissionGate permission="client.create">
-          <button type="button" onClick={openCreate}>{t('clients.new')}</button>
+          <NeonButton onClick={openCreate}>{t('clients.new')}</NeonButton>
         </PermissionGate>
-      </header>
-
-      <div className="toolbar">
+      )}
+    >
+      <div className="toolbar mb-6">
         <SearchInput
           placeholder={t('clients.search')}
           value={search}
@@ -249,8 +244,8 @@ export default function ClientsPage() {
       {loading ? (
         <p>{t('common.loading')}</p>
       ) : (
-        <div className="mt-6 flex w-full flex-col items-start gap-6 lg:flex-row">
-          <aside className="w-full space-y-1 rounded-xl border border-slate-800/80 bg-[#0f1013] p-2 lg:w-1/3">
+        <div className="mt-2 flex w-full flex-col items-start gap-5 lg:flex-row">
+          <aside className="pg-panel w-full space-y-1 p-2 lg:w-1/3">
             {clients.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-slate-500">{t('clients.empty')}</p>
             ) : (
@@ -278,7 +273,7 @@ export default function ClientsPage() {
             )}
           </aside>
 
-          <section className="flex min-h-[400px] w-full flex-col rounded-xl border border-slate-800/80 bg-[#0f1013] p-6 lg:w-2/3">
+          <section className="pg-panel flex min-h-[400px] w-full flex-col p-6 lg:w-2/3">
             {!selectedClient ? (
               <p className="m-auto text-center text-xs text-slate-500">{t('clients.selectPrompt')}</p>
             ) : (
@@ -328,17 +323,16 @@ export default function ClientsPage() {
                       {selectedRole ? (
                         <RoleBadge label={getRoleLabel(selectedRole, t)} tone={selectedRole.badgeTone} />
                       ) : null}
-                      <select
-                        className="client-role-select filter-select w-full py-1.5 text-xs"
+                      <CutSelect
+                        className="w-full"
+                        size="sm"
                         value={selectedRole?.id ?? 'client_extern'}
-                        onChange={(event) => assignClientRole(selectedClient.id, event.target.value)}
-                      >
-                        {getAllRoles().map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {getRoleLabel(item, t)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(roleId) => assignClientRole(selectedClient.id, roleId)}
+                        options={getAllRoles().map((item) => ({
+                          value: item.id,
+                          label: getRoleLabel(item, t),
+                        }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -416,17 +410,15 @@ export default function ClientsPage() {
           </label>
           <label>
             {t('clients.assignedRole')}
-            <select
-              className="filter-select w-full"
+            <CutSelect
+              className="w-full"
               value={form.role_id}
-              onChange={(event) => setForm({ ...form, role_id: event.target.value })}
-            >
-              {getAllRoles().map((roleOption) => (
-                <option key={roleOption.id} value={roleOption.id}>
-                  {getRoleLabel(roleOption, t)}
-                </option>
-              ))}
-            </select>
+              onChange={(role_id) => setForm({ ...form, role_id })}
+              options={getAllRoles().map((roleOption) => ({
+                value: roleOption.id,
+                label: getRoleLabel(roleOption, t),
+              }))}
+            />
           </label>
           <label>
             {t('clients.address')}
@@ -472,6 +464,6 @@ export default function ClientsPage() {
           </button>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   )
 }

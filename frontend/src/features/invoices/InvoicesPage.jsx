@@ -4,6 +4,9 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientsApi from '../../api/clients'
@@ -120,38 +123,40 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="list-page">
-      <header className="page-header">
-        <div>
-          <h1>{t('invoices.title')}</h1>
-          <p>{t('invoices.subtitle')}</p>
-        </div>
+    <PageShell
+      compact
+      title={t('invoices.title')}
+      actions={(
         <PermissionGate permission="invoice.manage">
-          <button type="button" onClick={openCreate} disabled={clients.length === 0}>
+          <NeonButton onClick={openCreate} className={clients.length === 0 ? 'pointer-events-none opacity-40' : ''}>
             {t('invoices.new')}
-          </button>
+          </NeonButton>
         </PermissionGate>
-      </header>
-
+      )}
+    >
       {clients.length === 0 ? (
-        <p className="hint">{t('invoices.needClient')}</p>
+        <p className="hint mb-4">{t('invoices.needClient')}</p>
       ) : null}
 
-      <div className="toolbar">
+      <div className="toolbar mb-4">
         <SearchInput
           placeholder={t('invoices.search')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('invoices.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="sent">{t('status.sent')}</option>
-          <option value="partially_paid">{t('status.partially_paid')}</option>
-          <option value="paid">{t('status.paid')}</option>
-          <option value="overdue">{t('status.overdue')}</option>
-          <option value="cancelled">{t('status.cancelled')}</option>
-        </select>
+        <CutSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('invoices.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'sent', label: t('status.sent') },
+            { value: 'partially_paid', label: t('status.partially_paid') },
+            { value: 'paid', label: t('status.paid') },
+            { value: 'overdue', label: t('status.overdue') },
+            { value: 'cancelled', label: t('status.cancelled') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -159,17 +164,17 @@ export default function InvoicesPage() {
       {loading ? (
         <p>{t('common.loading')}</p>
       ) : (
-        <div className="table-wrap overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#16171B] dark:shadow-black/30">
-          <table className="w-full text-left text-sm text-gray-900 dark:text-slate-200">
+        <div className="table-wrap">
+          <table>
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.reference')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.client')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.status')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.totalTtc')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.balanceDue')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('invoices.dueDate')}</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-slate-400">{t('common.actions')}</th>
+              <tr>
+                <th>{t('invoices.reference')}</th>
+                <th>{t('invoices.client')}</th>
+                <th>{t('invoices.status')}</th>
+                <th>{t('invoices.totalTtc')}</th>
+                <th>{t('invoices.balanceDue')}</th>
+                <th>{t('invoices.dueDate')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -179,16 +184,16 @@ export default function InvoicesPage() {
                 </tr>
               ) : (
                 invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
+                  <tr key={invoice.id}>
+                    <td>
                       <Link to={`/invoices/${invoice.id}`}>{invoice.reference}</Link>
                     </td>
-                    <td className="px-4 py-3">{invoice.client?.name ?? '—'}</td>
-                    <td className="px-4 py-3"><StatusBadge status={invoice.status} /></td>
-                    <td className="px-4 py-3">{formatMoney(invoice.total_ttc, locale)}</td>
-                    <td className="px-4 py-3">{formatMoney(invoice.balance_due, locale)}</td>
-                    <td className="px-4 py-3">{invoice.due_date ?? '—'}</td>
-                    <td className="actions px-4 py-3">
+                    <td>{invoice.client?.name ?? '—'}</td>
+                    <td><StatusBadge status={invoice.status} /></td>
+                    <td>{formatMoney(invoice.total_ttc, locale)}</td>
+                    <td>{formatMoney(invoice.balance_due, locale)}</td>
+                    <td>{invoice.due_date ?? '—'}</td>
+                    <td className="actions">
                       <Link to={`/invoices/${invoice.id}`} className="btn-action">{t('invoices.open')}</Link>
                       {hasPermission('invoice.manage') && invoice.status === 'draft' ? (
                         <button type="button" className="ghost danger" onClick={() => handleDelete(invoice)}>
@@ -208,16 +213,16 @@ export default function InvoicesPage() {
         <form className="stack" onSubmit={handleSubmit}>
           <label>
             {t('invoices.client')} *
-            <select
+            <CutSelect
+              className="w-full"
               value={form.client_id}
-              onChange={(event) => setForm({ ...form, client_id: event.target.value })}
-              required
-            >
-              <option value="">{t('invoices.selectClient')}</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
+              onChange={(client_id) => setForm({ ...form, client_id })}
+              placeholder={t('invoices.selectClient')}
+              options={[
+                { value: '', label: t('invoices.selectClient') },
+                ...clients.map((client) => ({ value: String(client.id), label: client.name })),
+              ]}
+            />
           </label>
           <div className="form-row">
             <label>
@@ -250,6 +255,6 @@ export default function InvoicesPage() {
           </button>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   )
 }

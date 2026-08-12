@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as documentsApi from '../../api/documents'
@@ -117,11 +118,15 @@ export default function ProjectDocumentsTab({ projectId }) {
           </label>
           <label>
             {t('documents.category')}
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              {CATEGORIES.map((item) => (
-                <option key={item} value={item}>{t(`documents.categories.${item}`)}</option>
-              ))}
-            </select>
+            <CutSelect
+              className="w-full"
+              value={category}
+              onChange={setCategory}
+              options={CATEGORIES.map((item) => ({
+                value: item,
+                label: t(`documents.categories.${item}`),
+              }))}
+            />
           </label>
           <p className="hint">{t('documents.uploadHint')}</p>
           <button type="submit" disabled={uploading || !file}>
@@ -131,11 +136,15 @@ export default function ProjectDocumentsTab({ projectId }) {
       ) : null}
 
       <div className="toolbar">
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="active">{t('documents.filters.active')}</option>
-          <option value="archived">{t('documents.filters.archived')}</option>
-          <option value="all">{t('documents.filters.all')}</option>
-        </select>
+        <CutSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: 'active', label: t('documents.filters.active') },
+            { value: 'archived', label: t('documents.filters.archived') },
+            { value: 'all', label: t('documents.filters.all') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}

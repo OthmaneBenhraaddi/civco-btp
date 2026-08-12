@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import PermissionToggle from '../../components/PermissionToggle'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
+import Reveal from '../../components/prodigy/Reveal'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { PERMISSION_MODULES } from './mockRoles'
 import {
@@ -13,23 +16,6 @@ import {
   getRoleLabel,
   persistRolePermissions,
 } from './rolesStore'
-
-function roleItemClasses(isActive) {
-  const base = [
-    'role-list-item flex w-full flex-col rounded-lg border px-3 py-2.5 text-left',
-    'transition-all duration-150 ease-in-out',
-  ]
-
-  if (isActive) {
-    base.push(
-      'role-list-item-active border-l-2 border-blue-500 border-slate-700/50 bg-white/[0.06] pl-2.5 text-white',
-    )
-  } else {
-    base.push('border-transparent bg-transparent text-slate-400 hover:bg-white/[0.03] hover:text-slate-200')
-  }
-
-  return base.join(' ')
-}
 
 export default function RolesPage() {
   const { t } = useTranslation()
@@ -97,27 +83,24 @@ export default function RolesPage() {
   }
 
   return (
-    <div className="roles-page mx-auto flex max-w-[1400px] flex-col gap-y-6">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">{t('roles.title')}</h1>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <aside className="rounded-xl border border-slate-800/60 bg-[#111214] p-4 lg:col-span-1">
+    <PageShell
+      wide
+      compact
+      title={t('roles.title')}
+      actions={<NeonButton onClick={openCreateModal}>{t('roles.createRole')}</NeonButton>}
+    >
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Reveal className="pg-panel p-4 lg:col-span-1">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--pg-text-dim)]">
               {t('roles.directoryTitle')}
             </h2>
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="roles-create-btn rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-            >
-              {t('roles.createRole')}
-            </button>
+            <span className="rounded-full border border-[var(--pg-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--pg-accent)]">
+              {roles.length}
+            </span>
           </div>
 
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
             {roles.map((role) => {
               const isActive = role.id === selectedRoleId
 
@@ -126,11 +109,13 @@ export default function RolesPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedRoleId(role.id)}
-                    className={roleItemClasses(isActive)}
+                    className={`pg-list-item ${isActive ? 'is-active' : ''}`}
                   >
-                    <span className="block truncate text-sm font-medium">{getRoleLabel(role, t)}</span>
+                    <span className="block truncate text-sm font-semibold">
+                      {getRoleLabel(role, t)}
+                    </span>
                     <span
-                      className={`mt-0.5 block truncate text-xs ${isActive ? 'text-slate-400' : 'text-slate-500'}`}
+                      className={`mt-0.5 block truncate text-xs ${isActive ? 'text-slate-300' : 'text-slate-500'}`}
                     >
                       {getRoleDescription(role, t)}
                     </span>
@@ -139,24 +124,32 @@ export default function RolesPage() {
               )
             })}
           </ul>
-        </aside>
+        </Reveal>
 
-        <section className="rounded-xl border border-slate-800/60 bg-[#111214] p-5 lg:col-span-2">
-          <div className="mb-6 border-b border-slate-800/60 pb-4">
-            <h2 className="text-lg font-semibold text-white">{getRoleLabel(selectedRole, t)}</h2>
-            <p className="mt-1 text-sm text-slate-400">{getRoleDescription(selectedRole, t)}</p>
-            <p className="mt-2 text-xs text-slate-500">
-              {t('roles.activeCount', { count: activePermissions.length, total: ALL_PERMISSION_IDS.length })}
-            </p>
+        <Reveal delay={0.08} className="pg-panel p-5 lg:col-span-2">
+          <div className="mb-6 border-b border-[var(--pg-border)] pb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-[family-name:var(--pg-font-display)] text-lg font-bold uppercase tracking-wide text-white">
+                  {getRoleLabel(selectedRole, t)}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--pg-text-muted)]">
+                  {getRoleDescription(selectedRole, t)}
+                </p>
+              </div>
+              <span className="pg-status-pill is-open">
+                {t('roles.activeCount', {
+                  count: activePermissions.length,
+                  total: ALL_PERMISSION_IDS.length,
+                })}
+              </span>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {PERMISSION_MODULES.map((module) => (
-              <article
-                key={module.id}
-                className="rounded-xl border border-slate-800/50 bg-[#0d0e11]/80 p-4"
-              >
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <article key={module.id} className="pg-panel-muted p-4">
+                <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pg-accent)]">
                   {t(module.labelKey)}
                 </h3>
                 <ul className="m-0 flex list-none flex-col p-0">
@@ -167,7 +160,7 @@ export default function RolesPage() {
                     return (
                       <li
                         key={permission.id}
-                        className="flex items-center justify-between gap-3 border-b border-slate-800/40 py-2.5 last:border-0"
+                        className="flex items-center justify-between gap-3 border-b border-[var(--pg-border)]/70 py-2.5 last:border-0"
                       >
                         <span className="text-sm text-slate-300">{label}</span>
                         <PermissionToggle
@@ -182,7 +175,7 @@ export default function RolesPage() {
               </article>
             ))}
           </div>
-        </section>
+        </Reveal>
       </div>
 
       <Modal title={t('roles.form.title')} open={createOpen} onClose={() => setCreateOpen(false)}>
@@ -209,6 +202,6 @@ export default function RolesPage() {
           <button type="submit">{t('roles.form.create')}</button>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   )
 }

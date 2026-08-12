@@ -1,229 +1,302 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import KpiCard from '../../components/KpiCard'
-import StatusBadge from '../../components/StatusBadge'
-import { useAuth } from '../../context/AuthContext'
-import { useTranslation } from '../../i18n/LanguageContext'
-import * as dashboardApi from '../../api/dashboard'
-import { extractErrorMessage } from '../../utils/apiHelpers'
-import { formatMoneyParts } from '../../utils/currency'
-
-function EmptyProjectsPlaceholder({ message }) {
-  return <p className="mt-4 text-sm text-slate-500">{message}</p>
-}
+import { motion } from 'framer-motion'
+import CutFrame from '../../components/prodigy/CutFrame'
+import NeonButton from '../../components/prodigy/NeonButton'
+import Reveal from '../../components/prodigy/Reveal'
+import {
+  FEATURE_CARDS,
+  KEY_STATS,
+  LIVE_SITES,
+  QUICK_ACTIONS,
+} from './sandboxData'
 
 export default function DashboardPage() {
-  const { t, locale } = useTranslation()
-  const { company } = useAuth()
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!company?.id) {
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    setError('')
-
-    dashboardApi.fetchDashboardSummary()
-      .then((data) => {
-        if (!cancelled) {
-          setSummary(data)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(extractErrorMessage(err, t('dashboard.loadError')))
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [t, company?.id])
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="flex items-center gap-3 rounded-xl border border-gray-700/50 bg-[#1f2937] px-5 py-3 shadow-2xl">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-blue-400" />
-          <p className="text-sm font-medium text-slate-400">{t('common.loading')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4">
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
-      </div>
-    )
-  }
-
-  const statusEntries = Object.entries(summary?.projects?.by_status ?? {})
-  const revenueParts = formatMoneyParts(summary.financial.total_revenue, locale)
-  const outstandingParts = formatMoneyParts(summary.financial.outstanding_balance, locale)
-  const expensesParts = formatMoneyParts(summary.financial.total_expenses, locale)
-
   return (
-    <div className="dashboard w-full bg-[#111827]">
-      <header className="px-6 pt-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('dashboard.title')}</h1>
-      </header>
+    <div className="pb-20">
+      {/* HERO — one composition: brand signal, headline, CTA, full-bleed visual */}
+      <section className="pg-hero-bg relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_45%)]" />
+        <div className="relative mx-auto flex min-h-[78vh] max-w-7xl flex-col justify-center px-4 pb-10 pt-16 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto max-w-4xl text-center"
+          >
+            <h1 className="font-[family-name:var(--pg-font-display)] text-[clamp(2.1rem,5vw,3.6rem)] font-extrabold leading-[1.08] tracking-tight text-white">
+              Join Into a World of{' '}
+              <span className="text-[var(--pg-accent)]">Limitless Sites</span>
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-300 sm:text-base">
+              A city of chantiers where{' '}
+              <span className="font-semibold text-[var(--pg-accent)]">relationships</span> drive
+              contracts. Open a{' '}
+              <span className="font-semibold text-[var(--pg-accent)]">project</span>, supply another,
+              build an <span className="font-semibold text-[var(--pg-accent)]">empire</span> of lots —
+              with real <span className="font-semibold text-[var(--pg-accent)]">tools</span> for every
+              crew.
+            </p>
 
-      <section className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard
-          label={t('dashboard.kpi.totalProjects')}
-          value={summary.projects.total}
-          hint={t('dashboard.kpi.activeProjects', { count: summary.projects.active_count })}
-          variant="operational"
-        />
-        <KpiCard
-          label={t('dashboard.kpi.averageProgress')}
-          value={`${summary.projects.average_progress}%`}
-          variant="progress"
-        />
-        <KpiCard
-          label={t('dashboard.kpi.totalRevenue')}
-          moneyAmount={revenueParts.amount}
-          moneyCurrency={revenueParts.currency}
-          variant="financial"
-        />
-        <KpiCard
-          label={t('dashboard.kpi.outstanding')}
-          moneyAmount={outstandingParts.amount}
-          moneyCurrency={outstandingParts.currency}
-          hint={t('dashboard.kpi.overdueInvoices', { count: summary.financial.overdue_invoices_count })}
-          variant="warning"
-        />
-        <KpiCard
-          label={t('dashboard.kpi.totalExpenses')}
-          moneyAmount={expensesParts.amount}
-          moneyCurrency={expensesParts.currency}
-          variant="expense"
-        />
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <NeonButton to="/projects">View Projects</NeonButton>
+              <NeonButton to="/tickets" variant="ghost">
+                Explore Map
+              </NeonButton>
+              <NeonButton to="/roles" variant="ghost">
+                Check Roles
+              </NeonButton>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.65 }}
+            className="mt-14"
+          >
+            <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--pg-accent)]">
+              Live Now
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {LIVE_SITES.map((site) => (
+                <CutFrame key={site.id} size="md" className="block group">
+                  <Link to="/projects" className="relative block aspect-[16/10] overflow-hidden">
+                    <img
+                      src={site.image}
+                      alt={site.name}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f17] via-[#0b0f17]/40 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3.5">
+                      <p className="text-sm font-semibold text-white">{site.name}</p>
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--pg-accent)]" />
+                        {site.viewers}
+                      </span>
+                    </div>
+                  </Link>
+                </CutFrame>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 px-6 pb-6 lg:grid-cols-12">
-        <article className="rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 shadow-lg lg:col-span-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">{t('dashboard.projectsByStatus')}</h2>
-            <span className="rounded-lg border border-slate-700/50 bg-slate-800/60 px-2.5 py-1 text-xs font-medium text-slate-400">
-              {summary.projects.total}
-            </span>
-          </div>
+      {/* KEY STATS */}
+      <section className="relative border-t border-[var(--pg-border)] bg-[var(--pg-bg-elevated)]">
+        <div
+          className="pointer-events-none absolute inset-x-0 -top-px h-8 bg-[var(--pg-bg)]"
+          style={{
+            clipPath: 'polygon(0 0, 100% 0, 100% 0, 96% 100%, 4% 100%, 0 0)',
+          }}
+        />
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <Reveal className="text-center">
+            <h2 className="pg-section-title">
+              What We Achieved{' '}
+              <span className="text-[var(--pg-accent)]">This Season</span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-[var(--pg-text-muted)]">
+              Live operational metrics across active chantiers.
+            </p>
+          </Reveal>
 
-          {statusEntries.length === 0 ? (
-            <EmptyProjectsPlaceholder message={t('dashboard.noProjects')} />
-          ) : (
-            <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
-              {statusEntries.map(([status, count]) => (
-                <li
-                  key={status}
-                  className="flex items-center justify-between rounded-lg border border-slate-800/50 bg-[#111827]/40 px-4 py-3 transition-colors hover:border-slate-700/60 hover:bg-[#111827]/60"
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {KEY_STATS.map((stat, index) => (
+              <Reveal key={stat.id} delay={index * 0.06}>
+                <CutFrame as="article" size="md" innerClassName="relative overflow-hidden p-5">
+                  <StatIcon type={stat.icon} />
+                  <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-[family-name:var(--pg-font-display)] text-3xl font-bold text-white sm:text-4xl">
+                      {stat.value}
+                    </span>
+                    <span className="text-sm font-bold uppercase tracking-wide text-[var(--pg-accent)]">
+                      {stat.unit}
+                    </span>
+                  </p>
+                  <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pg-text-dim)]">
+                    {stat.label}
+                  </p>
+                </CutFrame>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURE GRID */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <Reveal className="text-center">
+          <h2 className="pg-section-title">
+            Every Detail. <span className="text-[var(--pg-accent)]">Rethought.</span>
+          </h2>
+        </Reveal>
+
+        <div className="mt-10 grid gap-4 lg:grid-cols-3 lg:grid-rows-2">
+          <FeatureCard card={FEATURE_CARDS[0]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0} />
+          <FeatureCard card={FEATURE_CARDS[1]} className="min-h-[16rem]" delay={0.08} />
+          <FeatureCard card={FEATURE_CARDS[3]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0.12} />
+          <FeatureCard card={FEATURE_CARDS[2]} className="min-h-[16rem]" delay={0.16} />
+        </div>
+      </section>
+
+      {/* QUICK ACTIONS */}
+      <section className="mx-auto max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {QUICK_ACTIONS.map((action) => (
+              <CutFrame key={action.id} size="sm" className="block group transition hover:brightness-110">
+                <Link
+                  to={action.to}
+                  className="flex items-center gap-3 px-4 py-3.5 transition group-hover:bg-[var(--pg-accent-dim)]"
                 >
-                  <StatusBadge status={status} />
-                  <span className="font-mono text-sm font-semibold tabular-nums text-slate-300">{count}</span>
+                  <span className="pg-cut-sm flex h-9 w-9 items-center justify-center bg-[#0e121b] text-[var(--pg-accent)] ring-1 ring-[var(--pg-border)]">
+                    <QuickIcon type={action.icon} />
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                    {action.label}
+                  </span>
+                </Link>
+              </CutFrame>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* FOOTER STRIP */}
+      <footer className="mt-8 border-t border-[var(--pg-border)] bg-[#0a0e15]">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
+          <div>
+            <p className="font-[family-name:var(--pg-font-display)] text-sm font-bold italic tracking-[0.08em] text-[var(--pg-accent)]">
+              CIVCO BTP
+            </p>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--pg-text-muted)]">
+              Dark command center for Moroccan & French BTP crews — projects, devis, factures, and
+              site amendments in one place.
+            </p>
+          </div>
+          <FooterCol title="Navigate" links={['Projects', 'Clients', 'Tasks', 'Tickets']} />
+          <FooterCol title="Legal" links={['Terms', 'Privacy', 'Security']} />
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white">Site Status</p>
+            <ul className="mt-4 space-y-2.5">
+              {LIVE_SITES.map((site) => (
+                <li key={site.id} className="flex items-center justify-between text-sm">
+                  <span className="inline-flex items-center gap-2 text-slate-300">
+                    <span className="h-2 w-2 rounded-[2px] bg-[var(--pg-accent)] shadow-[0_0_8px_var(--pg-accent)]" />
+                    {site.name}
+                  </span>
+                  <span className="text-xs text-[var(--pg-text-dim)]">{site.viewers}</span>
                 </li>
               ))}
             </ul>
-          )}
-        </article>
-
-        <article className="rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 shadow-lg lg:col-span-7">
-          <h2 className="text-base font-semibold text-white">{t('dashboard.recentProjects')}</h2>
-
-          {summary.recent_projects.length === 0 ? (
-            <EmptyProjectsPlaceholder message={t('dashboard.noProjects')} />
-          ) : (
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-800/60">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-800/80 bg-[#111827]/50">
-                      <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {t('projects.reference')}
-                      </th>
-                      <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {t('projects.projectTitle')}
-                      </th>
-                      <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {t('projects.client')}
-                      </th>
-                      <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {t('projects.status')}
-                      </th>
-                      <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {t('projects.progress')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.recent_projects.map((project) => (
-                      <tr
-                        key={project.id}
-                        className="border-b border-slate-800/40 transition-colors last:border-0 hover:bg-[#111827]/30"
-                      >
-                        <td className="px-4 py-3.5">
-                          <Link
-                            to={`/projects/${project.id}`}
-                            className="font-medium text-blue-400 transition hover:text-blue-300"
-                          >
-                            {project.reference}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3.5 font-medium text-slate-200">{project.title}</td>
-                        <td className="px-4 py-3.5 text-slate-400">{project.client_name ?? '—'}</td>
-                        <td className="px-4 py-3.5">
-                          <StatusBadge status={project.status} />
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-800">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
-                                style={{ width: `${project.progress_percent}%` }}
-                              />
-                            </div>
-                            <span className="font-mono text-xs tabular-nums text-slate-400">
-                              {project.progress_percent}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </article>
-      </section>
-
-      <footer className="flex flex-wrap items-center gap-2 border-t border-slate-800/60 px-6 pb-6 pt-2">
-        <span className="text-sm font-medium text-slate-400">{t('dashboard.quickLinks')}:</span>
-        <Link
-          to="/clients"
-          className="ml-3 rounded-xl border border-slate-700/50 bg-slate-800 px-4 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-slate-700"
-        >
-          {t('nav.clients')}
-        </Link>
-        <Link
-          to="/projects"
-          className="rounded-xl border border-slate-700/50 bg-slate-800 px-4 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-slate-700"
-        >
-          {t('nav.projects')}
-        </Link>
+          </div>
+        </div>
       </footer>
     </div>
+  )
+}
+
+function FeatureCard({ card, className = '', delay = 0 }) {
+  return (
+    <Reveal delay={delay} className={`group h-full ${className}`}>
+      <CutFrame size="lg" className="relative h-full overflow-hidden" innerClassName="relative h-full min-h-[16rem] overflow-hidden lg:min-h-full">
+        <img
+          src={card.image}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f17] via-[#0b0f17]/75 to-[#0b0f17]/25" />
+        <div className="absolute inset-0 bg-[var(--pg-accent)]/0 transition duration-300 group-hover:bg-[var(--pg-accent)]/[0.07]" />
+        <div className="relative flex h-full min-h-[16rem] flex-col justify-end p-5 lg:min-h-full lg:p-6">
+          <h3 className="text-lg font-bold text-white sm:text-xl">{card.title}</h3>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-300/90">{card.description}</p>
+        </div>
+      </CutFrame>
+    </Reveal>
+  )
+}
+
+function FooterCol({ title, links }) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white">{title}</p>
+      <ul className="mt-4 space-y-2">
+        {links.map((link) => (
+          <li key={link}>
+            <span className="cursor-default text-sm text-[var(--pg-text-muted)] transition hover:text-white">
+              {link}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function StatIcon({ type }) {
+  const className = 'h-5 w-5 text-[var(--pg-accent)]'
+  if (type === 'team') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 19c0-2.5 2.5-4 6-4s6 1.5 6 4" />
+        <path d="M17 11h4M19 9v4" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  if (type === 'budget') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <circle cx="12" cy="12" r="2.5" />
+      </svg>
+    )
+  }
+  if (type === 'time') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l2.5 2.5" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 20V9l8-5 8 5v11" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  )
+}
+
+function QuickIcon({ type }) {
+  const className = 'h-4 w-4'
+  if (type === 'tickets') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path d="M4 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V8z" />
+      </svg>
+    )
+  }
+  if (type === 'clients') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 19c0-2.5 2.5-4 6-4s6 1.5 6 4" />
+      </svg>
+    )
+  }
+  if (type === 'roles') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path d="M12 3l7 3v5c0 4.5-2.8 7.8-7 10-4.2-2.2-7-5.5-7-10V6l7-3z" />
+      </svg>
+    )
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+    </svg>
   )
 }

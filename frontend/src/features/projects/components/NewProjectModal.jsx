@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
+import NeonButton from '../../../components/prodigy/NeonButton'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import {
   BATIMENT_LOTS,
@@ -13,7 +15,7 @@ import {
 
 const LABEL_CLASS = 'mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400'
 const FIELD_CLASS =
-  'w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-600/50'
+  'w-full border-0 bg-[#111722] px-3 py-2.5 text-sm text-white placeholder:text-slate-400 outline-none [clip-path:polygon(8px_0,calc(100%-8px)_0,100%_8px,100%_calc(100%-8px),calc(100%-8px)_100%,8px_100%,0_calc(100%-8px),0_8px)] [filter:drop-shadow(0_0_0.6px_#5b6a82)_drop-shadow(0_0_0.6px_#5b6a82)] focus:[filter:drop-shadow(0_0_0.7px_var(--pg-accent))_drop-shadow(0_0_0.7px_var(--pg-accent))]'
 
 function SegmentOption({ active, children, onClick, name }) {
   return (
@@ -118,51 +120,36 @@ export default function NewProjectModal({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="md:col-span-2">
             <span className={LABEL_CLASS}>{t('projects.form.client')}</span>
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
               value={form.client_id}
-              onChange={(event) => updateForm({ client_id: event.target.value })}
-              required
-            >
-              <option value="">{t('projects.selectClient')}</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              onChange={(client_id) => updateForm({ client_id })}
+              placeholder={t('projects.selectClient')}
+              options={[
+                { value: '', label: t('projects.selectClient') },
+                ...clients.map((client) => ({ value: String(client.id), label: client.name })),
+              ]}
+            />
           </label>
 
           <label>
             <span className={LABEL_CLASS}>{t('projects.form.nature')}</span>
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
               value={form.nature}
-              onChange={(event) => handleNatureChange(event.target.value)}
-              required
-            >
-              {PROJECT_NATURES.map((nature) => (
-                <option key={nature} value={nature}>
-                  {nature}
-                </option>
-              ))}
-            </select>
+              onChange={handleNatureChange}
+              options={PROJECT_NATURES.map((nature) => ({ value: nature, label: nature }))}
+            />
           </label>
 
           <label>
             <span className={LABEL_CLASS}>{t('projects.form.paymentState')}</span>
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
               value={form.etatPaiement}
-              onChange={(event) => updateForm({ etatPaiement: event.target.value })}
-              required
-            >
-              {PAYMENT_STATES.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
+              onChange={(etatPaiement) => updateForm({ etatPaiement })}
+              options={PAYMENT_STATES.map((state) => ({ value: state, label: state }))}
+            />
           </label>
 
           <label className="md:col-span-2">
@@ -326,20 +313,12 @@ export default function NewProjectModal({
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-700/50 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="new-project-modal-btn rounded-xl border border-slate-700/60 bg-transparent px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white"
-          >
+          <NeonButton type="button" variant="ghost" size="sm" onClick={onClose}>
             {t('common.cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="new-project-modal-btn rounded-xl border border-slate-600/60 bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600 disabled:opacity-60"
-          >
+          </NeonButton>
+          <NeonButton type="submit" size="sm" disabled={saving}>
             {saving ? t('projects.creating') : t('projects.create')}
-          </button>
+          </NeonButton>
         </div>
       </form>
     </Modal>

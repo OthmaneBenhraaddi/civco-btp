@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
 import { setActiveCompanyId } from '../api/client'
+import { isUiOnlyMode } from '../mocks/uiOnlyMode'
+import { MOCK_AUTH_CONTEXT } from '../mocks/seedData'
 
 const AuthContext = createContext(null)
 
@@ -41,6 +43,13 @@ export function AuthProvider({ children }) {
 
   const bootstrapSession = useCallback(async () => {
     setBootstrapError('')
+
+    // Design-time bypass: load a full mock session without hitting Laravel.
+    if (isUiOnlyMode()) {
+      const context = structuredClone(MOCK_AUTH_CONTEXT)
+      applyContext(context)
+      return context
+    }
 
     try {
       const context = await authApi.fetchMe()

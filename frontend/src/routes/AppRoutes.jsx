@@ -11,6 +11,9 @@ import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage'
 import TasksPage from '../features/tasks/TasksPage'
 import HistoryPage from '../features/history/HistoryPage'
 import RolesPage from '../features/roles/RolesPage'
+import TicketsPage from '../features/tickets/TicketsPage'
+import TicketDetailPage from '../features/tickets/TicketDetailPage'
+import NewTicketPage from '../features/tickets/NewTicketPage'
 import AppLayout from '../layouts/AppLayout'
 
 export default function AppRoutes() {
@@ -31,6 +34,9 @@ export default function AppRoutes() {
               <Route path="quotes/:id" element={<QuoteDetailPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+              <Route path="tickets" element={<TicketsPage />} />
+              <Route path="tickets/new" element={<NewTicketPage />} />
+              <Route path="tickets/:id" element={<TicketDetailPage />} />
               <Route path="roles" element={<RolesPage />} />
               <Route path="history" element={<HistoryPage />} />
             </Route>

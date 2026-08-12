@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as invoicesApi from '../../api/invoices'
@@ -182,7 +183,7 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <div>
+    <div className="list-page">
       <p className="breadcrumb">
         <Link to="/invoices">{t('invoices.title')}</Link> / {invoice.reference}
       </p>
@@ -364,16 +365,18 @@ export default function InvoiceDetailPage() {
             </label>
             <label>
               {t('invoices.paymentMethod')}
-              <select
+              <CutSelect
+                className="w-full"
                 value={paymentForm.method}
-                onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })}
-              >
-                <option value="bank_transfer">{t('invoices.methods.bank_transfer')}</option>
-                <option value="cash">{t('invoices.methods.cash')}</option>
-                <option value="check">{t('invoices.methods.check')}</option>
-                <option value="card">{t('invoices.methods.card')}</option>
-                <option value="other">{t('invoices.methods.other')}</option>
-              </select>
+                onChange={(method) => setPaymentForm({ ...paymentForm, method })}
+                options={[
+                  { value: 'bank_transfer', label: t('invoices.methods.bank_transfer') },
+                  { value: 'cash', label: t('invoices.methods.cash') },
+                  { value: 'check', label: t('invoices.methods.check') },
+                  { value: 'card', label: t('invoices.methods.card') },
+                  { value: 'other', label: t('invoices.methods.other') },
+                ]}
+              />
             </label>
             <label>
               {t('invoices.paymentReference')}

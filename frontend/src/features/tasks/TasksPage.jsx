@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import PageShell from '../../components/prodigy/PageShell'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as projectsApi from '../../api/projects'
 import { appendTask, readTasks } from './taskStore'
@@ -18,9 +21,9 @@ const VIEWS = {
 
 function TasksEmptyProjectState({ t }) {
   return (
-    <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-slate-800/80 bg-[#0f1013] py-20 text-center">
-      <p className="text-base font-medium text-white">{t('tasks.noProjectSelected')}</p>
-      <p className="mt-1 text-sm text-slate-500">{t('tasks.noProjectSelectedHint')}</p>
+    <div className="pg-panel mt-2 flex flex-col items-center justify-center py-20 text-center">
+      <p className="text-base font-semibold text-white">{t('tasks.noProjectSelected')}</p>
+      <p className="mt-1 text-sm text-[var(--pg-text-dim)]">{t('tasks.noProjectSelectedHint')}</p>
     </div>
   )
 }
@@ -84,41 +87,40 @@ export default function TasksPage() {
     setTasks(appendTask(task))
   }
 
-  function handleProjectChange(event) {
-    const value = event.target.value
+  function handleProjectChange(value) {
     setSelectedProjectId(value === '' ? null : value)
     setSearch('')
     setStatusFilter('')
   }
 
   return (
-    <div className="tasks-page mx-auto flex max-w-[1600px] flex-col gap-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">{t('tasks.title')}</h1>
-        {hasProjectSelected ? (
-          <button type="button" className="tasks-create-btn" onClick={() => setCreateOpen(true)}>
-            {t('tasks.new')}
-          </button>
-        ) : null}
-      </header>
-
-      <div className="tasks-project-bar flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-        <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+    <PageShell
+      wide
+      compact
+      className="tasks-page"
+      title={t('tasks.title')}
+      actions={hasProjectSelected ? (
+        <NeonButton onClick={() => setCreateOpen(true)}>{t('tasks.new')}</NeonButton>
+      ) : null}
+    >
+      <div className="tasks-project-bar mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <label className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pg-text-dim)]">
           {t('tasks.projectSelector.label')}
         </label>
-        <select
-          className="tasks-project-select filter-select min-w-[240px] max-w-md"
+        <CutSelect
+          className="min-w-[240px] max-w-md"
           value={selectedProjectId ?? ''}
           onChange={handleProjectChange}
           disabled={projectsLoading}
-        >
-          <option value="">{t('tasks.projectSelector.placeholder')}</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.title}
-            </option>
-          ))}
-        </select>
+          placeholder={t('tasks.projectSelector.placeholder')}
+          options={[
+            { value: '', label: t('tasks.projectSelector.placeholder') },
+            ...projects.map((project) => ({
+              value: String(project.id),
+              label: project.title,
+            })),
+          ]}
+        />
       </div>
 
       {!hasProjectSelected ? (
@@ -134,17 +136,18 @@ export default function TasksPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="filter-select min-w-[180px]"
+              <CutSelect
+                className="min-w-[180px]"
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="">{t('tasks.allStatuses')}</option>
-                <option value="working">{t('tasks.statuses.working')}</option>
-                <option value="done">{t('tasks.statuses.done')}</option>
-                <option value="stuck">{t('tasks.statuses.stuck')}</option>
-                <option value="not_started">{t('tasks.statuses.not_started')}</option>
-              </select>
+                onChange={setStatusFilter}
+                options={[
+                  { value: '', label: t('tasks.allStatuses') },
+                  { value: 'working', label: t('tasks.statuses.working') },
+                  { value: 'done', label: t('tasks.statuses.done') },
+                  { value: 'stuck', label: t('tasks.statuses.stuck') },
+                  { value: 'not_started', label: t('tasks.statuses.not_started') },
+                ]}
+              />
             </div>
 
             <div className="tasks-view-panel">
@@ -171,6 +174,6 @@ export default function TasksPage() {
         defaultProjectId={selectedProjectId}
         defaultProjectName={selectedProject?.title ?? ''}
       />
-    </div>
+    </PageShell>
   )
 }

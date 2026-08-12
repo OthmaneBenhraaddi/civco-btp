@@ -8,7 +8,7 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center overflow-hidden bg-[#111827]">
+      <div className="flex h-full items-center justify-center overflow-hidden bg-[#0b0f17]">
         <p className="text-sm text-slate-400">{t('common.loading')}</p>
       </div>
     )
@@ -16,8 +16,8 @@ export default function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full items-center justify-center overflow-hidden bg-[#111827] px-4">
-        <div className="max-w-md rounded-2xl border border-slate-800/80 bg-[#1f2937] p-6 text-center shadow-xl">
+      <div className="flex h-full items-center justify-center overflow-hidden bg-[#0b0f17] px-4">
+        <div className="max-w-md rounded-2xl border border-[#1e293b] bg-[#151c28] p-6 text-center shadow-xl">
           <p className="text-sm text-slate-300">
             {bootstrapError || t('auth.sessionError')}
           </p>

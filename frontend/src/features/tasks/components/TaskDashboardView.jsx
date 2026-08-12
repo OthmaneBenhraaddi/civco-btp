@@ -47,27 +47,27 @@ export default function TaskDashboardView({ tasks, t }) {
         <MetricCard
           label={t('tasks.metrics.all')}
           value={total}
-          accent="border-gray-800 bg-[#16171B]"
+          accent="border-[var(--pg-border)] bg-[var(--pg-card)]"
         />
         <MetricCard
           label={t('tasks.metrics.done')}
           value={done}
-          accent="border-emerald-900/50 bg-emerald-950/30"
+          accent="border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.08)]"
         />
         <MetricCard
           label={t('tasks.metrics.inProgress')}
           value={working}
-          accent="border-amber-900/50 bg-amber-950/20"
+          accent="border-[rgba(251,191,36,0.35)] bg-[rgba(251,191,36,0.08)]"
         />
         <MetricCard
           label={t('tasks.metrics.stuck')}
           value={stuck}
-          accent="border-rose-900/50 bg-rose-950/20"
+          accent="border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)]"
         />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-xl border border-gray-800 bg-[#16171B] p-6 shadow-xl shadow-black/25">
+        <article className="pg-panel p-6">
           <h3 className="mb-5 text-base font-semibold text-zinc-100">{t('tasks.widgets.byStatus')}</h3>
           <div className="space-y-4">
             <ProgressBar
@@ -100,7 +100,7 @@ export default function TaskDashboardView({ tasks, t }) {
           </div>
         </article>
 
-        <article className="rounded-xl border border-gray-800 bg-[#16171B] p-6 shadow-xl shadow-black/25">
+        <article className="pg-panel p-6">
           <h3 className="mb-5 text-base font-semibold text-zinc-100">{t('tasks.widgets.byOwner')}</h3>
           {ownerEntries.length === 0 ? (
             <p className="text-sm text-zinc-500">{t('tasks.empty')}</p>
