@@ -20,6 +20,7 @@ use App\Models\ContractAmendment;
 use App\Models\Project;
 use App\Services\ClientPortalService;
 use App\Services\ContractAmendmentService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,6 +32,7 @@ class ClientPortalController extends Controller
     public function __construct(
         private readonly ClientPortalService $clientPortalService,
         private readonly ContractAmendmentService $amendmentService,
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function projects(Request $request): AnonymousResourceCollection
@@ -129,7 +131,13 @@ class ClientPortalController extends Controller
             'status' => ContractStatus::SignedByClient,
         ]);
 
-        return new ContractResource($contract->fresh()->load(['project:id,title,reference', 'client:id,name']));
+        $fresh = $contract->fresh()->load(['project:id,title,reference', 'client:id,name']);
+
+        if ($fresh->tenant_id !== null) {
+            $this->notificationService->notifyContractSigned($fresh, $request->user());
+        }
+
+        return new ContractResource($fresh);
     }
 
     public function amendments(Request $request, Project $project): AnonymousResourceCollection

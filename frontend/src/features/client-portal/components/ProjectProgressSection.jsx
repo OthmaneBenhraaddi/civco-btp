@@ -34,8 +34,8 @@ export default function ProgressRing({ percent = 0, label }) {
           />
           <defs>
             <linearGradient id="portalProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="100%" stopColor="#34d399" />
+              <stop offset="0%" stopColor="#4ade80" />
+              <stop offset="100%" stopColor="#22c55e" />
             </linearGradient>
           </defs>
         </svg>
@@ -61,7 +61,7 @@ export function ProgressBar({ percent = 0, label }) {
       ) : null}
       <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-700"
+          className="h-full bg-gradient-to-r from-emerald-300 to-emerald-500 transition-all duration-700"
           style={{ width: `${safePercent}%` }}
         />
       </div>
@@ -69,15 +69,15 @@ export function ProgressBar({ percent = 0, label }) {
   )
 }
 
-export function useWeekLabel(locale) {
+export function useWeekLabel() {
   return useMemo(() => {
     const now = new Date()
     const end = new Date(now)
     end.setDate(end.getDate() + 6)
-    const fmt = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'fr-FR', {
+    const fmt = new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
       month: 'short',
     })
     return `${fmt.format(now)} – ${fmt.format(end)}`
-  }, [locale])
+  }, [])
 }

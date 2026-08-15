@@ -21,10 +21,6 @@ export function sessionMatchesTenantContext(user, tenant, activeTenantSlug) {
 }
 
 export function resolveProfileRoleLabel(user, roles, t) {
-  if (user?.job_title) {
-    return user.job_title
-  }
-
   if (roles?.[0]?.name) {
     return roles[0].name
   }
@@ -35,6 +31,10 @@ export function resolveProfileRoleLabel(user, roles, t) {
 
   if (user?.role === 'admin') {
     return t('layout.profileRoleAdmin')
+  }
+
+  if (user?.job_title) {
+    return user.job_title
   }
 
   return t('layout.profileRoleMember')

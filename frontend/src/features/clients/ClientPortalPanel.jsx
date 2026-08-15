@@ -58,27 +58,29 @@ export default function ClientPortalPanel({
           ) : null}
         </div>
         {canManage ? (
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
-            <span>{isActive ? t('clients.portal.active') : t('clients.portal.inactive')}</span>
+          <div className="flex flex-col items-end gap-2">
+            <span
+              className={[
+                'text-[11px] font-semibold uppercase tracking-[0.12em]',
+                isActive ? 'text-emerald-400' : 'text-slate-500',
+              ].join(' ')}
+            >
+              {isActive ? t('clients.portal.active') : t('clients.portal.inactive')}
+            </span>
             <button
               type="button"
               role="switch"
               aria-checked={isActive}
+              aria-label={isActive ? t('clients.portal.active') : t('clients.portal.inactive')}
               disabled={toggleDisabled}
               onClick={() => onToggle(!isActive)}
-              className={[
-                'relative h-6 w-11 rounded-full transition-colors disabled:opacity-60',
-                isActive ? 'bg-emerald-500' : 'bg-slate-600',
-              ].join(' ')}
+              className={['pg-toggle', isActive ? 'is-on' : '', toggleDisabled ? 'is-disabled' : '']
+                .filter(Boolean)
+                .join(' ')}
             >
-              <span
-                className={[
-                  'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
-                  isActive ? 'translate-x-5' : 'translate-x-0.5',
-                ].join(' ')}
-              />
+              <span className="pg-toggle__knob" />
             </button>
-          </label>
+          </div>
         ) : null}
       </div>
 

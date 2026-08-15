@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import SearchInput from '../../components/SearchInput'
 import StatusBadge from '../../components/StatusBadge'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as teamMembersApi from '../../api/teamMembers'
@@ -142,18 +143,19 @@ export default function SuperAdminMembersPage() {
           <span className="mb-1.5 block font-semibold uppercase tracking-wider">
             {t('superAdmin.members.filterByEntity')}
           </span>
-          <select
-            className="filter-select w-full py-2 text-sm"
+          <CutSelect
+            className="w-full min-w-[180px]"
+            size="sm"
             value={tenantFilter}
-            onChange={(event) => setTenantFilter(event.target.value)}
-          >
-            <option value="">{t('superAdmin.members.allEntities')}</option>
-            {tenants.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
+            onChange={setTenantFilter}
+            options={[
+              { value: '', label: t('superAdmin.members.allEntities') },
+              ...tenants.map((tenant) => ({
+                value: String(tenant.id),
+                label: tenant.name,
+              })),
+            ]}
+          />
         </label>
 
         <div className="min-w-[16rem] flex-1">

@@ -26,7 +26,7 @@ export default function PortalContactList({
 
   if (contacts.length === 0) {
     return (
-      <p className="mx-4 my-6 rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-8 text-center text-sm text-slate-500">
+      <p className="pg-inner-tile mx-4 my-6 px-4 py-8 text-center text-sm text-[var(--pg-text-dim)]">
         {emptyMessage ?? t('messaging.noContacts')}
       </p>
     )
@@ -46,7 +46,7 @@ export default function PortalContactList({
               className={[
                 'flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors',
                 isActive
-                  ? 'bg-indigo-500/10 text-white'
+                  ? 'bg-[var(--pg-accent-dim)] text-white'
                   : hasUnread
                     ? 'bg-amber-500/[0.06] text-white hover:bg-amber-500/[0.09]'
                     : 'text-slate-300 hover:bg-white/[0.03]',

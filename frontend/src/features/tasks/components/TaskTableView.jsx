@@ -6,8 +6,8 @@ import TaskDocumentsIndicator from './TaskDocumentsIndicator'
 import TaskPriorityBadge from './TaskPriorityBadge'
 import TaskStatusBadge from './TaskStatusBadge'
 
-function formatDueDate(isoDate, locale) {
-  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+function formatDueDate(isoDate) {
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -22,7 +22,7 @@ function ProjectBadge({ name }) {
   )
 }
 
-export default function TaskTableView({ tasks, locale, t, canManageTask, onEditTask }) {
+export default function TaskTableView({ tasks, t, canManageTask, onEditTask }) {
   const [previewState, setPreviewState] = useState({ open: false, files: [] })
 
   function openPreview(files) {
@@ -88,7 +88,7 @@ export default function TaskTableView({ tasks, locale, t, canManageTask, onEditT
                     />
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-slate-300">
-                    {formatDueDate(task.echeance, locale)}
+                    {formatDueDate(task.echeance)}
                   </td>
                   <td className="px-4 py-4">
                     <TaskPriorityBadge
@@ -97,7 +97,7 @@ export default function TaskTableView({ tasks, locale, t, canManageTask, onEditT
                     />
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 font-mono text-slate-200">
-                    {formatMoney(task.budget, locale)}
+                    {formatMoney(task.budget)}
                   </td>
                   <td className="px-4 py-4">
                     <TaskDocumentsIndicator

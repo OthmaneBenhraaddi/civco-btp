@@ -1,4 +1,5 @@
-import { FIELD_CLASS, LABEL_CLASS } from '../../../theme/designTokens'
+import CutSelect from '../../../components/prodigy/CutSelect'
+import { LABEL_CLASS } from '../../../theme/designTokens'
 
 export default function PortalProjectSelector({
   projects,
@@ -11,20 +12,20 @@ export default function PortalProjectSelector({
     return null
   }
 
+  const options = projects.map((project) => ({
+    value: String(project.id),
+    label: `${project.reference} — ${project.title}`,
+  }))
+
   return (
     <label className={[LABEL_CLASS, 'max-w-md', className].filter(Boolean).join(' ')}>
       {label}
-      <select
-        className={FIELD_CLASS}
-        value={selectedProjectId ?? ''}
-        onChange={(event) => onChange(Number(event.target.value))}
-      >
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.reference} — {project.title}
-          </option>
-        ))}
-      </select>
+      <CutSelect
+        className="mt-2 w-full"
+        value={selectedProjectId != null ? String(selectedProjectId) : ''}
+        options={options}
+        onChange={(next) => onChange(Number(next))}
+      />
     </label>
   )
 }

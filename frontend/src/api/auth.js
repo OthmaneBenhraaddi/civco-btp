@@ -23,3 +23,15 @@ export async function updateProfile(payload) {
   const { data } = await api.patch('/api/v1/me', payload)
   return data
 }
+
+export async function uploadAvatar(file) {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  const { data } = await api.post('/api/v1/me/avatar', formData)
+  return data
+}
+
+export async function deleteAvatar() {
+  const { data } = await api.delete('/api/v1/me/avatar')
+  return data
+}

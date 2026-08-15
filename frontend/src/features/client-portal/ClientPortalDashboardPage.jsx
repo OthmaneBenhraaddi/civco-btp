@@ -14,20 +14,20 @@ import PortalAmendmentsPanel from './components/PortalAmendmentsPanel'
 import PortalProjectSelector from './components/PortalProjectSelector'
 import ProgressRing, { ProgressBar, useWeekLabel } from './components/ProjectProgressSection'
 
-function MilestoneList({ milestones, loading, t, locale }) {
+function MilestoneList({ milestones, loading, t }) {
   if (loading) {
     return <p className="text-sm text-slate-500">{t('common.loading')}</p>
   }
 
   if (milestones.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-6 text-sm text-slate-500">
+      <p className="pg-inner-tile px-4 py-6 text-sm text-[var(--pg-text-dim)]">
         {t('clientPortal.noMilestones')}
       </p>
     )
   }
 
-  const dateFmt = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'fr-FR', {
+  const dateFmt = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -38,7 +38,7 @@ function MilestoneList({ milestones, loading, t, locale }) {
       {milestones.map((milestone) => (
         <li
           key={milestone.id}
-          className="flex items-start justify-between gap-3 rounded-xl border border-white/[0.06] bg-[#121316] px-4 py-3"
+          className="pg-inner-tile flex items-start justify-between gap-3 px-4 py-3"
         >
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white">{milestone.title}</p>
@@ -48,7 +48,7 @@ function MilestoneList({ milestones, loading, t, locale }) {
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-xs font-medium text-indigo-300">
+            <p className="text-xs font-medium text-[var(--pg-accent)]">
               {milestone.due_date ? dateFmt.format(new Date(milestone.due_date)) : '—'}
             </p>
             <p className="text-[10px] uppercase tracking-wide text-slate-500">{milestone.status}</p>
@@ -60,9 +60,9 @@ function MilestoneList({ milestones, loading, t, locale }) {
 }
 
 export default function ClientPortalDashboardPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { user } = useAuth()
-  const weekLabel = useWeekLabel(locale)
+  const weekLabel = useWeekLabel()
 
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
@@ -171,7 +171,7 @@ export default function ClientPortalDashboardPage() {
       </header>
 
       {error ? (
-        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
           {error}
         </div>
       ) : null}
@@ -185,19 +185,19 @@ export default function ClientPortalDashboardPage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               to={resolveNavPath('/portal/quotes', user)}
-              className="inline-flex rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-500/15"
+              className="inline-flex border border-[rgba(251,191,36,0.35)] bg-[rgba(251,191,36,0.1)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-amber-200 transition-colors hover:bg-[rgba(251,191,36,0.16)]"
             >
               {t('clientPortal.quotes.title')}
             </Link>
             <Link
-              to={resolveNavPath('/portal/discussions', user)}
-              className="inline-flex rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 transition-colors hover:bg-indigo-500/15"
+              to={resolveNavPath('/portal/tickets/new', user)}
+              className="inline-flex border border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--pg-accent)] transition-colors hover:bg-[rgba(34,197,94,0.2)]"
             >
-              {t('clientPortal.openDiscussions')}
+              {t('tickets.new')}
             </Link>
             <Link
               to={resolveNavPath('/portal/calendar', user)}
-              className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-white/[0.06]"
+              className="inline-flex border border-[var(--pg-border-strong)] bg-[var(--pg-bg-elevated)] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-200 transition-colors hover:text-white"
             >
               {t('clientPortal.openCalendar')}
             </Link>
@@ -207,8 +207,8 @@ export default function ClientPortalDashboardPage() {
         <>
           <div className="grid gap-6 xl:grid-cols-3">
             <section className={`${BENTO_CARD_CLASS} p-6 xl:col-span-1`}>
-              <h2 className="text-lg font-semibold text-white">{t('clientPortal.progressTitle')}</h2>
-              <p className="mt-1 text-sm text-slate-400">{selectedProject?.title}</p>
+              <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('clientPortal.progressTitle')}</h2>
+              <p className="mt-1 text-sm text-[var(--pg-text-muted)]">{selectedProject?.title}</p>
 
               <div className="mt-6 flex flex-col items-center gap-6">
                 <ProgressRing
@@ -220,29 +220,29 @@ export default function ClientPortalDashboardPage() {
                   label={t('clientPortal.completion')}
                 />
                 <dl className="grid w-full grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                  <div className="pg-inner-tile px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.reference')}</dt>
                     <dd className="mt-1 font-medium text-white">{selectedProject?.reference}</dd>
                   </div>
-                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                  <div className="pg-inner-tile px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.status')}</dt>
                     <dd className="mt-1 font-medium capitalize text-white">{selectedProject?.status}</dd>
                   </div>
-                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                  <div className="pg-inner-tile px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.city')}</dt>
                     <dd className="mt-1 font-medium text-white">{selectedProject?.site_city ?? '—'}</dd>
                   </div>
-                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                  <div className="pg-inner-tile px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.endDate')}</dt>
                     <dd className="mt-1 font-medium text-white">
                       {selectedProject?.revised_end_date ?? selectedProject?.end_date ?? '—'}
                     </dd>
                   </div>
-                  <div className="rounded-lg bg-[#121316] px-3 py-2">
+                  <div className="pg-inner-tile px-3 py-2">
                     <dt className="text-slate-500">{t('clientPortal.revisedBudget')}</dt>
                     <dd className="mt-1 font-medium text-white">
                       {selectedProject?.revised_budget != null
-                        ? formatMoney(selectedProject.revised_budget, locale)
+                        ? formatMoney(selectedProject.revised_budget)
                         : '—'}
                     </dd>
                   </div>
@@ -253,16 +253,15 @@ export default function ClientPortalDashboardPage() {
             <section className={`${BENTO_CARD_CLASS} p-6 xl:col-span-2`}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">{t('clientPortal.calendarTitle')}</h2>
-                  <p className="mt-1 text-sm text-slate-400">{t('clientPortal.calendarSubtitle')}</p>
+                  <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('clientPortal.calendarTitle')}</h2>
+                  <p className="mt-1 text-sm text-[var(--pg-text-muted)]">{t('clientPortal.calendarSubtitle')}</p>
                 </div>
-                <span className="rounded-lg bg-[#121316] px-3 py-1.5 text-xs text-slate-400">{weekLabel}</span>
+                <span className="pg-inner-tile px-3 py-1.5 text-xs text-[var(--pg-text-dim)]">{weekLabel}</span>
               </div>
               <MilestoneList
                 milestones={milestones}
                 loading={loadingDetails}
                 t={t}
-                locale={locale}
               />
             </section>
           </div>

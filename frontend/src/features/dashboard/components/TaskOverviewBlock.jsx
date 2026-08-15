@@ -27,7 +27,7 @@ import {
 const INTERVALS = ['monthly', 'weekly', 'daily']
 
 export default function TaskOverviewBlock() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { colors } = useTheme()
   const { tasks } = useProjectTasks()
   const [interval, setInterval] = useState('monthly')
@@ -39,15 +39,15 @@ export default function TaskOverviewBlock() {
 
     return {
       totalTasks: tasks.length,
-      chartData: buildTaskChartSeries(interval, locale, totals),
+      chartData: buildTaskChartSeries(interval, totals),
     }
-  }, [interval, locale, tasks])
+  }, [interval, tasks])
 
   return (
     <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-white">{t('dashboard.taskTracking')}</h2>
+          <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('dashboard.taskTracking')}</h2>
           <p className="mt-1 text-2xl font-black tracking-tight text-white">
             {t('dashboard.totalTasks', { count: totalTasks })}
           </p>

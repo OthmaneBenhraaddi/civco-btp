@@ -6,7 +6,16 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import * as amendmentsApi from '../../api/amendments'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
-import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
+import NeonButton from '../../components/prodigy/NeonButton'
+import CutSelect from '../../components/prodigy/CutSelect'
+import {
+  FIELD_CLASS,
+  LABEL_CLASS,
+  PG_BADGE,
+  PG_BADGE_TONES,
+  PG_STAT_ACCENT_CLASS,
+  PG_STAT_CLASS,
+} from '../../theme/designTokens'
 
 const TYPES = ['budget', 'duration', 'scope', 'mixed']
 
@@ -20,10 +29,10 @@ const emptyForm = {
 }
 
 const STATUS_CLASS = {
-  draft: 'bg-slate-500/15 text-slate-300',
-  pending_client: 'bg-amber-500/15 text-amber-300',
-  validated: 'bg-emerald-500/15 text-emerald-300',
-  refused: 'bg-rose-500/15 text-rose-300',
+  draft: PG_BADGE_TONES.draft,
+  pending_client: PG_BADGE_TONES.pending,
+  validated: PG_BADGE_TONES.success,
+  refused: PG_BADGE_TONES.danger,
 }
 
 function formatSignedMoney(value, locale) {
@@ -43,7 +52,7 @@ function formatSignedDays(value, t) {
 
 function StatusBadge({ status, t }) {
   return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_CLASS[status] ?? STATUS_CLASS.draft}`}>
+    <span className={`${PG_BADGE} ${STATUS_CLASS[status] ?? STATUS_CLASS.draft}`}>
       {t(`amendments.statuses.${status}`)}
     </span>
   )
@@ -200,55 +209,39 @@ export default function ProjectAmendmentsTab({ projectId, project, onProjectRefr
   return (
     <section className="stack space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-white/[0.06] bg-[#16171b] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            {t('amendments.initialBudget')}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-white">
+        <div className={PG_STAT_CLASS}>
+          <p className="pg-stat__label">{t('amendments.initialBudget')}</p>
+          <p className="pg-stat__value">
             {summary.initialBudget == null ? '—' : formatMoney(summary.initialBudget, locale)}
           </p>
         </div>
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/80">
-            {t('amendments.currentBudget')}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-emerald-300">
+        <div className={PG_STAT_ACCENT_CLASS}>
+          <p className="pg-stat__label">{t('amendments.currentBudget')}</p>
+          <p className="pg-stat__value">
             {summary.totalBudget == null ? '—' : formatMoney(summary.totalBudget, locale)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {formatSignedMoney(summary.amountDelta, locale)}
-          </p>
+          <p className="pg-stat__hint">{formatSignedMoney(summary.amountDelta, locale)}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-[#16171b] p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            {t('amendments.initialEndDate')}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-white">
-            {summary.initialEndDate || '—'}
-          </p>
+        <div className={PG_STAT_CLASS}>
+          <p className="pg-stat__label">{t('amendments.initialEndDate')}</p>
+          <p className="pg-stat__value">{summary.initialEndDate || '—'}</p>
         </div>
-        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-400/80">
-            {t('amendments.adjustedEndDate')}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-sky-300">
-            {summary.adjustedEndDate || '—'}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            {formatSignedDays(summary.durationDelta, t)}
-          </p>
+        <div className={PG_STAT_CLASS}>
+          <p className="pg-stat__label">{t('amendments.adjustedEndDate')}</p>
+          <p className="pg-stat__value">{summary.adjustedEndDate || '—'}</p>
+          <p className="pg-stat__hint">{formatSignedDays(summary.durationDelta, t)}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">{t('amendments.listTitle')}</h3>
-          <p className="text-xs text-slate-500">{t('amendments.listSubtitle')}</p>
+          <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('amendments.listTitle')}</h3>
+          <p className="mt-1 text-xs text-[var(--pg-text-dim)]">{t('amendments.listSubtitle')}</p>
         </div>
         {canManage ? (
-          <button type="button" className={BTN_PRIMARY} onClick={openCreate}>
+          <NeonButton type="button" size="sm" onClick={openCreate}>
             {t('amendments.add')}
-          </button>
+          </NeonButton>
         ) : null}
       </div>
 
@@ -377,20 +370,18 @@ export default function ProjectAmendmentsTab({ projectId, project, onProjectRefr
             />
           </label>
 
-          <label>
+          <div>
             <span className={LABEL_CLASS}>{t('amendments.type')}</span>
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="mt-1 w-full"
               value={form.type}
-              onChange={(event) => setForm({ ...form, type: event.target.value })}
-            >
-              {TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {t(`amendments.types.${type}`)}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(type) => setForm({ ...form, type })}
+              options={TYPES.map((type) => ({
+                value: type,
+                label: t(`amendments.types.${type}`),
+              }))}
+            />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
@@ -439,9 +430,9 @@ export default function ProjectAmendmentsTab({ projectId, project, onProjectRefr
             <span className="mt-1 block text-xs text-slate-500">{t('amendments.fileHint')}</span>
           </label>
 
-          <button type="submit" disabled={saving} className={BTN_PRIMARY}>
+          <NeonButton type="submit" disabled={saving} className="w-full">
             {saving ? t('common.saving') : t('amendments.create')}
-          </button>
+          </NeonButton>
         </form>
       </Modal>
     </section>

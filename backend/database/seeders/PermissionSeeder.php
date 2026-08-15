@@ -50,6 +50,10 @@ class PermissionSeeder extends Seeder
             ['name' => 'View clients (semantic)', 'slug' => 'view_clients', 'module' => 'client'],
             ['name' => 'Edit clients (semantic)', 'slug' => 'edit_clients', 'module' => 'client'],
             ['name' => 'Manage projects (semantic)', 'slug' => 'manage_projects', 'module' => 'project'],
+            ['name' => 'View tickets', 'slug' => 'ticket.view', 'module' => 'ticket'],
+            ['name' => 'Create tickets', 'slug' => 'ticket.create', 'module' => 'ticket'],
+            ['name' => 'Reply to tickets', 'slug' => 'ticket.reply', 'module' => 'ticket'],
+            ['name' => 'Close tickets', 'slug' => 'ticket.close', 'module' => 'ticket'],
         ];
 
         foreach ($permissions as $permission) {

@@ -1,7 +1,7 @@
 import { BENTO_CARD_CLASS } from '../theme/designTokens'
 
 const DOT_COLORS = {
-  purple: 'bg-indigo-400',
+  purple: 'bg-emerald-400',
   cyan: 'bg-sky-400',
   green: 'bg-emerald-400',
   orange: 'bg-amber-400',
@@ -30,7 +30,7 @@ export default function KpiCard({
 
   return (
     <article
-      className={`relative min-w-0 overflow-hidden ${BENTO_CARD_CLASS} bg-[#121316] p-5 transition-colors duration-200 hover:bg-[#16171b]`}
+      className={`relative min-w-0 overflow-hidden ${BENTO_CARD_CLASS} p-5 transition-[filter,background] duration-200 hover:brightness-110`}
     >
       <span
         className={`absolute right-5 top-5 h-1.5 w-1.5 rounded-full ${dot}`}

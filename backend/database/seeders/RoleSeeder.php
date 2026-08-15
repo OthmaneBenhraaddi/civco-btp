@@ -28,6 +28,7 @@ class RoleSeeder extends Seeder
                     'task.view_all', 'task.update',
                     'document.view', 'document.upload', 'document.archive', 'expense.view', 'expense.manage',
                     'quote.view', 'invoice.view', 'delivery_form.view',
+                    'ticket.view', 'ticket.create', 'ticket.reply', 'ticket.close',
                 ],
             ],
             'commercial' => [
@@ -38,6 +39,7 @@ class RoleSeeder extends Seeder
                     'dashboard.view', 'client.view', 'client.create', 'client.update',
                     'project.view', 'quote.view', 'quote.manage', 'delivery_form.view', 'delivery_form.manage', 'invoice.view', 'invoice.manage',
                     'document.view', 'document.upload',
+                    'ticket.view', 'ticket.reply',
                 ],
             ],
             'accountant' => [
@@ -74,6 +76,7 @@ class RoleSeeder extends Seeder
                 'badge_tone' => 'amber',
                 'permissions' => [
                     'dashboard.view', 'project.view', 'project.update', 'task.view_all', 'task.update',
+                    'ticket.view', 'ticket.reply',
                 ],
             ],
             'conducteur_travaux' => [
@@ -82,6 +85,7 @@ class RoleSeeder extends Seeder
                 'badge_tone' => 'sky',
                 'permissions' => [
                     'dashboard.view', 'project.view', 'project.update', 'task.view_all',
+                    'ticket.view', 'ticket.reply',
                 ],
             ],
             'client_extern' => [

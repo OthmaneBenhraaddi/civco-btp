@@ -38,7 +38,7 @@ export default function ProvisionSuccessBanner({ result, variant = 'tenant' }) {
           <dd className="text-sm">
             <a
               href={result.login_url}
-              className="text-indigo-300 underline-offset-2 hover:underline"
+              className="text-[var(--pg-accent)] underline-offset-2 hover:underline"
               target="_blank"
               rel="noreferrer"
             >

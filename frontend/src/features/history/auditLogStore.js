@@ -145,18 +145,23 @@ export const ACTION_BADGE_CLASS = {
 
 export const ACTION_TOAST_CLASS = {
   creation: {
-    container: 'border border-emerald-500/20 bg-slate-900/75 backdrop-blur-md',
+    shell: 'is-toast-creation',
     icon: 'text-emerald-400',
     title: 'text-emerald-400',
   },
   modification: {
-    container: 'border border-amber-500/20 bg-slate-900/75 backdrop-blur-md',
+    shell: 'is-toast-modification',
     icon: 'text-amber-400',
     title: 'text-amber-400',
   },
   suppression: {
-    container: 'border border-red-500/20 bg-slate-900/75 backdrop-blur-md',
+    shell: 'is-toast-suppression',
     icon: 'text-red-400',
     title: 'text-red-400',
+  },
+  error: {
+    shell: 'is-toast-error',
+    icon: 'text-rose-400',
+    title: 'text-rose-300',
   },
 }

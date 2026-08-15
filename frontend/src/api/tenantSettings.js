@@ -12,3 +12,8 @@ export async function uploadTenantLogo(file) {
   const { data } = await api.post('/api/v1/tenant/logo', formData)
   return data
 }
+
+export async function deleteTenantLogo() {
+  const { data } = await api.delete('/api/v1/tenant/logo')
+  return data
+}

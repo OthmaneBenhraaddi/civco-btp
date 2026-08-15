@@ -75,13 +75,9 @@ export function isSuperAdminOnlyPath(pathname) {
   )
 }
 
-/** Entity-scoped admin routes that platform super admins must not access. */
-export function isEntityBoundAdminPath(pathname) {
-  if (pathname.startsWith('/super-admin')) {
-    return false
-  }
-
-  return pathname === '/discussions' || pathname.startsWith('/discussions/')
+/** Retained for route guard compatibility; messaging is no longer entity navigation. */
+export function isEntityBoundAdminPath() {
+  return false
 }
 
 /** @deprecated Use canAccessRoute with permissions instead. */

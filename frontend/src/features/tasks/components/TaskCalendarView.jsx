@@ -27,7 +27,7 @@ function toIsoDate(date) {
   return `${y}-${m}-${d}`
 }
 
-export default function TaskCalendarView({ tasks, locale, t }) {
+export default function TaskCalendarView({ tasks, t }) {
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
 
@@ -47,7 +47,7 @@ export default function TaskCalendarView({ tasks, locale, t }) {
     return map
   }, [tasks])
 
-  const monthLabel = viewDate.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+  const monthLabel = viewDate.toLocaleDateString('fr-FR', {
     month: 'long',
     year: 'numeric',
   })

@@ -13,7 +13,6 @@ export default function ActivityLogFeed({
   lastPage = 1,
   onPageChange,
   t,
-  locale,
 }) {
   if (loading && logs.length === 0) {
     return <p className="text-sm text-slate-500">{t('common.loading')}</p>
@@ -43,7 +42,7 @@ export default function ActivityLogFeed({
               <div className="relative flex justify-center pt-1.5">
                 <span
                   className={[
-                    'relative z-[1] h-2.5 w-2.5 rounded-full ring-2 ring-[#0b0c0e]',
+                    'relative z-[1] h-2.5 w-2.5 rounded-full ring-2 ring-[#0b0f17]',
                     ACTION_DOT_CLASS[log.action] ?? ACTION_DOT_CLASS.modification,
                   ].join(' ')}
                   aria-hidden
@@ -54,7 +53,7 @@ export default function ActivityLogFeed({
                 <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-sm font-medium text-white">{log.actor}</span>
                   <time className="text-xs tabular-nums text-slate-500">
-                    {formatAuditTime(log.timestamp ?? log.created_at, locale)}
+                    {formatAuditTime(log.timestamp ?? log.created_at)}
                   </time>
                   <span
                     className={[
@@ -65,7 +64,7 @@ export default function ActivityLogFeed({
                     {actionBadgeLabel(log.action, t)}
                   </span>
                   {log.tenant_name ? (
-                    <span className="rounded bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-indigo-300">
+                    <span className="bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-[var(--pg-accent)]">
                       {log.tenant_name}
                     </span>
                   ) : null}

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const WEEKDAY_LABELS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const WEEKDAY_LABELS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function buildMonthGrid(year, month) {
   const firstDay = new Date(year, month, 1)
@@ -25,7 +24,7 @@ function buildMonthGrid(year, month) {
   return cells
 }
 
-export default function PortalMonthCalendar({ locale, milestones = [], emptyLabel }) {
+export default function PortalMonthCalendar({ milestones = [], emptyLabel }) {
   const today = new Date()
   const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
 
@@ -51,12 +50,12 @@ export default function PortalMonthCalendar({ locale, milestones = [], emptyLabe
     return map
   }, [milestones])
 
-  const monthLabel = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'fr-FR', {
+  const monthLabel = new Intl.DateTimeFormat('fr-FR', {
     month: 'long',
     year: 'numeric',
   }).format(viewDate)
 
-  const weekdayLabels = locale === 'en' ? WEEKDAY_LABELS_EN : WEEKDAY_LABELS_FR
+  const weekdayLabels = WEEKDAY_LABELS_FR
 
   function shiftMonth(delta) {
     setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1))
@@ -107,13 +106,13 @@ export default function PortalMonthCalendar({ locale, milestones = [], emptyLabe
                 'min-h-[72px] rounded-xl border px-2 py-2 text-left sm:min-h-[88px]',
                 day === null
                   ? 'border-transparent bg-transparent'
-                  : 'border-white/[0.06] bg-[#121316]',
-                isToday ? 'ring-1 ring-indigo-500/40' : '',
+                  : 'border-[var(--pg-border)] bg-[var(--pg-bg-elevated)]',
+                isToday ? 'ring-1 ring-[rgba(34,197,94,0.45)]' : '',
               ].join(' ')}
             >
               {day !== null ? (
                 <>
-                  <span className={`text-sm font-medium ${isToday ? 'text-indigo-300' : 'text-slate-300'}`}>
+                  <span className={`text-sm font-medium ${isToday ? 'text-[var(--pg-accent)]' : 'text-slate-300'}`}>
                     {day}
                   </span>
                   {dayMilestones.length > 0 ? (
@@ -121,7 +120,7 @@ export default function PortalMonthCalendar({ locale, milestones = [], emptyLabe
                       {dayMilestones.slice(0, 2).map((milestone) => (
                         <li
                           key={milestone.id}
-                          className="truncate rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] text-indigo-200"
+                          className="truncate bg-[var(--pg-accent-dim)] px-1.5 py-0.5 text-[10px] text-[var(--pg-accent-soft)]"
                           title={milestone.title}
                         >
                           {milestone.title}
@@ -140,7 +139,7 @@ export default function PortalMonthCalendar({ locale, milestones = [], emptyLabe
       </div>
 
       {milestones.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-6 text-center text-sm text-slate-500">
+        <p className="pg-inner-tile px-4 py-6 text-center text-sm text-[var(--pg-text-dim)]">
           {emptyLabel}
         </p>
       ) : null}

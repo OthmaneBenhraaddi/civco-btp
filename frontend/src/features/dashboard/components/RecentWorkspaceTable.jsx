@@ -4,18 +4,18 @@ import { useTranslation } from '../../../i18n/LanguageContext'
 import { formatMoney } from '../../../utils/currency'
 import { DASHBOARD_CARD_CLASS } from '../dashboardTheme'
 
-function formatProjectDate(project, locale) {
+function formatProjectDate(project) {
   const date = project.updated_at ?? project.created_at
   if (!date) {
     const day = 10 + (Number(project.id) % 18)
-    return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+    return new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
     }).format(new Date(2026, 5, day))
   }
 
-  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+  return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -28,7 +28,7 @@ function estimateBudget(project) {
 }
 
 export default function RecentWorkspaceTable({ projects }) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
@@ -84,10 +84,10 @@ export default function RecentWorkspaceTable({ projects }) {
                   <td className="px-4 py-3.5">
                     <StatusBadge status={project.status} />
                   </td>
-                  <td className="px-4 py-3.5 text-gray-400">{formatProjectDate(project, locale)}</td>
+                  <td className="px-4 py-3.5 text-gray-400">{formatProjectDate(project)}</td>
                   <td className="px-4 py-3.5 text-gray-400">{project.client_name ?? '—'}</td>
                   <td className="px-4 py-3.5 text-right font-medium tabular-nums text-white">
-                    {formatMoney(estimateBudget(project), locale)}
+                    {formatMoney(estimateBudget(project))}
                   </td>
                 </tr>
               ))}

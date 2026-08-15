@@ -17,24 +17,24 @@ class VerifyRoleAccessCommand extends Command
     /** @var array<string, array{allowed: list<string>, denied: list<string>}> */
     private const ROUTE_MATRIX = [
         'admin' => [
-            'allowed' => ['/', '/tasks', '/clients', '/discussions', '/map', '/projects', '/quotes', '/delivery-forms', '/invoices', '/history', '/team', '/configuration'],
+            'allowed' => ['/', '/tasks', '/clients', '/discussions', '/tickets', '/map', '/projects', '/quotes', '/delivery-forms', '/invoices', '/history', '/team', '/configuration'],
             'denied' => ['/super-admin'],
         ],
         'accountant' => [
             'allowed' => ['/', '/clients', '/quotes', '/delivery-forms', '/invoices'],
-            'denied' => ['/projects', '/tasks', '/map', '/team', '/configuration', '/history', '/discussions'],
+            'denied' => ['/projects', '/tasks', '/map', '/team', '/configuration', '/history', '/discussions', '/tickets'],
         ],
         'chef_chantier' => [
-            'allowed' => ['/', '/tasks', '/map', '/projects'],
+            'allowed' => ['/', '/tasks', '/map', '/projects', '/tickets'],
             'denied' => ['/clients', '/quotes', '/delivery-forms', '/invoices', '/team', '/configuration', '/history', '/discussions'],
         ],
         'project_manager' => [
-            'allowed' => ['/', '/tasks', '/clients', '/map', '/projects', '/quotes', '/delivery-forms', '/invoices'],
+            'allowed' => ['/', '/tasks', '/clients', '/map', '/projects', '/quotes', '/delivery-forms', '/invoices', '/tickets'],
             'denied' => ['/team', '/configuration', '/history', '/discussions'],
         ],
         'collaborator' => [
             'allowed' => ['/', '/tasks', '/map', '/projects'],
-            'denied' => ['/clients', '/quotes', '/delivery-forms', '/invoices', '/team', '/configuration', '/history', '/discussions'],
+            'denied' => ['/clients', '/quotes', '/delivery-forms', '/invoices', '/team', '/configuration', '/history', '/discussions', '/tickets'],
         ],
     ];
 
@@ -143,6 +143,7 @@ class VerifyRoleAccessCommand extends Command
             '/projects', '/map' => $this->has($permissions, 'project.view'),
             '/tasks' => $this->hasAny($permissions, ['project.view', 'task.view_all', 'task.view_own', 'manage_tasks']),
             '/discussions' => $user->isAdmin() && $user->tenant_id !== null,
+            '/tickets' => $this->has($permissions, 'ticket.view'),
             '/history', '/configuration' => $user->isAdmin(),
             '/team' => $user->isAdmin() && $user->tenant_id !== null,
             default => false,

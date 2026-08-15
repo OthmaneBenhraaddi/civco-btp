@@ -4,7 +4,7 @@ import { STATUS_COLOR_KEYS } from '../theme/themeColorDefaults'
 import { buildToneBadgeStyle } from '../utils/colorUtils'
 
 const BASE_CLASSES =
-  'inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium'
+  'inline-flex w-fit max-w-none items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]'
 
 export default function StatusBadge({ status }) {
   const { t } = useTranslation()

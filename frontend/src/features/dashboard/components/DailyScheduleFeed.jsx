@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
@@ -207,19 +208,20 @@ export default function DailyScheduleFeed() {
             />
           </label>
 
-          <label className="form-row">
+          <div className="form-row">
             <span>{t('dashboard.schedule.fields.tag')}</span>
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
               value={form.tag}
-              onChange={(event) => setForm((current) => ({ ...current, tag: event.target.value }))}
-            >
-              <option value="chantier">{t('dashboard.schedule.tags.chantier')}</option>
-              <option value="validation">{t('dashboard.schedule.tags.validation')}</option>
-              <option value="inspection">{t('dashboard.schedule.tags.inspection')}</option>
-              <option value="finance">{t('dashboard.schedule.tags.finance')}</option>
-            </select>
-          </label>
+              onChange={(tag) => setForm((current) => ({ ...current, tag }))}
+              options={[
+                { value: 'chantier', label: t('dashboard.schedule.tags.chantier') },
+                { value: 'validation', label: t('dashboard.schedule.tags.validation') },
+                { value: 'inspection', label: t('dashboard.schedule.tags.inspection') },
+                { value: 'finance', label: t('dashboard.schedule.tags.finance') },
+              ]}
+            />
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="ghost" onClick={closeModal}>

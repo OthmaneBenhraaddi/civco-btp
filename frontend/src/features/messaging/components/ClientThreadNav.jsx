@@ -21,7 +21,7 @@ function ThreadButton({ active, label, unreadCount, onClick, indent = false }) {
         'flex w-full items-center justify-between gap-2 py-2.5 text-left text-sm transition-colors',
         indent ? 'pl-8 pr-4' : 'px-4',
         active
-          ? 'bg-indigo-500/10 font-medium text-white'
+          ? 'bg-[var(--pg-accent-dim)] font-medium text-white'
           : unreadCount
             ? 'bg-amber-500/[0.06] text-white hover:bg-amber-500/[0.09]'
             : 'text-slate-300 hover:bg-white/[0.03]',
@@ -47,7 +47,7 @@ export default function ClientThreadNav({
 
   if (!threads) {
     return (
-      <p className="mx-4 my-6 rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-8 text-center text-sm text-slate-500">
+      <p className="pg-inner-tile mx-4 my-6 px-4 py-8 text-center text-sm text-[var(--pg-text-dim)]">
         {t('clientPortal.noThreads')}
       </p>
     )

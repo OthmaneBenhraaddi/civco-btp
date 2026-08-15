@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useDragAutoScroll } from '../../hooks/useDragAutoScroll'
 import KpiCard from '../../components/KpiCard'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { BENTO_CARD_CLASS } from '../../theme/designTokens'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthModeRefresh } from '../../context/StealthModeContext'
@@ -27,9 +28,11 @@ import {
   canViewOperationalKpis,
   filterDashboardLayout,
 } from './dashboardWidgetAccess'
+import { DASHBOARD_COC_CLASS, DASHBOARD_COC_ENABLED } from './dashboardTheme'
+import './dashboardCoc.css'
 
 export default function DashboardPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { user, company, isAdmin, hasPermission } = useAuth()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -139,9 +142,9 @@ export default function DashboardPage() {
     const recentProjects = summary.recent_projects ?? []
     const showOperationalKpis = canViewOperationalKpis(hasPermission)
     const showFinancialKpis = canViewFinancialKpis(hasPermission)
-    const revenueParts = formatMoneyParts(financial.total_revenue, locale)
-    const outstandingParts = formatMoneyParts(financial.outstanding_balance, locale)
-    const expensesParts = formatMoneyParts(financial.total_expenses, locale)
+    const revenueParts = formatMoneyParts(financial.total_revenue)
+    const outstandingParts = formatMoneyParts(financial.outstanding_balance)
+    const expensesParts = formatMoneyParts(financial.total_expenses)
     const kpiCount = (showOperationalKpis ? 2 : 0) + (showFinancialKpis ? 3 : 0)
     const kpiGridClass = kpiCount >= 5
       ? 'sm:grid-cols-2 xl:grid-cols-5'
@@ -201,11 +204,11 @@ export default function DashboardPage() {
       financialActivity: <FinancialActivityBlock financial={financial} />,
       recentProjects: <RecentWorkspaceTable projects={recentProjects} />,
     }
-  }, [summary, locale, t, hasPermission])
+  }, [summary, t, hasPermission])
 
   if (loading && !summary) {
     return (
-      <div className="dashboard list-page mx-auto max-w-[1600px] p-6">
+      <div className={`dashboard list-page mx-auto max-w-[1600px] p-6 ${DASHBOARD_COC_CLASS}`}>
         <p className="text-slate-400">{t('common.loading')}</p>
       </div>
     )
@@ -213,18 +216,18 @@ export default function DashboardPage() {
 
   if (error && !summary) {
     return (
-      <div className="dashboard list-page mx-auto max-w-[1600px] p-6">
+      <div className={`dashboard list-page mx-auto max-w-[1600px] p-6 ${DASHBOARD_COC_CLASS}`}>
         <p className="error">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className={`dashboard list-page mx-auto max-w-[1600px] p-6 ${editMode ? 'dashboard--edit-mode' : ''}`}>
-      <header className="dashboard-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className={`dashboard list-page mx-auto max-w-[1600px] p-6 ${DASHBOARD_COC_CLASS} ${editMode ? 'dashboard--edit-mode' : ''}`}>
+      <header className="page-header dashboard-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">{t('dashboard.title')}</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1>{t('dashboard.title')}</h1>
+          <p className="mt-1 text-sm text-[var(--pg-text-muted)]">
             {t('dashboard.welcome', { name: user?.full_name ?? t('layout.profileFallbackName') })}
           </p>
         </div>
@@ -233,20 +236,39 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             {editMode ? (
               <>
-                <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                <span className="dashboard-edit-badge rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
                   {t('dashboard.editModeActive')}
                 </span>
-                <button type="button" className="ghost" onClick={cancelEditMode}>
-                  {t('common.cancel')}
-                </button>
-                <button type="button" onClick={handleSaveLayout}>
-                  {t('dashboard.saveLayout')}
-                </button>
+                {DASHBOARD_COC_ENABLED ? (
+                  <>
+                    <NeonButton type="button" variant="ghost" size="sm" onClick={cancelEditMode}>
+                      {t('common.cancel')}
+                    </NeonButton>
+                    <NeonButton type="button" size="sm" onClick={handleSaveLayout}>
+                      {t('dashboard.saveLayout')}
+                    </NeonButton>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="ghost" onClick={cancelEditMode}>
+                      {t('common.cancel')}
+                    </button>
+                    <button type="button" onClick={handleSaveLayout}>
+                      {t('dashboard.saveLayout')}
+                    </button>
+                  </>
+                )}
               </>
             ) : (
-              <button type="button" className="filter-select" onClick={enterEditMode}>
-                {t('dashboard.editMode')}
-              </button>
+              DASHBOARD_COC_ENABLED ? (
+                <NeonButton type="button" variant="ghost" size="sm" onClick={enterEditMode}>
+                  {t('dashboard.editMode')}
+                </NeonButton>
+              ) : (
+                <button type="button" className="filter-select" onClick={enterEditMode}>
+                  {t('dashboard.editMode')}
+                </button>
+              )
             )}
           </div>
         ) : null}

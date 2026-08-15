@@ -13,7 +13,7 @@ const ERP_ROUTE_RULES = [
   { prefix: '/map', permission: 'project.view' },
   { prefix: '/tasks', anyPermissions: TASK_ROUTE_PERMISSIONS },
   { prefix: '/roles', permission: 'role.view' },
-  { prefix: '/discussions', entityBound: true },
+  { prefix: '/tickets', permission: 'ticket.view' },
   { prefix: '/history', adminOnly: true },
   { prefix: '/configuration', adminOnly: true },
   { prefix: '/team', tenantAdminOnly: true },

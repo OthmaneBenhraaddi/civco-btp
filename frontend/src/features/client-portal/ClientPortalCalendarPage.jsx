@@ -7,7 +7,7 @@ import PortalMonthCalendar from './components/PortalMonthCalendar'
 import PortalProjectSelector from './components/PortalProjectSelector'
 
 export default function ClientPortalCalendarPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
 
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
@@ -99,7 +99,6 @@ export default function ClientPortalCalendarPage() {
               </p>
             ) : null}
             <PortalMonthCalendar
-              locale={locale}
               milestones={milestones}
               emptyLabel={t('clientPortal.noEvents')}
             />

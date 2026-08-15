@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as projectsApi from '../api/projects'
 import { useStealthMode, useStealthModeRefresh } from '../context/StealthModeContext'
-import { useTranslation } from '../i18n/LanguageContext'
 import { mapPhasesResponseToTasks } from '../features/tasks/utils/taskApiMappers'
 import { unwrapResource } from '../utils/apiHelpers'
 import { filterOfficialLinkedRecords, isOfficialLinkedRecord } from '../utils/stealthVisibility'
 
 export function useProjectTasks() {
-  const { locale } = useTranslation()
   const { stealthMode } = useStealthMode()
   const stealthModeRef = useRef(stealthMode)
   stealthModeRef.current = stealthMode
@@ -44,7 +42,7 @@ export function useProjectTasks() {
           try {
             const phaseResponse = await projectsApi.fetchProjectPhases(project.id)
             const phases = unwrapResource(phaseResponse)
-            return mapPhasesResponseToTasks(phases, project, locale)
+            return mapPhasesResponseToTasks(phases, project)
           } catch {
             return []
           }
@@ -65,7 +63,7 @@ export function useProjectTasks() {
         setLoading(false)
       }
     }
-  }, [locale])
+  }, [])
 
   useEffect(() => {
     refresh()

@@ -20,6 +20,8 @@ class Tenant extends Model
         'mail_password',
         'mail_encryption',
         'status',
+        'is_demo',
+        'demo_expires_at',
         'max_official_prints',
         'max_official_devis',
         'max_official_invoices',
@@ -45,6 +47,8 @@ class Tenant extends Model
     {
         return [
             'status' => TenantStatus::class,
+            'is_demo' => 'boolean',
+            'demo_expires_at' => 'datetime',
             'mail_port' => 'integer',
             'mail_password' => 'encrypted',
             'max_official_prints' => 'integer',

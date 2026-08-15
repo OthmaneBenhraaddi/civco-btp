@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import StatusBadge from '../../components/StatusBadge'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { LIVE_SYNC_INTERVAL_MS, useAutoRefresh } from '../../hooks/useAutoRefresh'
+import { useActionToast } from '../../hooks/useActionToast'
 import * as clientsApi from '../../api/clients'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
@@ -24,6 +26,7 @@ export default function ProjectsPage() {
   const stealthModeRef = useRef(stealthMode)
   stealthModeRef.current = stealthMode
   const { t } = useTranslation()
+  const { toastError } = useActionToast()
   const [projects, setProjects] = useState([])
   const projectsBaselineRef = useRef([])
   const [clients, setClients] = useState([])
@@ -161,6 +164,7 @@ export default function ProjectsPage() {
       await loadProjects({ page: 1 })
     } catch (err) {
       setError(extractErrorMessage(err, t('projects.createError')))
+      toastError(extractErrorMessage(err, t('projects.createError')))
     } finally {
       setSaving(false)
     }
@@ -180,6 +184,7 @@ export default function ProjectsPage() {
       await loadProjects({ page: meta?.current_page ?? 1 })
     } catch (err) {
       setError(extractErrorMessage(err, t('projects.deleteError')))
+      toastError(extractErrorMessage(err, t('projects.deleteError')))
     }
   }
 
@@ -209,15 +214,20 @@ export default function ProjectsPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('projects.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="planned">{t('status.planned')}</option>
-          <option value="in_progress">{t('status.in_progress')}</option>
-          <option value="on_hold">{t('status.on_hold')}</option>
-          <option value="completed">{t('status.completed')}</option>
-          <option value="cancelled">{t('status.cancelled')}</option>
-        </select>
+        <CutSelect
+          className="min-w-[180px]"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('projects.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'planned', label: t('status.planned') },
+            { value: 'in_progress', label: t('status.in_progress') },
+            { value: 'on_hold', label: t('status.on_hold') },
+            { value: 'completed', label: t('status.completed') },
+            { value: 'cancelled', label: t('status.cancelled') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -232,7 +242,7 @@ export default function ProjectsPage() {
                 <th>{t('projects.reference')}</th>
                 <th>{t('projects.projectTitle')}</th>
                 <th>{t('projects.client')}</th>
-                <th>{t('projects.status')}</th>
+                <th className="text-center">{t('projects.status')}</th>
                 <th>{t('projects.progress')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
@@ -250,7 +260,11 @@ export default function ProjectsPage() {
                       <Link to={`/projects/${project.id}`}>{project.title}</Link>
                     </td>
                     <td>{project.client?.name ?? '—'}</td>
-                    <td><StatusBadge status={project.status} /></td>
+                    <td>
+                      <div className="flex justify-center">
+                        <StatusBadge status={project.status} />
+                      </div>
+                    </td>
                     <td>{project.progress_percent}%</td>
                     <td className="actions">
                       <Link

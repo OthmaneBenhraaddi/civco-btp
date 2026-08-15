@@ -36,6 +36,16 @@ class TenantSettingsController extends Controller
         return response()->json($this->brandingPayload($tenant->fresh()));
     }
 
+    public function destroyLogo(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveActorTenant($request);
+
+        TenantLogoStorage::delete($tenant->logo_path);
+        $tenant->update(['logo_path' => null]);
+
+        return response()->json($this->brandingPayload($tenant->fresh()));
+    }
+
     public function showDocumentControls(Request $request): JsonResponse
     {
         $tenant = $this->resolveActorTenant($request);

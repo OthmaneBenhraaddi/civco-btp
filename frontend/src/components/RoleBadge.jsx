@@ -10,7 +10,7 @@ export default function RoleBadge({ label, tone = 'slate', className = '' }) {
   return (
     <span
       className={[
-        'inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+        'inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]',
         className,
       ].join(' ')}
       style={buildToneBadgeStyle(color)}

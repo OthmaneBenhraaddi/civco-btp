@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as clientPortalApi from '../../../api/clientPortal'
 import { useTranslation } from '../../../i18n/LanguageContext'
+import { useActionToast } from '../../../hooks/useActionToast'
 import { BENTO_CARD_CLASS, PAGE_SUBTITLE_CLASS, PAGE_TITLE_CLASS } from '../../../theme/designTokens'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
 import { SignatureCanvasPadSubmit } from './SignatureCanvasPad'
@@ -13,6 +14,7 @@ const STATUS_LABELS = {
 
 export default function ClientContractSignature({ projectId }) {
   const { t } = useTranslation()
+  const { toastSuccess, toastError } = useActionToast()
   const [contract, setContract] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -60,8 +62,11 @@ export default function ClientContractSignature({ projectId }) {
       const updated = await clientPortalApi.signProjectContract(projectId, signatureData)
       setContract(updated)
       setSuccess(t('contracts.signSuccess'))
+      toastSuccess(t('toast.messages.contractSigned'))
     } catch (err) {
-      setError(extractErrorMessage(err, t('contracts.signError')))
+      const message = extractErrorMessage(err, t('contracts.signError'))
+      setError(message)
+      toastError(message)
     } finally {
       setSubmitting(false)
     }
@@ -90,7 +95,7 @@ export default function ClientContractSignature({ projectId }) {
           <h2 className={PAGE_TITLE_CLASS}>{t('contracts.clientTitle')}</h2>
           <p className={PAGE_SUBTITLE_CLASS}>{contract.title}</p>
         </div>
-        <span className="rounded-lg bg-[#121316] px-3 py-1.5 text-xs font-medium text-indigo-300">
+        <span className="pg-inner-tile px-3 py-1.5 text-xs font-medium text-[var(--pg-accent)]">
           {t(statusKey)}
         </span>
       </header>

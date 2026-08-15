@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/Modal'
 import PermissionGate from '../../components/PermissionGate'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as documentTypesApi from '../../api/documentTypes'
 import { extractErrorMessage } from '../../utils/apiHelpers'
@@ -130,7 +132,10 @@ export default function DocumentTypeSettingsPanel() {
             <h2>{t('documentTypes.title')}</h2>
             <p className="hint">{t('documentTypes.subtitle')}</p>
           </div>
-          <button type="button" onClick={openCreate}>{t('documentTypes.new')}</button>
+          <NeonButton type="button" size="sm" onClick={openCreate}>
+            <span aria-hidden>+</span>
+            {t('documentTypes.new')}
+          </NeonButton>
         </header>
 
         {error ? <p className="error">{error}</p> : null}
@@ -161,13 +166,20 @@ export default function DocumentTypeSettingsPanel() {
                         ? t('documentTypes.inactive')
                         : t('documentTypes.active')}
                     </td>
-                    <td className="actions">
-                      <button type="button" className="ghost" onClick={() => openEdit(documentType)}>
-                        {t('common.edit')}
-                      </button>
-                      <button type="button" className="ghost danger" onClick={() => openDeleteFlow(documentType)}>
-                        {t('common.delete')}
-                      </button>
+                    <td>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <NeonButton type="button" variant="ghost" size="sm" onClick={() => openEdit(documentType)}>
+                          {t('common.edit')}
+                        </NeonButton>
+                        <NeonButton
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          onClick={() => openDeleteFlow(documentType)}
+                        >
+                          {t('common.delete')}
+                        </NeonButton>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -200,13 +212,13 @@ export default function DocumentTypeSettingsPanel() {
             <span>{t('documentTypes.activeHint')}</span>
           </label>
           <p className="hint">{t('documentTypes.inactiveHint')}</p>
-          <div className="actions">
-            <button type="button" className="ghost" onClick={() => setModalOpen(false)}>
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <NeonButton type="button" variant="neon" size="sm" onClick={() => setModalOpen(false)}>
               {t('common.cancel')}
-            </button>
-            <button type="submit" disabled={saving}>
+            </NeonButton>
+            <NeonButton type="submit" size="sm" disabled={saving} className={saving ? 'opacity-45' : ''}>
               {saving ? t('common.saving') : editing ? t('common.save') : t('documentTypes.create')}
-            </button>
+            </NeonButton>
           </div>
         </form>
       </Modal>
@@ -225,20 +237,35 @@ export default function DocumentTypeSettingsPanel() {
           </p>
           <label>
             {t('documentTypes.reassignTarget')}
-            <select value={reassignTo} onChange={(event) => setReassignTo(event.target.value)} required>
-              <option value="">{t('documentTypes.reassignSelect')}</option>
-              {reassignOptions.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
+            <CutSelect
+              className="w-full"
+              size="sm"
+              value={reassignTo}
+              onChange={setReassignTo}
+              required
+              placeholder={t('documentTypes.reassignSelect')}
+              options={[
+                { value: '', label: t('documentTypes.reassignSelect') },
+                ...reassignOptions.map((item) => ({
+                  value: item.id,
+                  label: item.name,
+                })),
+              ]}
+            />
           </label>
-          <div className="actions">
-            <button type="button" className="ghost" onClick={() => setReassignModalOpen(false)}>
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <NeonButton type="button" variant="neon" size="sm" onClick={() => setReassignModalOpen(false)}>
               {t('common.cancel')}
-            </button>
-            <button type="submit" className="danger" disabled={saving || !reassignTo}>
+            </NeonButton>
+            <NeonButton
+              type="submit"
+              variant="danger"
+              size="sm"
+              disabled={saving || !reassignTo}
+              className={saving || !reassignTo ? 'opacity-45' : ''}
+            >
               {t('documentTypes.reassignAndDelete')}
-            </button>
+            </NeonButton>
           </div>
         </form>
       </Modal>

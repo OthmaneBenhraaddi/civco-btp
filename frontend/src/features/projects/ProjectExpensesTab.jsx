@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as expensesApi from '../../api/expenses'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import {
+  BENTO_CARD_CLASS,
+  FIELD_CLASS,
+  LABEL_CLASS,
+  PG_STAT_ACCENT_CLASS,
+} from '../../theme/designTokens'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import { formatMoney } from '../../utils/currency'
 
@@ -107,71 +116,87 @@ export default function ProjectExpensesTab({ projectId }) {
     }
   }
 
+  const categoryOptions = CATEGORIES.map((item) => ({
+    value: item,
+    label: t(`expenses.categories.${item}`),
+  }))
+
   return (
     <section className="stack">
-      <article className="card kpi-card">
-        <h3>{t('expenses.projectTotal')}</h3>
-        <p className="kpi-value">{formatMoney(total, locale)}</p>
+      <article className={`${PG_STAT_ACCENT_CLASS} p-5`}>
+        <p className="pg-stat__label">{t('expenses.projectTotal')}</p>
+        <p className="pg-stat__value">{formatMoney(total, locale)}</p>
       </article>
 
       {canManage ? (
-        <form className="card stack" onSubmit={handleSubmit}>
-          <h3>{editing ? t('expenses.edit') : t('expenses.add')}</h3>
+        <form className={`${BENTO_CARD_CLASS} grid gap-4 p-5`} onSubmit={handleSubmit}>
+          <h3 className="m-0 text-sm font-bold uppercase tracking-[0.12em] text-white">
+            {editing ? t('expenses.edit') : t('expenses.add')}
+          </h3>
+
           <label>
-            {t('expenses.label')} *
+            <span className={LABEL_CLASS}>{t('expenses.label')} *</span>
             <input
+              className={FIELD_CLASS}
               value={form.label}
               onChange={(event) => setForm({ ...form, label: event.target.value })}
               required
             />
           </label>
-          <div className="form-row">
-            <label>
-              {t('expenses.category')} *
-              <select
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <span className={LABEL_CLASS}>{t('expenses.category')} *</span>
+              <CutSelect
+                className="mt-1 w-full"
+                size="sm"
                 value={form.category}
-                onChange={(event) => setForm({ ...form, category: event.target.value })}
-              >
-                {CATEGORIES.map((item) => (
-                  <option key={item} value={item}>{t(`expenses.categories.${item}`)}</option>
-                ))}
-              </select>
-            </label>
+                onChange={(category) => setForm({ ...form, category })}
+                options={categoryOptions}
+              />
+            </div>
             <label>
-              {t('expenses.amount')} *
+              <span className={LABEL_CLASS}>{t('expenses.amount')} *</span>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
+                className={FIELD_CLASS}
                 value={form.amount}
                 onChange={(event) => setForm({ ...form, amount: event.target.value })}
                 required
               />
             </label>
             <label>
-              {t('expenses.date')} *
+              <span className={LABEL_CLASS}>{t('expenses.date')} *</span>
               <input
                 type="date"
+                className={FIELD_CLASS}
                 value={form.expense_date}
                 onChange={(event) => setForm({ ...form, expense_date: event.target.value })}
                 required
               />
             </label>
           </div>
+
           <label>
-            {t('expenses.notes')}
+            <span className={LABEL_CLASS}>{t('expenses.notes')}</span>
             <textarea
               rows={2}
+              className={FIELD_CLASS}
               value={form.notes}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
             />
           </label>
-          <div className="inline-form">
-            <button type="submit" disabled={saving}>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <NeonButton type="submit" size="sm" disabled={saving}>
               {saving ? t('common.saving') : editing ? t('expenses.update') : t('expenses.create')}
-            </button>
+            </NeonButton>
             {editing ? (
-              <button type="button" className="ghost" onClick={resetForm}>{t('common.cancel')}</button>
+              <NeonButton type="button" variant="ghost" size="sm" onClick={resetForm}>
+                {t('common.cancel')}
+              </NeonButton>
             ) : null}
           </div>
         </form>
@@ -207,14 +232,26 @@ export default function ProjectExpensesTab({ projectId }) {
                     <td>{expense.recorded_by?.full_name ?? '—'}</td>
                     <td className="actions">
                       {canManage ? (
-                        <>
-                          <button type="button" className="ghost" onClick={() => openEdit(expense)}>
-                            {t('common.edit')}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(expense)}
+                            aria-label={t('common.edit')}
+                            title={t('common.edit')}
+                            className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                          >
+                            <Pencil className="h-4 w-4" strokeWidth={1.75} />
                           </button>
-                          <button type="button" className="ghost danger" onClick={() => handleDelete(expense.id)}>
-                            {t('common.delete')}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(expense.id)}
+                            aria-label={t('common.delete')}
+                            title={t('common.delete')}
+                            className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
                           </button>
-                        </>
+                        </div>
                       ) : null}
                     </td>
                   </tr>

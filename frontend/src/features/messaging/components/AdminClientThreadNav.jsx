@@ -21,7 +21,7 @@ function ThreadButton({ active, label, unreadCount, onClick }) {
       className={[
         'flex w-full items-center justify-between gap-2 py-2 pl-8 pr-4 text-left text-sm transition-colors',
         active
-          ? 'bg-indigo-500/10 font-medium text-white'
+          ? 'bg-[var(--pg-accent-dim)] font-medium text-white'
           : unreadCount
             ? 'text-white hover:bg-amber-500/[0.06]'
             : 'text-slate-400 hover:bg-white/[0.03] hover:text-slate-200',
@@ -61,7 +61,7 @@ export default function AdminClientThreadNav({
 
   if (!clientGroups?.length) {
     return (
-      <p className="mx-4 my-6 rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-8 text-center text-sm text-slate-500">
+      <p className="pg-inner-tile mx-4 my-6 px-4 py-8 text-center text-sm text-[var(--pg-text-dim)]">
         {t('messaging.noClients')}
       </p>
     )

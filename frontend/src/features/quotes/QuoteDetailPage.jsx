@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import Modal from '../../components/Modal'
 import StatusBadge from '../../components/StatusBadge'
+import CutSelect from '../../components/prodigy/CutSelect'
 import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
 import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
 import PrintOptionsModal from '../../components/print/PrintOptionsModal'
@@ -345,21 +346,21 @@ export default function QuoteDetailPage() {
           ) : null}
           {hasPermission('invoice.manage') && quote.status === 'accepted' && !quote.invoice ? (
             <div className="inline-actions-stack">
-              <label className="dispatch-note-picker">
+              <div className="dispatch-note-picker">
                 <span className="sr-only">{t('dispatchNotes.selectExecuted')}</span>
-                <select
+                <CutSelect
                   value={dispatchNoteId}
-                  onChange={(event) => setDispatchNoteId(event.target.value)}
+                  onChange={setDispatchNoteId}
                   disabled={dispatchNotes.length === 0}
-                >
-                  <option value="">{t('dispatchNotes.selectExecuted')}</option>
-                  {dispatchNotes.map((note) => (
-                    <option key={note.id} value={note.id}>
-                      {note.reference_number} — {note.delivery_forms_count ?? 0} BL
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: '', label: t('dispatchNotes.selectExecuted') },
+                    ...dispatchNotes.map((note) => ({
+                      value: String(note.id),
+                      label: `${note.reference_number} — ${note.delivery_forms_count ?? 0} BL`,
+                    })),
+                  ]}
+                />
+              </div>
               <button
                 type="button"
                 onClick={handleConvert}

@@ -4,6 +4,7 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
@@ -11,6 +12,7 @@ import { resolveNavPath } from '../../routes/routeAccess'
 import * as clientsApi from '../../api/clients'
 import * as quotesApi from '../../api/quotes'
 import { extractErrorMessage } from '../../utils/apiHelpers'
+import { useActionToast } from '../../hooks/useActionToast'
 import { formatMoney } from '../../utils/currency'
 import { filterOfficialClients, filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
 import {
@@ -33,6 +35,7 @@ export default function QuotesPage() {
   const stealthModeRef = useRef(stealthMode)
   stealthModeRef.current = stealthMode
   const { t, locale } = useTranslation()
+  const { toastError } = useActionToast()
   const [quotes, setQuotes] = useState([])
   const quotesBaselineRef = useRef([])
   const [clients, setClients] = useState([])
@@ -145,6 +148,7 @@ export default function QuotesPage() {
       await loadQuotes()
     } catch (err) {
       setError(extractErrorMessage(err, t('quotes.createError')))
+      toastError(extractErrorMessage(err, t('quotes.createError')))
     } finally {
       setSaving(false)
     }
@@ -164,6 +168,7 @@ export default function QuotesPage() {
       await loadQuotes(meta?.current_page ?? 1)
     } catch (err) {
       setError(extractErrorMessage(err, t('quotes.deleteError')))
+      toastError(extractErrorMessage(err, t('quotes.deleteError')))
     }
   }
 
@@ -191,14 +196,20 @@ export default function QuotesPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('quotes.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="sent">{t('status.sent')}</option>
-          <option value="accepted">{t('status.accepted')}</option>
-          <option value="rejected">{t('status.rejected')}</option>
-          <option value="expired">{t('status.expired')}</option>
-        </select>
+        <CutSelect
+          className="min-w-[180px]"
+          size="sm"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('quotes.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'sent', label: t('status.sent') },
+            { value: 'accepted', label: t('status.accepted') },
+            { value: 'rejected', label: t('status.rejected') },
+            { value: 'expired', label: t('status.expired') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -251,19 +262,21 @@ export default function QuotesPage() {
 
       <Modal title={t('quotes.new')} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form className="stack" onSubmit={handleSubmit}>
-          <label>
-            {t('quotes.client')} *
-            <select
+          <div>
+            <span>{t('quotes.client')} *</span>
+            <CutSelect
               value={form.client_id}
-              onChange={(event) => setForm({ ...form, client_id: event.target.value })}
+              onChange={(client_id) => setForm({ ...form, client_id })}
               required
-            >
-              <option value="">{t('quotes.selectClient')}</option>
-              {visibleClients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
-          </label>
+              options={[
+                { value: '', label: t('quotes.selectClient') },
+                ...visibleClients.map((client) => ({
+                  value: String(client.id),
+                  label: client.name,
+                })),
+              ]}
+            />
+          </div>
           <div className="form-row">
             <label>
               {t('quotes.issuedAt')}

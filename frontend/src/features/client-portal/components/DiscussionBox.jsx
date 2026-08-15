@@ -9,7 +9,7 @@ export default function DiscussionBox({
   posting,
   onSubmit,
 }) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const [content, setContent] = useState('')
   const [error, setError] = useState('')
 
@@ -43,7 +43,7 @@ export default function DiscussionBox({
         {loading ? (
           <p className="text-sm text-slate-500">{t('common.loading')}</p>
         ) : comments.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-8 text-center text-sm text-slate-500">
+          <p className="pg-inner-tile px-4 py-8 text-center text-sm text-[var(--pg-text-dim)]">
             {t('clientPortal.noComments')}
           </p>
         ) : (
@@ -52,8 +52,8 @@ export default function DiscussionBox({
               key={comment.id}
               className={`rounded-xl border px-4 py-3 ${
                 comment.user?.is_client
-                  ? 'ml-6 border-indigo-500/20 bg-indigo-500/[0.08]'
-                  : 'mr-6 border-white/[0.06] bg-[#121316]'
+                  ? 'ml-6 border-[rgba(34,197,94,0.25)] bg-[var(--pg-accent-dim)]'
+                  : 'mr-6 pg-inner-tile'
               }`}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -61,7 +61,7 @@ export default function DiscussionBox({
                   {comment.user?.full_name ?? t('clientPortal.unknownAuthor')}
                 </span>
                 <span className="text-[10px] text-slate-500">
-                  {formatRelativeTime(comment.created_at, locale)}
+                  {formatRelativeTime(comment.created_at)}
                 </span>
               </div>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">

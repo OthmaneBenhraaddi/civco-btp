@@ -4,6 +4,7 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
@@ -267,12 +268,18 @@ export default function DeliveryFormsPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('deliveryForms.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="signed">{t('status.signed')}</option>
-          <option value="signed_and_stamped">{t('status.signed_and_stamped')}</option>
-        </select>
+        <CutSelect
+          className="min-w-[180px]"
+          size="sm"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('deliveryForms.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'signed', label: t('status.signed') },
+            { value: 'signed_and_stamped', label: t('status.signed_and_stamped') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -387,42 +394,44 @@ export default function DeliveryFormsPage() {
 
       <Modal title={t('deliveryForms.new')} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form className="stack" onSubmit={handleSubmit}>
-          <label>
-            {t('deliveryForms.client')} *
-            <select
+          <div>
+            <span>{t('deliveryForms.client')} *</span>
+            <CutSelect
               value={form.client_id}
-              onChange={(event) => setForm({
+              onChange={(client_id) => setForm({
                 ...form,
-                client_id: event.target.value,
+                client_id,
                 project_id: '',
                 selectedPhaseIds: [],
               })}
               required
-            >
-              <option value="">{t('deliveryForms.selectClient')}</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t('deliveryForms.project')}
-            <select
+              options={[
+                { value: '', label: t('deliveryForms.selectClient') },
+                ...clients.map((client) => ({
+                  value: String(client.id),
+                  label: client.name,
+                })),
+              ]}
+            />
+          </div>
+          <div>
+            <span>{t('deliveryForms.project')}</span>
+            <CutSelect
               value={form.project_id}
-              onChange={(event) => setForm({
+              onChange={(project_id) => setForm({
                 ...form,
-                project_id: event.target.value,
+                project_id,
                 selectedPhaseIds: [],
               })}
-            >
-              <option value="">{t('deliveryForms.selectProject')}</option>
-              {clientProjects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.reference} — {project.title}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={[
+                { value: '', label: t('deliveryForms.selectProject') },
+                ...clientProjects.map((project) => ({
+                  value: String(project.id),
+                  label: `${project.reference} — ${project.title}`,
+                })),
+              ]}
+            />
+          </div>
           <label>
             {t('deliveryForms.deliveryDate')}
             <input

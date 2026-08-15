@@ -18,7 +18,6 @@ import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage'
 import TasksPage from '../features/tasks/TasksPage'
 import HistoryPage from '../features/history/HistoryPage'
 import ClientPortalDashboardPage from '../features/client-portal/ClientPortalDashboardPage'
-import ClientPortalDiscussionsPage from '../features/client-portal/ClientPortalDiscussionsPage'
 import ClientPortalCalendarPage from '../features/client-portal/ClientPortalCalendarPage'
 import ClientPortalQuotesPage from '../features/client-portal/ClientPortalQuotesPage'
 import ClientPortalQuoteDetailPage from '../features/client-portal/ClientPortalQuoteDetailPage'
@@ -27,9 +26,12 @@ import RolesPage from '../features/roles/RolesPage'
 import SuperAdminOverviewPage from '../features/super-admin/SuperAdminOverviewPage'
 import SuperAdminEntitiesPage from '../features/super-admin/SuperAdminEntitiesPage'
 import SuperAdminCreateEntityPage from '../features/super-admin/SuperAdminCreateEntityPage'
+import SuperAdminDemoCodesPage from '../features/super-admin/SuperAdminDemoCodesPage'
 import SuperAdminMembersPage from '../features/super-admin/SuperAdminMembersPage'
 import SuperAdminSystemLogsPage from '../features/super-admin/SuperAdminSystemLogsPage'
-import AdminMessagingPage from '../features/messaging/AdminMessagingPage'
+import TicketsPage from '../features/tickets/TicketsPage'
+import NewTicketPage from '../features/tickets/NewTicketPage'
+import TicketDetailPage from '../features/tickets/TicketDetailPage'
 import TeamManagementPage from '../features/team/TeamManagementPage'
 import ProfileSettingsPage from '../features/profile/ProfileSettingsPage'
 import SuperAdminRoute from '../components/SuperAdminRoute'
@@ -43,6 +45,7 @@ export default function AppRoutes() {
 
       <div className="h-full overflow-hidden">
         <Routes>
+          {/* Guests: /login only. Root `/` → LandingPage for guests via ProtectedRoute. */}
           <Route element={<GuestRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
@@ -52,10 +55,14 @@ export default function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="portal" element={<ClientPortalDashboardPage />} />
-              <Route path="portal/discussions" element={<ClientPortalDiscussionsPage />} />
+              <Route path="portal/discussions" element={<Navigate to="/portal/tickets" replace />} />
+              <Route path="portal/tickets" element={<TicketsPage />} />
+              <Route path="portal/tickets/new" element={<NewTicketPage />} />
+              <Route path="portal/tickets/:id" element={<TicketDetailPage />} />
               <Route path="portal/calendar" element={<ClientPortalCalendarPage />} />
               <Route path="portal/quotes" element={<ClientPortalQuotesPage />} />
               <Route path="portal/quotes/:id" element={<ClientPortalQuoteDetailPage />} />
+              {/* Authenticated home; guests on `/` see LandingPage via ProtectedRoute. */}
               <Route index element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="map" element={<ProjectMapPage />} />
@@ -70,13 +77,17 @@ export default function AppRoutes() {
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="profile" element={<ProfileSettingsPage />} />
-              <Route path="discussions" element={<AdminMessagingPage />} />
+              <Route path="discussions" element={<Navigate to="/tickets" replace />} />
+              <Route path="tickets" element={<TicketsPage />} />
+              <Route path="tickets/new" element={<NewTicketPage />} />
+              <Route path="tickets/:id" element={<TicketDetailPage />} />
 
               <Route path="super-admin" element={<SuperAdminRoute />}>
                 <Route index element={<Navigate to="overview" replace />} />
                 <Route path="overview" element={<SuperAdminOverviewPage />} />
                 <Route path="entities" element={<SuperAdminEntitiesPage />} />
                 <Route path="create" element={<SuperAdminCreateEntityPage />} />
+                <Route path="demo-codes" element={<SuperAdminDemoCodesPage />} />
                 <Route path="members" element={<SuperAdminMembersPage />} />
                 <Route path="logs" element={<SuperAdminSystemLogsPage />} />
               </Route>

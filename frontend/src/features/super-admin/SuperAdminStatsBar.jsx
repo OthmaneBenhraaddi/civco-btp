@@ -9,7 +9,7 @@ export default function SuperAdminStatsBar({ stats, loading }) {
     return (
       <section className="mb-6 grid gap-4 sm:grid-cols-3">
         {[1, 2, 3].map((key) => (
-          <div key={key} className={`${BENTO_CARD_CLASS} h-24 animate-pulse bg-[#121316] p-5`} />
+          <div key={key} className={`${BENTO_CARD_CLASS} h-24 animate-pulse p-5`} />
         ))}
       </section>
     )
@@ -33,7 +33,7 @@ export default function SuperAdminStatsBar({ stats, loading }) {
         hint={t('superAdmin.stats.allTenants')}
         variant="progress"
       />
-      <article className={`relative min-w-0 overflow-hidden ${BENTO_CARD_CLASS} bg-[#121316] p-5`}>
+      <article className={`relative min-w-0 overflow-hidden ${BENTO_CARD_CLASS} p-5`}>
         <span className="absolute right-5 top-5 h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
         <p className="pr-4 text-[11px] font-medium uppercase tracking-wider text-slate-500">
           {t('superAdmin.stats.systemStatus')}

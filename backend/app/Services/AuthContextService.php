@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\User;
 use App\Support\TenantLogoStorage;
+use App\Support\UserAvatarStorage;
 
 class AuthContextService
 {
@@ -27,7 +28,14 @@ class AuthContextService
             ? $this->permissionResolver->expand($user->permissionSlugsForCompany($company->id))
             : [];
 
-        $primaryRole = $roles->first();
+        $demoPayload = null;
+        if ($user->is_demo && $user->demo_expires_at !== null) {
+            $demoPayload = [
+                'expires_at' => $user->demo_expires_at->toIso8601String(),
+                'remaining_seconds' => max(0, $user->demo_expires_at->getTimestamp() - now()->getTimestamp()),
+                'is_expired' => $user->demoHasExpired(),
+            ];
+        }
 
         return [
             'user' => [
@@ -38,10 +46,13 @@ class AuthContextService
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role ?? 'user',
-                'job_title' => $primaryRole?->name,
+                'job_title' => $user->job_title,
+                'avatar_url' => UserAvatarStorage::url($user->avatar_path),
                 'client_id' => $user->client_id,
                 'tenant_id' => $user->tenant_id,
                 'is_super_admin' => $user->isSuperAdmin(),
+                'is_demo' => (bool) $user->is_demo,
+                'demo_expires_at' => $user->demo_expires_at?->toIso8601String(),
                 'stealth_shortcut' => $user->stealth_shortcut,
             ],
             'company' => $company ? [
@@ -65,7 +76,10 @@ class AuthContextService
                 'name' => $user->tenant->name,
                 'subdomain' => $user->tenant->subdomain,
                 'logo_url' => TenantLogoStorage::url($user->tenant->logo_path),
+                'is_demo' => (bool) $user->tenant->is_demo,
+                'demo_expires_at' => $user->tenant->demo_expires_at?->toIso8601String(),
             ] : null,
+            'demo' => $demoPayload,
             'redirect_to' => $this->postLoginRedirect->pathFor($user),
             'redirect_url' => $this->postLoginRedirect->absoluteUrlFor($user),
         ];

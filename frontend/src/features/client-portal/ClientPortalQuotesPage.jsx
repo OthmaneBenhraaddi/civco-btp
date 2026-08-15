@@ -10,7 +10,7 @@ import { formatMoney } from '../../utils/currency'
 import StatusBadge from '../../components/StatusBadge'
 
 export default function ClientPortalQuotesPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -73,8 +73,8 @@ export default function ClientPortalQuotesPage() {
                 </div>
                 <div className="text-right">
                   <StatusBadge status={quote.status === 'sent' ? 'pending' : quote.status} />
-                  <p className="mt-2 text-sm font-medium text-indigo-300">
-                    {formatMoney(quote.total_ttc, locale)}
+                  <p className="mt-2 text-sm font-medium text-[var(--pg-accent)]">
+                    {formatMoney(quote.total_ttc)}
                   </p>
                 </div>
               </div>

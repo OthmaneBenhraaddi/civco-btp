@@ -14,7 +14,7 @@ export default function PortalChatWindow({
   emptyKey = 'messaging.noMessages',
   selectPromptKey = 'messaging.selectThread',
 }) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
@@ -70,7 +70,7 @@ export default function PortalChatWindow({
         {loading ? (
           <p className="text-sm text-slate-500">{t('common.loading')}</p>
         ) : messages.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-4 py-8 text-center text-sm text-slate-500">
+          <p className="pg-inner-tile px-4 py-8 text-center text-sm text-[var(--pg-text-dim)]">
             {t(emptyKey)}
           </p>
         ) : (
@@ -80,10 +80,10 @@ export default function PortalChatWindow({
             return (
               <article
                 key={message.id}
-                className={`max-w-[85%] rounded-xl border px-4 py-3 ${
+                className={`max-w-[85%] border px-4 py-3 ${
                   isMine
-                    ? 'ml-auto border-indigo-500/20 bg-indigo-500/[0.08]'
-                    : 'mr-auto border-white/[0.06] bg-[#121316]'
+                    ? 'ml-auto border-[rgba(34,197,94,0.25)] bg-[var(--pg-accent-dim)]'
+                    : 'mr-auto pg-inner-tile'
                 }`}
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
@@ -91,7 +91,7 @@ export default function PortalChatWindow({
                     {message.sender?.full_name ?? t('messaging.unknownAuthor')}
                   </span>
                   <span className="text-[10px] text-slate-500">
-                    {formatRelativeTime(message.created_at, locale)}
+                    {formatRelativeTime(message.created_at)}
                   </span>
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">

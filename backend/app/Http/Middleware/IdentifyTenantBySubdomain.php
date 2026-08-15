@@ -48,6 +48,11 @@ class IdentifyTenantBySubdomain
                 return $next($request);
             }
 
+            // `/` and other entry paths → SPA home; `/login` still goes to SPA login.
+            if ($request->is('/')) {
+                return redirect()->away(TenantLoginUrl::bareHostHomeRedirect($request));
+            }
+
             return redirect()->away(TenantLoginUrl::bareHostRedirect($request));
         }
 
@@ -56,6 +61,10 @@ class IdentifyTenantBySubdomain
                 return response()->json([
                     'message' => 'Accédez à votre entité via son sous-domaine (ex. civco.monerp.com).',
                 ], 404);
+            }
+
+            if ($request->is('/')) {
+                return redirect()->away(TenantLoginUrl::bareHostHomeRedirect($request));
             }
 
             return redirect()->away(TenantLoginUrl::bareHostRedirect($request));

@@ -3,19 +3,19 @@ import { BENTO_CARD_CLASS } from '../../../theme/designTokens'
 import { useTranslation } from '../../../i18n/LanguageContext'
 
 export default function ChantierLiveFeed({ media, loading }) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <section className={`${BENTO_CARD_CLASS} p-6`}>
       <header className="mb-5">
-        <h2 className="text-lg font-semibold text-white">{t('clientPortal.liveFeedTitle')}</h2>
-        <p className="mt-1 text-sm text-slate-400">{t('clientPortal.liveFeedSubtitle')}</p>
+        <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('clientPortal.liveFeedTitle')}</h2>
+        <p className="mt-1 text-sm text-[var(--pg-text-muted)]">{t('clientPortal.liveFeedSubtitle')}</p>
       </header>
 
       {loading ? (
         <p className="text-sm text-slate-500">{t('common.loading')}</p>
       ) : media.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/[0.08] bg-[#121316] px-6 py-12 text-center">
+        <div className="pg-inner-tile px-6 py-12 text-center">
           <p className="text-sm text-slate-500">{t('clientPortal.noMedia')}</p>
         </div>
       ) : (
@@ -23,9 +23,9 @@ export default function ChantierLiveFeed({ media, loading }) {
           {media.map((item) => (
             <article
               key={item.id}
-              className="group overflow-hidden rounded-xl border border-white/[0.06] bg-[#121316]"
+              className="pg-inner-tile group overflow-hidden"
             >
-              <div className="relative aspect-[4/3] overflow-hidden bg-[#0b0c0e]">
+              <div className="relative aspect-[4/3] overflow-hidden bg-[#0b0f17]">
                 <img
                   src={item.image_url}
                   alt={item.title}
@@ -36,7 +36,7 @@ export default function ChantierLiveFeed({ media, loading }) {
               <div className="space-y-1 p-4">
                 <h3 className="text-sm font-medium text-white">{item.title}</h3>
                 <p className="text-xs text-slate-500">
-                  {formatRelativeTime(item.created_at, locale)}
+                  {formatRelativeTime(item.created_at)}
                   {item.uploaded_by?.full_name
                     ? ` · ${item.uploaded_by.full_name}`
                     : ''}

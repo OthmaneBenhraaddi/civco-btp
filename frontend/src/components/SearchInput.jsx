@@ -7,20 +7,13 @@ function SearchIcon({ className }) {
   )
 }
 
-const INPUT_CLASSES = [
-  'search-input w-full min-w-[200px] rounded-xl border border-slate-800 bg-[#1c1d22] py-2.5 pl-11 pr-4',
-  'text-sm text-white placeholder:text-slate-500',
-  'transition-all duration-200',
-  'focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-500/40',
-].join(' ')
-
 export default function SearchInput({ value, onChange, placeholder, className = '' }) {
   return (
-    <div className={`search-input-wrap ${className}`.trim()}>
-      <SearchIcon className="search-icon h-4 w-4 shrink-0" />
+    <div className={`search-input-wrap pg-field-shell relative flex flex-1 items-center ${className}`.trim()}>
+      <SearchIcon className="pointer-events-none absolute left-4 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-slate-300" />
       <input
         type="search"
-        className={INPUT_CLASSES}
+        className="search-input"
         placeholder={placeholder}
         value={value}
         onChange={onChange}

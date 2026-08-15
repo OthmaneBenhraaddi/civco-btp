@@ -86,7 +86,7 @@ export default function AdminCredentialsPanel({ tenantId, admin, onCredentialsUp
         type="button"
         onClick={handleToggle}
         disabled={loading}
-        className="rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[11px] font-medium text-indigo-300 hover:bg-indigo-500/15 disabled:opacity-60"
+        className="border border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pg-accent)] hover:bg-[rgba(34,197,94,0.2)] disabled:opacity-60"
       >
         {loading
           ? t('common.loading')

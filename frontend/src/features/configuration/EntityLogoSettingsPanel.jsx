@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { useActionToast } from '../../hooks/useActionToast'
 import * as tenantSettingsApi from '../../api/tenantSettings'
-import { BENTO_CARD_CLASS, BTN_PRIMARY, BTN_GHOST } from '../../theme/designTokens'
+import { BENTO_CARD_CLASS } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024
@@ -15,6 +16,7 @@ function isAcceptedImage(file) {
 export default function EntityLogoSettingsPanel() {
   const { t } = useTranslation()
   const { tenant, refresh } = useAuth()
+  const { toastSuccess, toastDeleted, toastError } = useActionToast()
   const inputRef = useRef(null)
 
   const [logoUrl, setLogoUrl] = useState(tenant?.logo_url ?? null)
@@ -23,6 +25,7 @@ export default function EntityLogoSettingsPanel() {
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -109,11 +112,41 @@ export default function EntityLogoSettingsPanel() {
       setLogoUrl(nextLogoUrl)
       resetSelection()
       setSuccess(t('configuration.entityLogo.saveSuccess'))
+      toastSuccess(t('toast.messages.logoSaved'))
       await refresh()
     } catch (err) {
       setError(extractErrorMessage(err, t('configuration.entityLogo.saveError')))
+      toastError(extractErrorMessage(err, t('configuration.entityLogo.saveError')))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleRemoveLogo() {
+    if (!logoUrl || selectedFile) {
+      return
+    }
+
+    if (!window.confirm(t('configuration.entityLogo.removeConfirm'))) {
+      return
+    }
+
+    setRemoving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      await tenantSettingsApi.deleteTenantLogo()
+      setLogoUrl(null)
+      resetSelection()
+      setSuccess(t('configuration.entityLogo.removeSuccess'))
+      toastDeleted(t('toast.messages.logoRemoved'))
+      await refresh()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('configuration.entityLogo.removeError')))
+      toastError(extractErrorMessage(err, t('configuration.entityLogo.removeError')))
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -143,28 +176,42 @@ export default function EntityLogoSettingsPanel() {
       ) : (
         <>
           <div className="flex flex-wrap items-start gap-6">
-            <div className="rounded-xl border border-white/[0.08] bg-[#111214] p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                {t('configuration.entityLogo.current')}
-              </p>
-              {displayUrl ? (
-                <img
-                  src={displayUrl}
-                  alt={tenant?.name ?? t('configuration.entityLogo.title')}
-                  className="max-h-24 max-w-[220px] object-contain object-left"
-                />
-              ) : (
-                <div className="flex h-24 w-[220px] items-center justify-center rounded-lg border border-dashed border-white/10 text-sm text-slate-500">
-                  {t('configuration.entityLogo.noLogo')}
-                </div>
-              )}
+            <div className="space-y-3">
+              <div className="rounded-xl border border-white/[0.08] bg-[#111214] p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  {t('configuration.entityLogo.current')}
+                </p>
+                {displayUrl ? (
+                  <img
+                    src={displayUrl}
+                    alt={tenant?.name ?? t('configuration.entityLogo.title')}
+                    className="max-h-24 max-w-[220px] object-contain object-left"
+                  />
+                ) : (
+                  <div className="flex h-24 w-[220px] items-center justify-center rounded-lg border border-dashed border-white/10 text-sm text-slate-500">
+                    {t('configuration.entityLogo.noLogo')}
+                  </div>
+                )}
+              </div>
+              {logoUrl && !selectedFile ? (
+                <button
+                  type="button"
+                  className="pg-cut-btn is-danger is-compact"
+                  disabled={removing || saving}
+                  onClick={handleRemoveLogo}
+                >
+                  <span className="pg-cut-btn__face">
+                    {removing ? t('common.saving') : t('configuration.entityLogo.remove')}
+                  </span>
+                </button>
+              ) : null}
             </div>
 
             <div
               className={[
                 'min-w-[280px] flex-1 rounded-xl border-2 border-dashed p-8 text-center transition-colors',
                 dragActive
-                  ? 'border-indigo-400/60 bg-indigo-500/10'
+                  ? 'border-[rgba(34,197,94,0.5)] bg-[var(--pg-accent-dim)]'
                   : 'border-white/10 bg-[#111214] hover:border-white/20',
               ].join(' ')}
               onDragEnter={(event) => {
@@ -187,10 +234,10 @@ export default function EntityLogoSettingsPanel() {
               <p className="mt-1 text-xs text-slate-500">{t('configuration.entityLogo.dropHint')}</p>
               <button
                 type="button"
-                className={`${BTN_GHOST} mt-4`}
+                className="pg-cut-btn is-ghost is-compact mt-4"
                 onClick={() => inputRef.current?.click()}
               >
-                {t('configuration.entityLogo.browse')}
+                <span className="pg-cut-btn__face">{t('configuration.entityLogo.browse')}</span>
               </button>
               <input
                 ref={inputRef}
@@ -207,11 +254,18 @@ export default function EntityLogoSettingsPanel() {
               <p className="text-sm text-slate-400">
                 {t('configuration.entityLogo.selected', { name: selectedFile.name })}
               </p>
-              <button type="button" className={BTN_GHOST} onClick={resetSelection}>
-                {t('configuration.entityLogo.clearSelection')}
+              <button type="button" className="pg-cut-btn is-ghost is-compact" onClick={resetSelection}>
+                <span className="pg-cut-btn__face">{t('configuration.entityLogo.clearSelection')}</span>
               </button>
-              <button type="button" className={BTN_PRIMARY} disabled={saving} onClick={handleUpload}>
-                {saving ? t('common.saving') : t('configuration.entityLogo.save')}
+              <button
+                type="button"
+                className="pg-cut-btn is-neon is-compact"
+                disabled={saving}
+                onClick={handleUpload}
+              >
+                <span className="pg-cut-btn__face">
+                  {saving ? t('common.saving') : t('configuration.entityLogo.save')}
+                </span>
               </button>
             </div>
           ) : null}

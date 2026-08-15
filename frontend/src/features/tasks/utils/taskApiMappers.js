@@ -31,7 +31,7 @@ function inferPriority(apiTask) {
 }
 
 /** @param {object} apiTask @param {object} project */
-export function mapApiTaskToUiTask(apiTask, project, locale = 'fr') {
+export function mapApiTaskToUiTask(apiTask, project) {
   const assigneeName = apiTask.assigned_to?.full_name ?? '—'
   const updatedAt = apiTask.completed_at ?? apiTask.due_date ?? new Date().toISOString()
 
@@ -52,13 +52,13 @@ export function mapApiTaskToUiTask(apiTask, project, locale = 'fr') {
     fichiers: [],
     notes: apiTask.description ?? '',
     lastUpdatedBy: assigneeName,
-    lastUpdatedAt: formatLastUpdatedAt(new Date(updatedAt), locale),
+    lastUpdatedAt: formatLastUpdatedAt(new Date(updatedAt)),
   }
 }
 
 /** @param {object[]} projects */
-export function mapPhasesResponseToTasks(phases, project, locale = 'fr') {
+export function mapPhasesResponseToTasks(phases, project) {
   return phases.flatMap((phase) =>
-    (phase.tasks ?? []).map((task) => mapApiTaskToUiTask(task, project, locale)),
+    (phase.tasks ?? []).map((task) => mapApiTaskToUiTask(task, project)),
   )
 }

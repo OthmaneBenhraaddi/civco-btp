@@ -1,0 +1,115 @@
+.portal--coc {
+  --portal-coc-border: rgba(52, 211, 153, 0.16);
+  --portal-coc-line: rgba(255, 255, 255, 0.055);
+}
+
+.portal--coc .page-header {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding: 0 0 1.15rem 1rem;
+  border-bottom: 1px solid var(--portal-coc-line);
+}
+
+.portal--coc .page-header::before {
+  position: absolute;
+  inset: 0 auto 1.15rem 0;
+  width: 2px;
+  background: var(--pg-accent);
+  box-shadow: 0 0 14px var(--pg-accent-glow);
+  content: '';
+}
+
+.portal--coc .page-header h1 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.portal--coc .list-page {
+  gap: 1rem;
+}
+
+.portal--coc .pg-card,
+.portal--coc article.pg-card,
+.portal--coc section.pg-card {
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, 0.035), transparent 28%),
+    var(--pg-card);
+  filter:
+    drop-shadow(0 0 0.7px var(--portal-coc-border))
+    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
+  transition: filter 180ms ease, background 180ms ease;
+}
+
+.portal--coc .pg-card:hover,
+.portal--coc article.pg-card:hover,
+.portal--coc section.pg-card:hover {
+  filter:
+    drop-shadow(0 0 0.9px rgba(52, 211, 153, 0.26))
+    drop-shadow(0 16px 26px rgba(0, 0, 0, 0.2));
+}
+
+.portal--coc .pg-inner-tile {
+  border-color: var(--portal-coc-line);
+  background: #111824;
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.portal--coc .list-page h2,
+.portal--coc .list-page h3,
+.portal--coc .pg-section-title {
+  position: relative;
+  padding-left: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.portal--coc .list-page h2::before,
+.portal--coc .list-page h3::before,
+.portal--coc .pg-section-title::before {
+  position: absolute;
+  inset: 0.1em auto 0.1em 0;
+  width: 2px;
+  background: var(--pg-accent);
+  content: '';
+}
+
+.portal--coc .pg-badge,
+.portal--coc [class*='badge'] {
+  border-radius: 0 !important;
+}
+
+.portal--coc .pg-ticket,
+.portal--coc .pg-filter,
+.portal--coc .pg-cut-shell {
+  filter:
+    drop-shadow(0 0 0.7px var(--portal-coc-border))
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.14));
+}
+
+.portal--coc table {
+  background: #101722;
+}
+
+.portal--coc .overflow-x-auto {
+  border-color: var(--portal-coc-line);
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.portal--coc tbody tr:hover {
+  background: rgba(34, 197, 94, 0.035);
+}
+
+.portal--coc a.pg-card {
+  transition: background 180ms ease, filter 180ms ease;
+}
+
+@media (max-width: 640px) {
+  .portal--coc .page-header {
+    padding-left: 0.75rem;
+  }
+}

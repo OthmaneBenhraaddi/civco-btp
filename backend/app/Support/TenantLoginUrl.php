@@ -40,6 +40,17 @@ final class TenantLoginUrl
         return "{$scheme}://{$host}{$portSegment}/login?tenant=".urlencode($subdomain);
     }
 
+    public static function localFrontendHomeUrl(?string $subdomain = null): string
+    {
+        $scheme = (string) config('tenancy.login_scheme', 'http');
+        $host = (string) config('tenancy.local_frontend_host', '127.0.0.1');
+        $port = (string) config('tenancy.frontend_port', '5173');
+        $portSegment = $port !== '' ? ":{$port}" : '';
+        $query = $subdomain ? '?tenant='.urlencode($subdomain) : '';
+
+        return "{$scheme}://{$host}{$portSegment}/{$query}";
+    }
+
     public static function bareHostRedirect(Request $request): string
     {
         $tenantKey = TenantRequestResolver::extractTenantKey($request);
@@ -55,6 +66,28 @@ final class TenantLoginUrl
         $path = self::resolveBareHostPath($request);
 
         return "{$scheme}://{$host}{$portSegment}{$path}";
+    }
+
+    /** Guest/marketing home on the Vite SPA (not /login). */
+    public static function bareHostHomeRedirect(Request $request): string
+    {
+        $tenantKey = TenantRequestResolver::extractTenantKey($request);
+
+        if ($tenantKey !== null && TenantRequestResolver::usesLocalQueryFallback()) {
+            return self::localFrontendHomeUrl($tenantKey);
+        }
+
+        $scheme = (string) config('tenancy.login_scheme', 'http');
+        $frontendPort = (string) config('tenancy.frontend_port', '5173');
+        $portSegment = $frontendPort !== '' ? ":{$frontendPort}" : '';
+        $host = self::resolveBareFrontendHost($request->getHost());
+
+        $user = $request->user();
+        if ($user !== null && $user->isSuperAdmin()) {
+            return "{$scheme}://{$host}{$portSegment}".(string) config('tenancy.super_admin_path', '/super-admin');
+        }
+
+        return "{$scheme}://{$host}{$portSegment}/";
     }
 
     public static function tenantFrontendLogin(Request $request): string

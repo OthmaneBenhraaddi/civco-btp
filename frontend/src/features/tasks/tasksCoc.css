@@ -1,0 +1,63 @@
+.tasks--coc {
+  --tasks-coc-border: rgba(52, 211, 153, 0.16);
+  --tasks-coc-line: rgba(255, 255, 255, 0.055);
+}
+
+.tasks--coc .page-header {
+  position: relative;
+  margin-bottom: 0.25rem;
+  padding: 0 0 1.15rem 1rem;
+  border-bottom: 1px solid var(--tasks-coc-line);
+}
+
+.tasks--coc .page-header::before {
+  position: absolute;
+  inset: 0 auto 1.15rem 0;
+  width: 2px;
+  background: var(--pg-accent);
+  box-shadow: 0 0 14px var(--pg-accent-glow);
+  content: '';
+}
+
+.tasks--coc .page-header h1 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tasks--coc .tasks-project-bar label {
+  letter-spacing: 0.14em;
+}
+
+.tasks--coc .tasks-empty-state {
+  border-radius: 0 !important;
+  border-color: var(--tasks-coc-line) !important;
+  background: #111824 !important;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  filter:
+    drop-shadow(0 0 0.7px var(--tasks-coc-border))
+    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
+}
+
+.tasks--coc .tasks-view-panel,
+.tasks--coc .tasks-controls {
+  gap: 0.85rem;
+}
+
+.tasks--coc .pg-cut-select {
+  min-width: 240px;
+  max-width: 28rem;
+}
+
+@media (max-width: 640px) {
+  .tasks--coc .page-header {
+    padding-left: 0.75rem;
+  }
+
+  .tasks--coc .pg-cut-select {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+}

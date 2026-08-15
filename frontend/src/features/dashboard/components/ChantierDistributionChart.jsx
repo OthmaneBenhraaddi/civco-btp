@@ -21,7 +21,7 @@ export default function ChantierDistributionChart({ byStatus }) {
 
   return (
     <article className={`p-5 ${DASHBOARD_CARD_CLASS}`}>
-      <h3 className="mb-4 text-sm font-semibold text-white">{t('dashboard.chantierDistribution')}</h3>
+      <h3 className="mb-4 text-sm font-bold uppercase tracking-[0.12em] text-white">{t('dashboard.chantierDistribution')}</h3>
 
       <div className="relative h-52 w-full">
         <ResponsiveContainer width="100%" height="100%">

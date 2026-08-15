@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import RoleBadge from '../../components/RoleBadge'
 import Modal from '../../components/Modal'
+import CutSelect from '../../components/prodigy/CutSelect'
 import SearchInput from '../../components/SearchInput'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as clientContactsApi from '../../api/clientContacts'
@@ -199,16 +200,16 @@ export default function ClientContactsPanel({
           </label>
           <label className="grid gap-1.5">
             {t('clientContacts.role')}
-            <select
+            <CutSelect
+              className="w-full"
+              size="sm"
               value={form.contact_role}
-              onChange={(event) => setForm({ ...form, contact_role: event.target.value })}
-            >
-              {clientContactsApi.CONTACT_ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {t(`clientContacts.roles.${role}`)}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => setForm({ ...form, contact_role: next })}
+              options={clientContactsApi.CONTACT_ROLE_OPTIONS.map((role) => ({
+                value: role,
+                label: t(`clientContacts.roles.${role}`),
+              }))}
+            />
           </label>
           {error ? <p className="error">{error}</p> : null}
           <button type="submit" disabled={saving}>

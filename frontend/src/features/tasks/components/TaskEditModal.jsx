@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
 import { useAuth } from '../../../context/AuthContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
 import * as projectsApi from '../../../api/projects'
@@ -16,7 +17,7 @@ export default function TaskEditModal({
   onDeleted,
 }) {
   const { user, isAdmin, hasPermission } = useAuth()
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const [users, setUsers] = useState([])
   const [form, setForm] = useState({
     nom: '',
@@ -77,7 +78,7 @@ export default function TaskEditModal({
       const response = await projectsApi.updateTask(task.id, payload)
       const apiTask = response?.data ?? response
       const project = { id: task.projectId, title: task.projectName }
-      onUpdated?.(mapApiTaskToUiTask(apiTask, project, locale))
+      onUpdated?.(mapApiTaskToUiTask(apiTask, project))
       onClose()
     } catch {
       setError(t('tasks.edit.error'))
@@ -125,18 +126,17 @@ export default function TaskEditModal({
           {manageAll ? (
             <label>
               {t('tasks.columns.owner')} *
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
+                size="sm"
                 value={form.responsableName}
-                onChange={(event) => setForm({ ...form, responsableName: event.target.value })}
+                onChange={(next) => setForm({ ...form, responsableName: next })}
                 required
-              >
-                {users.map((companyUser) => (
-                  <option key={companyUser.id} value={companyUser.full_name}>
-                    {companyUser.full_name}
-                  </option>
-                ))}
-              </select>
+                options={users.map((companyUser) => ({
+                  value: companyUser.full_name,
+                  label: companyUser.full_name,
+                }))}
+              />
             </label>
           ) : (
             <p className="text-sm text-slate-400">
@@ -146,17 +146,16 @@ export default function TaskEditModal({
 
           <label>
             {t('tasks.columns.status')}
-            <select
-              className="filter-select w-full"
+            <CutSelect
+              className="w-full"
+              size="sm"
               value={form.statut}
-              onChange={(event) => setForm({ ...form, statut: event.target.value })}
-            >
-              {TASK_STATUTS.map((statut) => (
-                <option key={statut} value={statut}>
-                  {t(`tasks.statuses.${STATUT_I18N_KEY[statut]}`)}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => setForm({ ...form, statut: next })}
+              options={TASK_STATUTS.map((statut) => ({
+                value: statut,
+                label: t(`tasks.statuses.${STATUT_I18N_KEY[statut]}`),
+              }))}
+            />
           </label>
 
           <label>

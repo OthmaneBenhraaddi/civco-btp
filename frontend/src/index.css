@@ -6,22 +6,22 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --surface-canvas: #0b0c0e;
-  --surface-elevated: #16171b;
-  --surface-sunken: #121316;
-  --surface-input: #1c1d22;
+  --surface-canvas: #0b0f17;
+  --surface-elevated: #151c28;
+  --surface-sunken: #0e121b;
+  --surface-input: #111722;
   --border-hairline: rgba(255, 255, 255, 0.06);
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --text-primary: #ffffff;
-  --text-muted: #94a3b8;
-  --text-body: #9ca3af;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --text-primary: #f8fafc;
+  --text-muted: #b6c2d4;
+  --text-body: #8b9bb0;
+  --accent: #22c55e;
+  --accent-hover: #4ade80;
+  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #1f2937;
-  background: #f3f4f6;
+  color: #e2e8f0;
+  background: #0b0f17;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -177,8 +177,6 @@ button.app-header-icon-btn,
 button.sidebar-collapse-btn,
 button.client-action-btn,
 button.notification-item-action,
-button.wizard-type-card,
-button.wizard-sector-card,
 button.action-toast-close,
 button.new-project-modal-btn[type="button"],
 button.new-client-modal-btn[type="button"],
@@ -194,9 +192,7 @@ button.login-demo-badge {
 }
 
 button.client-list-item:hover,
-button.command-palette-row:hover,
-button.wizard-type-card:hover,
-button.wizard-sector-card:hover {
+button.command-palette-row:hover {
   transform: none;
 }
 
@@ -217,8 +213,11 @@ button.wizard-sector-card:hover {
 }
 
 .notification-dropdown-panel {
-  background-color: #121316;
   color: #e2e8f0;
+}
+
+.notification-dropdown-panel .pg-cut-shell__inner {
+  background: #0e131f;
 }
 
 .notification-dropdown-subtitle {
@@ -236,14 +235,6 @@ button.notification-item-action span {
 
 button.notification-item-action .text-slate-200 {
   color: #e2e8f0;
-}
-
-button.language-switcher-trigger-header {
-  color: #e2e8f0;
-}
-
-button.language-switcher-trigger-header:hover {
-  color: #ffffff;
 }
 
 button.sidebar-logout-btn {
@@ -289,8 +280,9 @@ button.login-demo-badge {
 
 .login-input-wrap {
   position: relative;
-  display: block;
+  display: flex;
   width: 100%;
+  align-items: center;
 }
 
 .login-input {
@@ -303,22 +295,22 @@ button.login-demo-badge {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   padding-right: 1rem;
-  padding-left: 2.75rem;
+  padding-left: 3rem;
   border-radius: 0.5rem;
 }
 
 .login-input-wrap .login-input-icon {
   position: absolute;
-  left: 0.875rem;
+  left: 0.75rem;
   top: 50%;
   z-index: 2;
   transform: translateY(-50%);
   pointer-events: none;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .login-input:focus {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(34, 197, 94, 0.45);
   outline: none;
 }
 
@@ -327,8 +319,7 @@ button.login-demo-badge {
 }
 
 .app-header-icon-btn,
-.app-header-search-trigger,
-.language-switcher-trigger-header {
+.app-header-search-trigger {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -354,24 +345,26 @@ button.login-demo-badge {
 }
 
 .command-palette-row {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background-color: #16171b;
+  --pg-cut: var(--pg-cut-sm);
+  border: 1px solid #1e293b;
+  background-color: #131926;
   color: #ffffff;
   cursor: pointer;
   font: inherit;
   min-height: auto;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
+  padding: 0.75rem !important;
+  border-radius: 0 !important;
+  clip-path: var(--pg-cut-path);
 }
 
 button.command-palette-row:hover,
 button.command-palette-row:focus-visible,
 button.command-palette-row.is-active {
   outline: none;
-  background-color: #1c1d22;
-  border-color: rgba(99, 102, 241, 0.35);
+  background-color: #1a2234 !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
   color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.12);
+  box-shadow: none;
   transform: none;
 }
 
@@ -404,33 +397,8 @@ button.app-header-search-trigger:focus-visible {
   padding: 0.5rem;
 }
 
-.app-header-icon-btn:hover,
-.language-switcher-trigger-header:hover {
+.app-header-icon-btn:hover {
   background: rgba(255, 255, 255, 0.04);
-}
-
-.language-switcher-header {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  width: auto;
-  flex-shrink: 0;
-}
-
-button.language-switcher-trigger-header {
-  padding: 0.5rem;
-  color: #e2e8f0;
-}
-
-.language-switcher-header .language-switcher-option {
-  background: transparent;
-  border: none;
-  width: 100%;
-  text-align: left;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font: inherit;
 }
 
 .sidebar,
@@ -520,58 +488,6 @@ button.language-switcher-trigger-header {
   font-size: 0.875rem;
 }
 
-.sidebar .language-switcher {
-  margin-bottom: 0.75rem;
-}
-
-.language-switcher-label {
-  color: #64748b;
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.language-switcher {
-  display: block;
-  width: 100%;
-  font-size: 0.85rem;
-}
-
-.language-switcher.language-switcher-header {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  width: auto;
-  flex-shrink: 0;
-}
-
-.language-switcher-options {
-  position: static;
-  box-shadow: none;
-}
-
-.language-switcher-options .language-switcher-option {
-  border: none;
-  box-shadow: none;
-  background: transparent;
-  color: #94a3b8;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-}
-
-.language-switcher-options .language-switcher-option:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-  border: none;
-}
-
-.language-switcher-options .language-switcher-option.border-l-2 {
-  background: transparent;
-  color: #60a5fa;
-}
-
 .role-list-item {
   background: transparent;
   color: #94a3b8;
@@ -615,22 +531,6 @@ button.language-switcher-trigger-header {
 
 .permission-toggle[aria-checked='true'] {
   background: rgba(37, 99, 235, 0.35);
-}
-
-.language-switcher-trigger,
-.language-switcher button[type='button'].language-switcher-trigger {
-  border: 1px solid rgba(30, 41, 59, 0.6);
-  background: rgba(30, 41, 59, 0.4);
-  color: #e2e8f0;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-}
-
-.language-switcher-trigger:hover,
-.language-switcher button[type='button'].language-switcher-trigger:hover {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(51, 65, 85, 0.8);
 }
 
 .main-content {
@@ -1155,12 +1055,12 @@ button.language-switcher-trigger-header {
   border-color: rgba(251, 191, 36, 0.2);
 }
 
-.app-shell .modal-backdrop {
+:is(.app-shell, .pg-shell) .modal-backdrop {
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(4px);
 }
 
-.app-shell .modal {
+:is(.app-shell, .pg-shell) .modal {
   background: rgba(15, 17, 23, 0.92);
   backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
@@ -1169,25 +1069,25 @@ button.language-switcher-trigger-header {
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
 }
 
-.app-shell .modal-header {
+:is(.app-shell, .pg-shell) .modal-header {
   border-bottom: 1px solid var(--border-hairline);
   padding: 1.25rem 1.5rem;
 }
 
-.app-shell .modal-header h2 {
+:is(.app-shell, .pg-shell) .modal-header h2 {
   color: #ffffff;
   font-size: 1.0625rem;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-.app-shell .modal-body {
+:is(.app-shell, .pg-shell) .modal-body {
   padding: 1.5rem;
 }
 
-.app-shell .modal input,
-.app-shell .modal select,
-.app-shell .modal textarea {
+:is(.app-shell, .pg-shell) .modal input:not([type='checkbox']):not([type='radio']):not([type='file']),
+:is(.app-shell, .pg-shell) .modal select,
+:is(.app-shell, .pg-shell) .modal textarea {
   background: var(--surface-input);
   border: 1px solid rgb(30 41 59);
   color: #f4f4f5;
@@ -1195,52 +1095,57 @@ button.language-switcher-trigger-header {
   padding: 0.625rem 1rem;
 }
 
-.app-shell .modal input:focus,
-.app-shell .modal select:focus,
-.app-shell .modal textarea:focus {
+:is(.app-shell, .pg-shell) .modal input:focus,
+:is(.app-shell, .pg-shell) .modal select:focus,
+:is(.app-shell, .pg-shell) .modal textarea:focus {
   outline: none;
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.app-shell .modal label {
+:is(.app-shell, .pg-shell) .modal label {
   color: #94a3b8;
 }
 
-.app-shell .modal input,
-.app-shell .modal select,
-.app-shell .modal textarea {
+:is(.app-shell, .pg-shell) .modal input:not([type='checkbox']):not([type='radio']):not([type='file']),
+:is(.app-shell, .pg-shell) .modal select,
+:is(.app-shell, .pg-shell) .modal textarea {
   color: #ffffff;
 }
 
-.app-shell .modal.new-project-modal,
-.app-shell .modal.new-client-modal {
+:is(.app-shell, .pg-shell) .modal.new-project-modal,
+:is(.app-shell, .pg-shell) .modal.new-client-modal {
   background: rgba(15, 17, 23, 0.95);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-subtle);
   color: #fff;
   width: min(100%, 44rem);
+  max-height: 85vh;
 }
 
-.app-shell .modal.new-project-modal .modal-header,
-.app-shell .modal.new-client-modal .modal-header {
+:is(.app-shell, .pg-shell) .modal.new-client-modal .modal-body {
+  max-height: calc(85vh - 4.5rem);
+}
+
+:is(.app-shell, .pg-shell) .modal.new-project-modal .modal-header,
+:is(.app-shell, .pg-shell) .modal.new-client-modal .modal-header {
   border-bottom-color: var(--border-hairline);
 }
 
-.app-shell .modal.new-project-modal input,
-.app-shell .modal.new-project-modal select,
-.app-shell .modal.new-project-modal textarea,
-.app-shell .modal.new-client-modal input,
-.app-shell .modal.new-client-modal select,
-.app-shell .modal.new-client-modal textarea {
+:is(.app-shell, .pg-shell) .modal.new-project-modal input:not([type='checkbox']):not([type='radio']):not([type='file']),
+:is(.app-shell, .pg-shell) .modal.new-project-modal select,
+:is(.app-shell, .pg-shell) .modal.new-project-modal textarea,
+:is(.app-shell, .pg-shell) .modal.new-client-modal input:not([type='checkbox']):not([type='radio']):not([type='file']),
+:is(.app-shell, .pg-shell) .modal.new-client-modal select,
+:is(.app-shell, .pg-shell) .modal.new-client-modal textarea {
   background: var(--surface-input);
   border-color: rgb(30 41 59);
   color: #ffffff;
 }
 
-.app-shell .modal.new-project-modal input:focus,
-.app-shell .modal.new-project-modal select:focus,
-.app-shell .modal.new-project-modal textarea:focus {
+:is(.app-shell, .pg-shell) .modal.new-project-modal input:focus,
+:is(.app-shell, .pg-shell) .modal.new-project-modal select:focus,
+:is(.app-shell, .pg-shell) .modal.new-project-modal textarea:focus {
   border-color: #64748b;
   box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.35);
 }
@@ -1656,7 +1561,8 @@ td {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -1670,6 +1576,12 @@ td {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 textarea {
@@ -1916,10 +1828,6 @@ select {
   margin-bottom: 0.5rem;
 }
 
-.auth-card-top .language-switcher {
-  color: #94a3b8;
-}
-
 .banner-warning {
   background: #fef3c7;
   color: #92400e;
@@ -2028,7 +1936,8 @@ button.action-toast-close {
   border: none;
   box-shadow: none;
   min-height: auto;
-  padding: 0.25rem;
+  padding: 0;
+  border-radius: 0.375rem;
 }
 
 button.action-toast-close:hover,
@@ -2069,6 +1978,7 @@ button.action-toast-close:focus-visible {
   }
 
   .app-shell,
+  .pg-shell,
   .main-content,
   .main-content-scroll {
     display: block !important;

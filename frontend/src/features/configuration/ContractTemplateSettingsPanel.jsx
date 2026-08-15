@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as contractsApi from '../../api/contracts'
 import * as projectsApi from '../../api/projects'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useTranslation } from '../../i18n/LanguageContext'
 import {
   BENTO_CARD_CLASS,
-  BTN_GHOST,
-  BTN_PRIMARY,
   FIELD_CLASS,
   LABEL_CLASS,
 } from '../../theme/designTokens'
@@ -232,7 +232,7 @@ export default function ContractTemplateSettingsPanel() {
               />
             </label>
 
-            <div className="rounded-xl border border-white/[0.06] bg-[#121316] p-3">
+            <div className="pg-inner-tile p-3">
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
                 {t('contracts.placeholders')}
               </p>
@@ -240,7 +240,7 @@ export default function ContractTemplateSettingsPanel() {
                 {PLACEHOLDERS.map((token) => (
                   <code
                     key={token}
-                    className="cursor-pointer rounded bg-white/[0.06] px-2 py-1 text-[11px] text-indigo-300"
+                    className="cursor-pointer bg-white/[0.06] px-2 py-1 text-[11px] text-[var(--pg-accent)]"
                     onClick={() => setForm((current) => ({
                       ...current,
                       content: `${current.content}${token}`,
@@ -252,18 +252,23 @@ export default function ContractTemplateSettingsPanel() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={saving} className={BTN_PRIMARY}>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <NeonButton
+                type="submit"
+                size="sm"
+                disabled={saving}
+                className={saving ? 'opacity-45' : ''}
+              >
                 {saving ? t('common.saving') : t('common.save')}
-              </button>
+              </NeonButton>
               {editingId ? (
                 <>
-                  <button type="button" onClick={handlePreview} className={BTN_GHOST}>
+                  <NeonButton type="button" variant="neon" size="sm" onClick={handlePreview}>
                     {t('contracts.preview')}
-                  </button>
-                  <button type="button" onClick={resetForm} className={BTN_GHOST}>
+                  </NeonButton>
+                  <NeonButton type="button" variant="ghost" size="sm" onClick={resetForm}>
                     {t('common.cancel')}
-                  </button>
+                  </NeonButton>
                 </>
               ) : null}
             </div>
@@ -271,19 +276,22 @@ export default function ContractTemplateSettingsPanel() {
             {editingId ? (
               <label className="block">
                 <span className={LABEL_CLASS}>{t('contracts.previewProject')}</span>
-                <select
-                  className={FIELD_CLASS}
-                  value={previewProjectId}
-                  onFocus={loadProjectsIfNeeded}
-                  onChange={(e) => setPreviewProjectId(e.target.value)}
-                >
-                  <option value="">{t('contracts.noProjectPreview')}</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.reference} — {project.title}
-                    </option>
-                  ))}
-                </select>
+                <div onFocus={loadProjectsIfNeeded} onMouseDown={loadProjectsIfNeeded}>
+                  <CutSelect
+                    className="w-full"
+                    size="sm"
+                    value={previewProjectId}
+                    onChange={setPreviewProjectId}
+                    placeholder={t('contracts.noProjectPreview')}
+                    options={[
+                      { value: '', label: t('contracts.noProjectPreview') },
+                      ...projects.map((project) => ({
+                        value: project.id,
+                        label: `${project.reference} — ${project.title}`,
+                      })),
+                    ]}
+                  />
+                </div>
               </label>
             ) : null}
           </form>
@@ -308,7 +316,7 @@ export default function ContractTemplateSettingsPanel() {
               {templates.map((template) => (
                 <li
                   key={template.id}
-                  className="rounded-xl border border-white/[0.06] bg-[#121316] p-4"
+                  className="pg-inner-tile p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -318,36 +326,35 @@ export default function ContractTemplateSettingsPanel() {
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <button type="button" onClick={() => startEdit(template)} className={BTN_GHOST}>
+                      <NeonButton type="button" variant="ghost" size="sm" onClick={() => startEdit(template)}>
                         {t('common.edit')}
-                      </button>
-                      <button type="button" onClick={() => handleDelete(template.id)} className={BTN_GHOST}>
+                      </NeonButton>
+                      <NeonButton type="button" variant="danger" size="sm" onClick={() => handleDelete(template.id)}>
                         {t('common.delete')}
-                      </button>
+                      </NeonButton>
                     </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <select
-                      className="filter-select"
-                      value={compileProjectId}
-                      onFocus={loadProjectsIfNeeded}
-                      onChange={(e) => setCompileProjectId(e.target.value)}
-                    >
-                      <option value="">{t('contracts.selectProject')}</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.reference}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className={BTN_PRIMARY}
-                      onClick={() => handleCompile(template.id)}
-                    >
+                    <div onFocus={loadProjectsIfNeeded} onMouseDown={loadProjectsIfNeeded}>
+                      <CutSelect
+                        className="min-w-[10rem]"
+                        size="sm"
+                        value={compileProjectId}
+                        onChange={setCompileProjectId}
+                        placeholder={t('contracts.selectProject')}
+                        options={[
+                          { value: '', label: t('contracts.selectProject') },
+                          ...projects.map((project) => ({
+                            value: project.id,
+                            label: project.reference,
+                          })),
+                        ]}
+                      />
+                    </div>
+                    <NeonButton type="button" size="sm" onClick={() => handleCompile(template.id)}>
                       {t('contracts.generate')}
-                    </button>
+                    </NeonButton>
                   </div>
                 </li>
               ))}
@@ -367,7 +374,7 @@ export default function ContractTemplateSettingsPanel() {
             {pendingTenantContracts.map((contract) => (
               <li
                 key={contract.id}
-                className="rounded-xl border border-white/[0.06] bg-[#121316] p-4"
+                className="pg-inner-tile p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -376,15 +383,15 @@ export default function ContractTemplateSettingsPanel() {
                       {contract.project?.reference} · {contract.client?.name}
                     </p>
                   </div>
-                  <button
+                  <NeonButton
                     type="button"
-                    className={BTN_PRIMARY}
+                    size="sm"
                     onClick={() => setSigningContractId(
                       signingContractId === contract.id ? null : contract.id,
                     )}
                   >
                     {t('contracts.counterSign')}
-                  </button>
+                  </NeonButton>
                 </div>
 
                 {signingContractId === contract.id ? (

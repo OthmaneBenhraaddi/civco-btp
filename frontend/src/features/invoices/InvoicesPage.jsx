@@ -4,6 +4,7 @@ import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
 import Modal from '../../components/Modal'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
@@ -209,15 +210,21 @@ export default function InvoicesPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">{t('invoices.allStatuses')}</option>
-          <option value="draft">{t('status.draft')}</option>
-          <option value="sent">{t('status.sent')}</option>
-          <option value="partially_paid">{t('status.partially_paid')}</option>
-          <option value="paid">{t('status.paid')}</option>
-          <option value="overdue">{t('status.overdue')}</option>
-          <option value="cancelled">{t('status.cancelled')}</option>
-        </select>
+        <CutSelect
+          className="min-w-[180px]"
+          size="sm"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: t('invoices.allStatuses') },
+            { value: 'draft', label: t('status.draft') },
+            { value: 'sent', label: t('status.sent') },
+            { value: 'partially_paid', label: t('status.partially_paid') },
+            { value: 'paid', label: t('status.paid') },
+            { value: 'overdue', label: t('status.overdue') },
+            { value: 'cancelled', label: t('status.cancelled') },
+          ]}
+        />
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -272,42 +279,44 @@ export default function InvoicesPage() {
 
       <Modal title={t('invoices.new')} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form className="stack" onSubmit={handleSubmit}>
-          <label>
-            {t('invoices.client')} *
-            <select
+          <div>
+            <span>{t('invoices.client')} *</span>
+            <CutSelect
               value={form.client_id}
-              onChange={(event) => setForm({
+              onChange={(client_id) => setForm({
                 ...form,
-                client_id: event.target.value,
+                client_id,
                 dispatch_note_id: '',
               })}
               required
-            >
-              <option value="">{t('invoices.selectClient')}</option>
-              {visibleClients.map((client) => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t('dispatchNotes.selectExecuted')} *
-            <select
+              options={[
+                { value: '', label: t('invoices.selectClient') },
+                ...visibleClients.map((client) => ({
+                  value: String(client.id),
+                  label: client.name,
+                })),
+              ]}
+            />
+          </div>
+          <div>
+            <span>{t('dispatchNotes.selectExecuted')} *</span>
+            <CutSelect
               value={form.dispatch_note_id}
-              onChange={(event) => setForm({ ...form, dispatch_note_id: event.target.value })}
+              onChange={(dispatch_note_id) => setForm({ ...form, dispatch_note_id })}
               required
               disabled={!form.client_id || dispatchNotes.length === 0}
-            >
-              <option value="">{t('dispatchNotes.selectExecuted')}</option>
-              {dispatchNotes.map((note) => (
-                <option key={note.id} value={note.id}>
-                  {note.reference_number} — {note.delivery_forms_count ?? 0} BL
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: t('dispatchNotes.selectExecuted') },
+                ...dispatchNotes.map((note) => ({
+                  value: String(note.id),
+                  label: `${note.reference_number} — ${note.delivery_forms_count ?? 0} BL`,
+                })),
+              ]}
+            />
             {form.client_id && dispatchNotes.length === 0 ? (
               <span className="hint">{t('dispatchNotes.noneForClient')}</span>
             ) : null}
-          </label>
+          </div>
           <div className="form-row">
             <label>
               {t('invoices.issuedAt')}

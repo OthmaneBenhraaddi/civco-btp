@@ -14,8 +14,8 @@ const NAV_ITEMS = [
     audience: 'client',
   },
   {
-    to: '/portal/discussions',
-    labelKey: 'nav.clientDiscussions',
+    to: '/portal/tickets',
+    labelKey: 'nav.tickets',
     Icon: IconDiscussions,
     audience: 'client',
   },
@@ -54,11 +54,11 @@ const NAV_ITEMS = [
     permission: 'client.view',
   },
   {
-    to: '/discussions',
-    labelKey: 'nav.messaging',
+    to: '/tickets',
+    labelKey: 'nav.tickets',
     Icon: IconDiscussions,
     audience: 'erp',
-    entityBoundStaffOnly: true,
+    permission: 'ticket.view',
   },
   {
     to: '/map',

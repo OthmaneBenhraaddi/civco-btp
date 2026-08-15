@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['first_name', 'last_name', 'email', 'phone', 'cin', 'job_title', 'is_active', 'role', 'password', 'tenant_id', 'client_id', 'status', 'stealth_shortcut'])]
+#[Fillable(['first_name', 'last_name', 'email', 'phone', 'cin', 'job_title', 'avatar_path', 'is_active', 'role', 'password', 'tenant_id', 'client_id', 'status', 'stealth_shortcut', 'is_demo', 'demo_expires_at'])]
 #[Hidden(['password', 'remember_token', 'provisioned_password'])]
 class User extends Authenticatable
 {
@@ -35,7 +35,21 @@ class User extends Authenticatable
             'status' => UserStatus::class,
             'password' => 'hashed',
             'stealth_shortcut' => 'array',
+            'is_demo' => 'boolean',
+            'demo_expires_at' => 'datetime',
         ];
+    }
+
+    public function isDemoSession(): bool
+    {
+        return (bool) $this->is_demo;
+    }
+
+    public function demoHasExpired(): bool
+    {
+        return $this->is_demo
+            && $this->demo_expires_at !== null
+            && $this->demo_expires_at->isPast();
     }
 
     protected static function booted(): void

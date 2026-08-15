@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Upload } from 'lucide-react'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
+import { FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import TenantBrandingFields, {
   EMPTY_BRANDING_FORM,
   brandingPayloadFromForm,
@@ -13,24 +16,34 @@ const emptyForm = {
   ...EMPTY_BRANDING_FORM,
 }
 
+const LOGO_ACCEPT = 'image/jpeg,image/png,image/webp,image/svg+xml'
+
 export default function EntityCreationWizard({ saving, onSubmit }) {
   const { t } = useTranslation()
+  const fileInputRef = useRef(null)
   const [step, setStep] = useState(1)
   const [form, setForm] = useState(emptyForm)
   const [logoFile, setLogoFile] = useState(null)
   const [logoPreview, setLogoPreview] = useState(null)
+  const [dragOver, setDragOver] = useState(false)
   const [stepError, setStepError] = useState('')
 
   function resetWizard() {
     setStep(1)
     setForm(emptyForm)
     setLogoFile(null)
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview)
+    }
     setLogoPreview(null)
+    setDragOver(false)
     setStepError('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
-  function handleLogoChange(event) {
-    const file = event.target.files?.[0] ?? null
+  function applyLogoFile(file) {
     setLogoFile(file)
     setStepError('')
 
@@ -39,6 +52,10 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
     }
 
     setLogoPreview(file ? URL.createObjectURL(file) : null)
+  }
+
+  function handleLogoInputChange(event) {
+    applyLogoFile(event.target.files?.[0] ?? null)
   }
 
   function handleNextFromStep1(event) {
@@ -56,12 +73,6 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
   function handleNextFromStep2(event) {
     event.preventDefault()
     setStepError('')
-
-    if (!logoFile) {
-      setStepError(t('superAdmin.wizard.logoRequired'))
-      return
-    }
-
     setStep(3)
   }
 
@@ -69,16 +80,11 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
     event.preventDefault()
     setStepError('')
 
-    if (!logoFile) {
-      setStepError(t('superAdmin.wizard.logoRequired'))
-      return
-    }
-
     await onSubmit({
       name: form.name.trim(),
       subdomain: form.subdomain.trim().toLowerCase(),
       status: form.status,
-      logo: logoFile,
+      logo: logoFile || undefined,
       ...brandingPayloadFromForm(form),
     })
 
@@ -94,7 +100,7 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
               className={[
                 'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
                 step >= value
-                  ? 'bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30'
+                  ? 'bg-[var(--pg-accent-dim)] text-[var(--pg-accent)] ring-1 ring-[rgba(34,197,94,0.35)]'
                   : 'bg-white/5 text-slate-500 ring-1 ring-white/10',
               ].join(' ')}
             >
@@ -147,19 +153,22 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
           </label>
           <label className={LABEL_CLASS}>
             {t('superAdmin.status')}
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
               value={form.status}
-              onChange={(event) => setForm({ ...form, status: event.target.value })}
-            >
-              <option value="active">{t('status.active')}</option>
-              <option value="inactive">{t('status.inactive')}</option>
-              <option value="archived">{t('status.archived')}</option>
-            </select>
+              onChange={(nextValue) => setForm({ ...form, status: nextValue })}
+              options={[
+                { value: 'active', label: t('status.active') },
+                { value: 'inactive', label: t('status.inactive') },
+                { value: 'archived', label: t('status.archived') },
+              ]}
+            />
           </label>
-          <button type="submit" className={BTN_PRIMARY}>
-            {t('superAdmin.wizard.next')}
-          </button>
+          <div className="entity-wizard-actions flex flex-wrap items-center gap-2.5 pt-2">
+            <NeonButton type="submit" size="sm" className="entity-wizard-cta">
+              {t('superAdmin.wizard.next')}
+            </NeonButton>
+          </div>
         </form>
       ) : null}
 
@@ -167,42 +176,87 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
         <form className="stack" onSubmit={handleNextFromStep2}>
           <p className="text-sm text-slate-400">{t('superAdmin.wizard.step2Hint')}</p>
 
-          <label className={LABEL_CLASS}>
-            {t('superAdmin.wizard.logoLabel')}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/svg+xml"
-              className={FIELD_CLASS}
-              onChange={handleLogoChange}
-              required={!logoFile}
-            />
-          </label>
+          <div>
+            <p className={LABEL_CLASS}>
+              {t('superAdmin.wizard.logoLabel')}
+              <span className="ml-1 font-medium normal-case tracking-normal text-slate-500">
+                ({t('superAdmin.wizard.logoOptional')})
+              </span>
+            </p>
+            <div
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(event) => {
+                event.preventDefault()
+                setDragOver(false)
+                const dropped = event.dataTransfer.files?.[0]
+                if (dropped) applyLogoFile(dropped)
+              }}
+              className={`pg-dropzone mt-2 ${dragOver ? 'is-active' : ''}`}
+            >
+              <div className="pg-dropzone__face">
+                <Upload className="mx-auto mb-2 h-5 w-5 text-[var(--pg-accent)]" />
+                <p className="text-sm text-slate-300">{t('superAdmin.wizard.logoDropHint')}</p>
+                <p className="mt-1 text-xs text-[var(--pg-text-dim)]">
+                  {t('superAdmin.wizard.logoFormats')}
+                </p>
 
-          {logoPreview ? (
-            <div className="rounded-xl border border-white/[0.06] bg-[#0a0b0d]/40 p-4">
-              <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
-                {t('superAdmin.wizard.logoPreview')}
-              </p>
-              <img
-                src={logoPreview}
-                alt={t('superAdmin.wizard.logoPreview')}
-                className="max-h-24 max-w-full object-contain"
-              />
+                {logoFile ? (
+                  <p className="mt-3 text-xs font-semibold text-emerald-300">{logoFile.name}</p>
+                ) : null}
+
+                {logoPreview ? (
+                  <div className="mt-4 flex justify-center">
+                    <img
+                      src={logoPreview}
+                      alt={t('superAdmin.wizard.logoPreview')}
+                      className="max-h-24 max-w-full object-contain"
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <NeonButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      {t('superAdmin.wizard.logoChoose')}
+                    </span>
+                  </NeonButton>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={LOGO_ACCEPT}
+                  className="hidden"
+                  onChange={handleLogoInputChange}
+                />
+              </div>
             </div>
-          ) : null}
+          </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
+          <div className="entity-wizard-actions flex flex-wrap items-center gap-2.5 pt-2">
+            <NeonButton
               type="button"
-              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+              variant="neon"
+              size="sm"
               disabled={saving}
+              className="entity-wizard-cta"
               onClick={() => setStep(1)}
             >
               {t('superAdmin.wizard.back')}
-            </button>
-            <button type="submit" className={BTN_PRIMARY}>
+            </NeonButton>
+            <NeonButton type="submit" size="sm" className="entity-wizard-cta">
               {t('superAdmin.wizard.next')}
-            </button>
+            </NeonButton>
           </div>
         </form>
       ) : null}
@@ -217,18 +271,25 @@ export default function EntityCreationWizard({ saving, onSubmit }) {
             t={t}
           />
 
-          <div className="flex flex-wrap gap-3">
-            <button
+          <div className="entity-wizard-actions flex flex-wrap items-center gap-2.5 pt-2">
+            <NeonButton
               type="button"
-              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+              variant="neon"
+              size="sm"
               disabled={saving}
+              className="entity-wizard-cta"
               onClick={() => setStep(2)}
             >
               {t('superAdmin.wizard.back')}
-            </button>
-            <button type="submit" className={BTN_PRIMARY} disabled={saving}>
+            </NeonButton>
+            <NeonButton
+              type="submit"
+              size="sm"
+              disabled={saving}
+              className={`entity-wizard-cta ${saving ? 'opacity-45' : ''}`}
+            >
               {saving ? t('superAdmin.creating') : t('superAdmin.create.submit')}
-            </button>
+            </NeonButton>
           </div>
         </form>
       ) : null}

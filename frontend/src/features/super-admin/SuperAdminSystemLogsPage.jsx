@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import CutSelect from '../../components/prodigy/CutSelect'
 import ActivityLogFeed from '../history/ActivityLogFeed'
 import { useTranslation } from '../../i18n/LanguageContext'
 import {
@@ -18,7 +19,7 @@ import { TEAM_DIRECTORY_REFRESH_EVENT } from '../profile/profileSyncEvents'
 const ACTION_TYPE_OPTIONS = ['created', 'updated', 'deleted']
 
 export default function SuperAdminSystemLogsPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const [platformLogs, setPlatformLogs] = useState(() => readPlatformLogs())
   const [filters, setFilters] = useState({
@@ -90,7 +91,7 @@ export default function SuperAdminSystemLogsPage() {
   }
 
   return (
-    <div className="min-h-full w-full bg-[#0b0c0e]">
+    <div className="min-h-full w-full bg-[#0b0f17]">
       <div className="mx-auto max-w-4xl px-6 py-6">
         <article className="w-full">
           <header className="mb-8 flex flex-col gap-4 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -110,76 +111,77 @@ export default function SuperAdminSystemLogsPage() {
           </header>
 
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <label className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500">
               <span className="mb-1.5 block font-semibold uppercase tracking-wider">
                 {t('superAdmin.logs.filters.entity')}
               </span>
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={filters.tenant_slug}
-                onChange={(event) => updateFilter('tenant_slug', event.target.value)}
-              >
-                {SUPER_ADMIN_LOG_ENTITIES.map((entity) => (
-                  <option key={entity.slug || 'all'} value={entity.slug}>
-                    {t(entity.labelKey)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => updateFilter('tenant_slug', value)}
+                options={SUPER_ADMIN_LOG_ENTITIES.map((entity) => ({
+                  value: entity.slug,
+                  label: t(entity.labelKey),
+                }))}
+              />
+            </div>
 
-            <label className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500">
               <span className="mb-1.5 block font-semibold uppercase tracking-wider">
                 {t('history.filters.user')}
               </span>
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={filters.user_id}
-                onChange={(event) => updateFilter('user_id', event.target.value)}
-              >
-                <option value="">{t('history.filters.allUsers')}</option>
-                {filterOptions.users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => updateFilter('user_id', value)}
+                placeholder={t('history.filters.allUsers')}
+                options={[
+                  { value: '', label: t('history.filters.allUsers') },
+                  ...filterOptions.users.map((user) => ({
+                    value: user.id,
+                    label: user.name,
+                  })),
+                ]}
+              />
+            </div>
 
-            <label className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500">
               <span className="mb-1.5 block font-semibold uppercase tracking-wider">
                 {t('history.filters.project')}
               </span>
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={filters.project_id}
-                onChange={(event) => updateFilter('project_id', event.target.value)}
-              >
-                <option value="">{t('history.filters.allProjects')}</option>
-                {filterOptions.projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.reference} — {project.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => updateFilter('project_id', value)}
+                placeholder={t('history.filters.allProjects')}
+                options={[
+                  { value: '', label: t('history.filters.allProjects') },
+                  ...filterOptions.projects.map((project) => ({
+                    value: project.id,
+                    label: `${project.reference} — ${project.title}`,
+                  })),
+                ]}
+              />
+            </div>
 
-            <label className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500">
               <span className="mb-1.5 block font-semibold uppercase tracking-wider">
                 {t('history.filters.action')}
               </span>
-              <select
-                className="filter-select w-full"
+              <CutSelect
+                className="w-full"
                 value={filters.action_type}
-                onChange={(event) => updateFilter('action_type', event.target.value)}
-              >
-                <option value="">{t('history.filters.allActions')}</option>
-                {ACTION_TYPE_OPTIONS.map((actionType) => (
-                  <option key={actionType} value={actionType}>
-                    {t(`history.actionTypes.${actionType}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => updateFilter('action_type', value)}
+                placeholder={t('history.filters.allActions')}
+                options={[
+                  { value: '', label: t('history.filters.allActions') },
+                  ...ACTION_TYPE_OPTIONS.map((actionType) => ({
+                    value: actionType,
+                    label: t(`history.actionTypes.${actionType}`),
+                  })),
+                ]}
+              />
+            </div>
           </div>
 
           <ActivityLogFeed
@@ -189,7 +191,6 @@ export default function SuperAdminSystemLogsPage() {
             lastPage={lastPage}
             onPageChange={setPage}
             t={t}
-            locale={locale}
           />
         </article>
       </div>

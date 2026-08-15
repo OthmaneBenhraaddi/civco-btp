@@ -1,8 +1,10 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import LandingPage from '../features/landing/LandingPage'
 import { useTranslation } from '../i18n/LanguageContext'
 import { appendTenantQuery } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin } from '../utils/authIdentity'
+import { locationToReturnPath } from '../utils/returnPath'
 import {
   canAccessRoute,
   getHomePathForRole,
@@ -21,14 +23,25 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center overflow-hidden bg-[#0b0c0e] text-slate-400">
+      <div className="flex h-full items-center justify-center overflow-hidden bg-[#0b0f17] text-slate-400">
         <p className="text-sm text-slate-400">{t('common.loading')}</p>
       </div>
     )
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={appendTenantQuery('/login')} replace state={{ from: location.pathname }} />
+    const isRoot = location.pathname === '/' || location.pathname === ''
+    if (isRoot) {
+      return <LandingPage />
+    }
+
+    return (
+      <Navigate
+        to={appendTenantQuery('/login')}
+        replace
+        state={{ from: locationToReturnPath(location) }}
+      />
+    )
   }
 
   const clientUser = isClientUser(user, roles)

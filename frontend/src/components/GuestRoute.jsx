@@ -1,11 +1,13 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
 import { getHomePathForRole } from '../routes/routeAccess'
+import { getSafeReturnPath } from '../utils/returnPath'
 
 export default function GuestRoute() {
   const { isAuthenticated, loading, user, roles, permissions } = useAuth()
   const { t } = useTranslation()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -16,7 +18,8 @@ export default function GuestRoute() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
+    const fallback = getHomePathForRole(user?.role, user, roles, permissions)
+    return <Navigate to={getSafeReturnPath(location.state?.from, fallback)} replace />
   }
 
   return <Outlet />

@@ -21,12 +21,15 @@ use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\ClientPortalController;
 use App\Http\Controllers\Api\V1\ClientPortalMessageController;
 use App\Http\Controllers\Api\V1\ClientPortalQuoteController;
+use App\Http\Controllers\Api\V1\ClientPortalTicketController;
 use App\Http\Controllers\Api\V1\CommercialDocumentController;
 use App\Http\Controllers\Api\V1\CompanyUserController;
 use App\Http\Controllers\Api\V1\ContractAmendmentController;
+use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\ContractTemplateController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeliveryFormController;
+use App\Http\Controllers\Api\V1\DemoController;
 use App\Http\Controllers\Api\V1\DispatchNoteController;
 use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\DocumentTemplateController;
@@ -53,10 +56,12 @@ use App\Http\Controllers\Api\V1\QuoteLineController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\SuperAdminController;
+use App\Http\Controllers\Api\V1\SuperAdminDemoCodeController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
 use App\Http\Controllers\Api\V1\ThemeColorController;
+use App\Http\Controllers\Api\V1\TicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -66,10 +71,13 @@ Route::prefix('v1')->group(function (): void {
     ]));
 
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/demo/redeem', [DemoController::class, 'redeem']);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
         Route::patch('/me', [AuthController::class, 'updateProfile']);
+        Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
+        Route::delete('/me/avatar', [AuthController::class, 'destroyAvatar']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
@@ -94,6 +102,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/messages/threads', [ClientPortalMessageController::class, 'threads']);
             Route::get('/messages/thread', [ClientPortalMessageController::class, 'thread']);
             Route::post('/messages', [ClientPortalMessageController::class, 'store']);
+            Route::get('/tickets', [ClientPortalTicketController::class, 'index']);
+            Route::post('/tickets', [ClientPortalTicketController::class, 'store']);
+            Route::get('/tickets/{ticket}', [ClientPortalTicketController::class, 'show']);
+            Route::post('/tickets/{ticket}/messages', [ClientPortalTicketController::class, 'storeMessage']);
         });
 
         Route::prefix('super-admin')->middleware('super_admin')->group(function (): void {
@@ -106,6 +118,9 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/tenants/{tenant}/admins/{user}/status', [SuperAdminController::class, 'updateAdminStatus']);
             Route::get('/tenants/{tenant}/admins/{user}/credentials', [SuperAdminController::class, 'showAdminCredentials']);
             Route::post('/tenants/{tenant}/admins/{user}/reset-password', [SuperAdminController::class, 'resetAdminPassword']);
+            Route::get('/demo-codes', [SuperAdminDemoCodeController::class, 'index']);
+            Route::post('/demo-codes', [SuperAdminDemoCodeController::class, 'store']);
+            Route::delete('/demo-codes/{demoCode}', [SuperAdminDemoCodeController::class, 'destroy']);
         });
 
         Route::get('/team/tenant-options', [TeamController::class, 'tenantOptions']);
@@ -172,6 +187,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/tenant/logo', [TenantSettingsController::class, 'showLogo'])
                 ->middleware('admin');
             Route::post('/tenant/logo', [TenantSettingsController::class, 'updateLogo'])
+                ->middleware('admin');
+            Route::delete('/tenant/logo', [TenantSettingsController::class, 'destroyLogo'])
                 ->middleware('admin');
 
             Route::get('/tenant/document-controls', [TenantSettingsController::class, 'showDocumentControls'])
@@ -300,6 +317,17 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('permission:quote.manage');
             Route::post('/quotes/{quote}/convert-to-invoice', [QuoteController::class, 'convertToInvoice'])
                 ->middleware('permission:invoice.manage');
+
+            Route::get('/tickets', [TicketController::class, 'index'])
+                ->middleware('permission:ticket.view');
+            Route::post('/tickets', [TicketController::class, 'store'])
+                ->middleware('permission:ticket.create');
+            Route::get('/tickets/{ticket}', [TicketController::class, 'show'])
+                ->middleware('permission:ticket.view');
+            Route::post('/tickets/{ticket}/messages', [TicketController::class, 'storeMessage'])
+                ->middleware('permission:ticket.reply');
+            Route::post('/tickets/{ticket}/close', [TicketController::class, 'close'])
+                ->middleware('permission:ticket.close');
             Route::post('/quotes/{quote}/lines', [QuoteLineController::class, 'store'])
                 ->middleware('permission:quote.manage');
             Route::put('/quote-lines/{quoteLine}', [QuoteLineController::class, 'update'])

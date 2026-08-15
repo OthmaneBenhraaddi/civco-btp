@@ -6,9 +6,12 @@ import ConfirmArchiveModal from '../../components/ConfirmArchiveModal'
 import RoleBadge from '../../components/RoleBadge'
 import ClientBadge, { ClientBadgeList } from '../../components/ClientBadge'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { useDemoGuards } from '../../hooks/useDemoGuards'
+import { useActionToast } from '../../hooks/useActionToast'
 import * as clientsApi from '../../api/clients'
 import * as badgesApi from '../../api/badges'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
@@ -99,8 +102,8 @@ function DetailField({ label, value }) {
 
 function clientCardClasses(isSelected, isArchived) {
   const base = [
-    'client-list-item flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left',
-    'bg-[#16171b] text-white transition-all duration-150 ease-in-out',
+    'client-list-item flex w-full items-start gap-3 border px-3 py-2.5 text-left',
+    'bg-[var(--pg-bg-elevated)] text-white transition-all duration-150 ease-in-out',
   ]
 
   if (isArchived) {
@@ -108,7 +111,7 @@ function clientCardClasses(isSelected, isArchived) {
   }
 
   if (isSelected) {
-    base.push('border-white/[0.12] ring-1 ring-white/[0.06]')
+    base.push('border-[rgba(34,197,94,0.35)] ring-1 ring-[rgba(34,197,94,0.2)]')
   } else {
     base.push('border-white/[0.06] hover:border-white/10')
   }
@@ -122,6 +125,8 @@ export default function ClientsPage() {
   const stealthModeRef = useRef(stealthMode)
   stealthModeRef.current = stealthMode
   const { t } = useTranslation()
+  const { blockDestructive } = useDemoGuards()
+  const { toastError } = useActionToast()
   const location = useLocation()
   const isSuperAdmin = isPlatformSuperAdmin(user)
   const [clients, setClients] = useState([])
@@ -356,6 +361,7 @@ export default function ClientsPage() {
       await loadClients(meta?.current_page ?? 1)
     } catch (err) {
       setError(extractErrorMessage(err, t('clients.saveError')))
+      toastError(extractErrorMessage(err, t('clients.saveError')))
     } finally {
       setSaving(false)
     }
@@ -383,6 +389,7 @@ export default function ClientsPage() {
       await loadClientDetail(editing.id)
     } catch (err) {
       setError(extractErrorMessage(err, t('clients.saveError')))
+      toastError(extractErrorMessage(err, t('clients.saveError')))
     } finally {
       setSaving(false)
     }
@@ -390,6 +397,10 @@ export default function ClientsPage() {
 
   async function confirmArchiveClient() {
     if (!archiveTarget) {
+      return
+    }
+
+    if (blockDestructive(t('clients.archive'))) {
       return
     }
 
@@ -417,6 +428,7 @@ export default function ClientsPage() {
       await loadClients(meta?.current_page ?? 1)
     } catch (err) {
       setError(extractErrorMessage(err, t('clients.archiveError')))
+      toastError(extractErrorMessage(err, t('clients.archiveError')))
     } finally {
       setArchiving(false)
     }
@@ -460,18 +472,19 @@ export default function ClientsPage() {
           onChange={(event) => setSearch(event.target.value)}
         />
         {isSuperAdmin ? (
-          <select
-            className="filter-select min-w-[12rem] py-2 text-sm"
+          <CutSelect
+            className="min-w-[180px]"
+            size="sm"
             value={tenantFilter}
-            onChange={(event) => setTenantFilter(event.target.value)}
-          >
-            <option value="">{t('clients.entityFilterAll')}</option>
-            {tenantOptions.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
+            onChange={setTenantFilter}
+            options={[
+              { value: '', label: t('clients.entityFilterAll') },
+              ...tenantOptions.map((tenant) => ({
+                value: String(tenant.id),
+                label: tenant.name,
+              })),
+            ]}
+          />
         ) : null}
       </div>
 
@@ -481,7 +494,7 @@ export default function ClientsPage() {
         <p className="text-sm text-slate-400">{t('common.loading')}</p>
       ) : (
         <div className="mt-6 flex w-full flex-col items-start gap-6 lg:flex-row">
-          <aside className="w-full space-y-1 rounded-2xl border border-white/[0.06] bg-[#16171b] p-2 lg:w-1/3">
+          <aside className="pg-card w-full space-y-1 p-2 lg:w-1/3">
             {visibleClients.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-slate-500">{t('clients.empty')}</p>
             ) : (
@@ -512,7 +525,7 @@ export default function ClientsPage() {
             )}
           </aside>
 
-          <section className="flex min-h-[400px] w-full flex-col rounded-2xl border border-white/[0.06] bg-[#16171b] p-6 lg:w-2/3">
+          <section className="pg-card flex min-h-[400px] w-full flex-col p-6 lg:w-2/3">
             {!selectedClient ? (
               <p className="m-auto text-center text-xs text-slate-500">{t('clients.selectPrompt')}</p>
             ) : (
@@ -565,17 +578,16 @@ export default function ClientsPage() {
                           <RoleBadge label={getRoleLabel(selectedRole, t)} tone={selectedRole.badgeTone} />
                         ) : null}
                       </div>
-                      <select
-                        className="client-role-select filter-select w-full py-1.5 text-xs"
+                      <CutSelect
+                        className="w-full"
+                        size="sm"
                         value={selectedRole?.id ?? 'client_extern'}
-                        onChange={(event) => assignClientRole(selectedClient.id, event.target.value)}
-                      >
-                        {getAllRoles().map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {getRoleLabel(item, t)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(roleId) => assignClientRole(selectedClient.id, roleId)}
+                        options={getAllRoles().map((item) => ({
+                          value: item.id,
+                          label: getRoleLabel(item, t),
+                        }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -698,20 +710,18 @@ export default function ClientsPage() {
               onChange={(event) => setForm({ ...form, phone: event.target.value })}
             />
           </label>
-          <label>
+          <div>
             <span className={LABEL_CLASS}>{t('clients.assignedRole')}</span>
-            <select
-              className={`${FIELD_CLASS} w-full`}
+            <CutSelect
+              className="mt-1 w-full"
               value={form.role_id}
-              onChange={(event) => setForm({ ...form, role_id: event.target.value })}
-            >
-              {getAllRoles().map((roleOption) => (
-                <option key={roleOption.id} value={roleOption.id}>
-                  {getRoleLabel(roleOption, t)}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(role_id) => setForm({ ...form, role_id })}
+              options={getAllRoles().map((roleOption) => ({
+                value: roleOption.id,
+                label: getRoleLabel(roleOption, t),
+              }))}
+            />
+          </div>
           <div>
             <p className={LABEL_CLASS}>{t('clients.assignBadges')}</p>
             {availableBadges.length === 0 ? (

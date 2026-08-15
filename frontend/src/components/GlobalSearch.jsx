@@ -89,10 +89,12 @@ const ROUTE_ICONS = {
   roles: IconShield,
 }
 
-const ROW_BASE =
-  'command-palette-row flex w-full items-center gap-4 rounded-xl border border-white/[0.06] bg-[#16171b] p-3 text-left text-white transition-colors mb-1.5 cursor-pointer'
+const ROW_BASE = [
+  'command-palette-row pg-cut-sm mb-1.5 flex w-full cursor-pointer items-center gap-4',
+  'border border-slate-800 bg-[#131926] p-3 text-left text-white transition-all duration-200',
+].join(' ')
 
-const ROW_ACTIVE = 'is-active'
+const ROW_ACTIVE = 'is-active border-green-500/40 bg-[#1a2234]'
 
 function IconBuilding({ className }) {
   return (
@@ -308,78 +310,80 @@ export default function GlobalSearch() {
 
   const paletteModal = isOpen ? (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-[10vh] backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/65 pt-[10vh] backdrop-blur-[2px]"
       onMouseDown={handleBackdropClick}
       role="presentation"
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#0b0c0e]/95 p-4 shadow-2xl backdrop-blur-md"
+        className="pg-cut-shell pg-cut-shell--md relative w-full max-w-xl shadow-2xl shadow-black/60"
         role="dialog"
         aria-modal="true"
         aria-label={t('layout.commandSearch')}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center gap-3">
-          <IconSearch className="h-4 w-4 shrink-0 text-slate-500" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder={t('layout.commandSearch')}
-            aria-label={t('layout.commandSearch')}
-            aria-controls="global-search-results"
-            aria-activedescendant={
-              activeIndex >= 0 ? `global-search-option-${activeIndex}` : undefined
-            }
-            className="command-palette-input min-w-0 flex-1 border-none bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
-          />
-          <kbd className="ml-auto shrink-0 rounded-md border border-gray-700 px-1.5 py-0.5 font-mono text-xs text-gray-500 shadow-sm">
-            Esc
-          </kbd>
-        </div>
+        <div className="pg-cut-shell__inner bg-[#0e131f] p-4">
+          <div className="pg-cut-sm flex items-center gap-3 border border-slate-700 bg-[#090d16] px-3 py-2.5">
+            <IconSearch className="h-4 w-4 shrink-0 text-slate-500" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={handleInputKeyDown}
+              placeholder={t('layout.commandSearch')}
+              aria-label={t('layout.commandSearch')}
+              aria-controls="global-search-results"
+              aria-activedescendant={
+                activeIndex >= 0 ? `global-search-option-${activeIndex}` : undefined
+              }
+              className="command-palette-input min-w-0 flex-1 border-none bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
+            />
+            <kbd className="ml-auto shrink-0 border border-slate-700 bg-[#0e131f] px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Esc
+            </kbd>
+          </div>
 
-        <div className="my-3 border-t border-slate-700/50" />
-
-        <div id="global-search-results">
-          <p className="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-            {sectionLabel}
-          </p>
-
-          {hasQuery && displayResults.length === 0 ? (
-            <p className="px-2 py-2 text-sm text-slate-500">
-              {isSearching ? t('globalSearch.searching') : t('globalSearch.noResults')}
+          <div id="global-search-results" className="mt-4">
+            <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              {sectionLabel}
             </p>
-          ) : (
-            <ul className="max-h-[min(24rem,50vh)] overflow-y-auto px-1">
-              {displayResults.map((result, index) => (
-                <li key={result.id}>
-                  <button
-                    id={`global-search-option-${index}`}
-                    type="button"
-                    aria-selected={index === activeIndex}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => selectResult(result)}
-                    className={resultItemClass(index)}
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900/70 ring-1 ring-slate-700/60">
-                      <ResultIcon result={result} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-white">{result.label}</span>
-                      {result.subtitle ? (
-                        <span className="block truncate text-xs text-slate-500">{result.subtitle}</span>
-                      ) : null}
-                    </span>
-                    <IconChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+
+            {hasQuery && displayResults.length === 0 ? (
+              <p className="px-1 py-3 text-sm text-slate-500">
+                {isSearching ? t('globalSearch.searching') : t('globalSearch.noResults')}
+              </p>
+            ) : (
+              <ul className="custom-scrollbar max-h-[min(24rem,50vh)] overflow-y-auto pr-1">
+                {displayResults.map((result, index) => (
+                  <li key={result.id}>
+                    <button
+                      id={`global-search-option-${index}`}
+                      type="button"
+                      aria-selected={index === activeIndex}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => selectResult(result)}
+                      className={resultItemClass(index)}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 p-2 ring-1 ring-white/[0.04]">
+                        <ResultIcon result={result} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-white">
+                          {result.label}
+                        </span>
+                        {result.subtitle ? (
+                          <span className="block truncate text-xs text-slate-500">{result.subtitle}</span>
+                        ) : null}
+                      </span>
+                      <IconChevronRight className="h-4 w-4 shrink-0 text-slate-500" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

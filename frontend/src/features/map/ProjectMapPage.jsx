@@ -5,6 +5,7 @@ import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import StatusBadge from '../../components/StatusBadge'
 import RoleBadge from '../../components/RoleBadge'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useAuth } from '../../context/AuthContext'
 import { useStealthMode, useStealthModeRefresh } from '../../context/StealthModeContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -40,20 +41,17 @@ function ProjectMapEmptyState() {
 
   return (
     <div className="project-map-empty flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="project-map-empty__icon flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-700/60 bg-slate-800/60 text-slate-400">
+      <div className="project-map-empty__icon flex h-14 w-14 items-center justify-center pg-card text-[var(--pg-accent)]">
         <MapPin size={28} strokeWidth={1.75} aria-hidden />
       </div>
       <div className="max-w-md space-y-2">
-        <p className="text-base font-medium text-slate-200">{t('map.empty')}</p>
-        <p className="text-sm leading-relaxed text-slate-500">{t('map.emptyHint')}</p>
+        <p className="text-base font-bold uppercase tracking-[0.08em] text-white">{t('map.empty')}</p>
+        <p className="text-sm leading-relaxed text-[var(--pg-text-muted)]">{t('map.emptyHint')}</p>
       </div>
       {isAdmin ? (
-        <Link
-          to={resolveNavPath('/projects', user)}
-          className="inline-flex items-center justify-center rounded-lg border border-slate-600/60 bg-slate-800/90 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
-        >
+        <NeonButton to={resolveNavPath('/projects', user)}>
           {t('map.emptyAction')}
-        </Link>
+        </NeonButton>
       ) : null}
     </div>
   )
@@ -83,9 +81,9 @@ function ProjectMapPopup({ project }) {
 
       <Link
         to={`/projects/${project.id}`}
-        className="mt-3 inline-flex rounded-lg border border-slate-600/60 bg-slate-800/90 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-700"
+        className="mt-3 inline-flex text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--pg-accent)] hover:text-[var(--pg-accent-soft)]"
       >
-        {t('map.viewProject')}
+        {t('map.viewProject')} →
       </Link>
     </div>
   )
@@ -177,7 +175,7 @@ export default function ProjectMapPage() {
       <header className="page-header shrink-0">
         <div>
           <h1>{t('map.title')}</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-[var(--pg-text-muted)]">
             {isAdmin ? t('map.subtitleAdmin') : t('map.subtitleUser')}
           </p>
         </div>
@@ -190,7 +188,7 @@ export default function ProjectMapPage() {
 
       {error ? <p className="error shrink-0">{error}</p> : null}
 
-      <div className="project-map-canvas relative min-h-[520px] flex-1 overflow-hidden rounded-xl border border-slate-700/50 bg-[#1a1f2e]">
+      <div className="project-map-canvas relative min-h-[520px] flex-1 overflow-hidden bg-[#0e121b]">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-slate-500">
             {t('common.loading')}
@@ -220,7 +218,7 @@ export default function ProjectMapPage() {
                 </Marker>
               ))}
             </MapContainer>
-            <div className="project-map-overlay pointer-events-none absolute inset-0 rounded-xl" aria-hidden />
+            <div className="project-map-overlay pointer-events-none absolute inset-0" aria-hidden />
           </>
         )}
       </div>

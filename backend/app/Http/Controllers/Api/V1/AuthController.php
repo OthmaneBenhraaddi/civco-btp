@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UpdateAvatarRequest;
 use App\Services\ActivityLogService;
-use App\Services\AdminCredentialService;
 use App\Services\AuthContextService;
 use App\Support\TenantAuthGuard;
+use App\Support\UserAvatarStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,8 +64,11 @@ class AuthController extends Controller
         $previousEmail = $user?->email;
 
         $validated = $request->validate([
+            'first_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'required', 'string', 'max:100'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'job_title' => ['sometimes', 'nullable', 'string', 'max:120'],
             'stealth_shortcut' => ['sometimes', 'nullable', 'array'],
             'stealth_shortcut.ctrl' => ['required_with:stealth_shortcut', 'boolean'],
             'stealth_shortcut.shift' => ['required_with:stealth_shortcut', 'boolean'],
@@ -75,12 +79,20 @@ class AuthController extends Controller
 
         $updates = [];
 
-        if (array_key_exists('email', $validated)) {
-            $updates['email'] = $validated['email'];
-        }
-
-        if (! empty($validated['password'])) {
-            $updates['password'] = bcrypt($validated['password']);
+        foreach (['first_name', 'last_name', 'email', 'phone', 'job_title'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $value = $validated[$field];
+                $updates[$field] = is_string($value) ? trim($value) : $value;
+                if (in_array($field, ['first_name', 'last_name'], true) && ($updates[$field] ?? '') === '') {
+                    $updates[$field] = $user->{$field};
+                }
+                if ($field === 'job_title' && ($updates[$field] ?? null) === '') {
+                    $updates[$field] = null;
+                }
+                if ($field === 'phone' && ($updates[$field] ?? null) === '') {
+                    $updates[$field] = null;
+                }
+            }
         }
 
         if (array_key_exists('stealth_shortcut', $validated)) {
@@ -92,23 +104,56 @@ class AuthController extends Controller
         }
 
         $emailChanged = array_key_exists('email', $validated) && $previousEmail !== $validated['email'];
-        $passwordChanged = ! empty($validated['password']);
 
-        if ($emailChanged || $passwordChanged) {
+        if ($emailChanged) {
             $freshUser = $user->fresh()->loadMissing(['companies', 'roles']);
             $roleLabel = $freshUser->roles->first()?->name ?? $freshUser->job_title ?? 'Membre';
-            if ($passwordChanged) {
-                app(AdminCredentialService::class)->storeProvisionedPassword($freshUser, $validated['password']);
-            }
             app(ActivityLogService::class)->logCredentialsUpdated(
                 $freshUser,
                 $roleLabel,
                 $freshUser->email,
-                $emailChanged,
-                $passwordChanged,
+                true,
+                false,
                 $freshUser,
             );
         }
+
+        $companyId = $request->filled('company_id')
+            ? $request->integer('company_id')
+            : null;
+
+        return response()->json(
+            $authContext->forUser($user->fresh(), $companyId)
+        );
+    }
+
+    public function updateAvatar(UpdateAvatarRequest $request, AuthContextService $authContext): JsonResponse
+    {
+        $user = $request->user();
+
+        $avatarPath = UserAvatarStorage::replace(
+            $request->file('avatar'),
+            (int) $user->id,
+            $user->avatar_path,
+        );
+
+        $user->update(['avatar_path' => $avatarPath]);
+
+        $companyId = $request->filled('company_id')
+            ? $request->integer('company_id')
+            : null;
+
+        return response()->json(
+            $authContext->forUser($user->fresh(), $companyId)
+        );
+    }
+
+    public function destroyAvatar(Request $request, AuthContextService $authContext): JsonResponse
+    {
+        $user = $request->user();
+
+        UserAvatarStorage::delete($user->avatar_path);
+        $user->update(['avatar_path' => null]);
 
         $companyId = $request->filled('company_id')
             ? $request->integer('company_id')

@@ -14,7 +14,7 @@ export default function SuperAdminRoute() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#0b0c0e] text-slate-400">
+      <div className="flex h-full items-center justify-center bg-[#0b0f17] text-slate-400">
         <p className="text-sm">{t('common.loading')}</p>
       </div>
     )

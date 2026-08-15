@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import en from './locales/en'
 import fr from './locales/fr'
 
-const locales = { en, fr }
+export const DEFAULT_LOCALE = 'fr'
+const STORAGE_KEY = 'btp-locale'
+const dictionaries = { fr, en }
 
 const LanguageContext = createContext(null)
 
@@ -14,21 +16,43 @@ function interpolate(template, vars = {}) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '')
 }
 
+function resolveInitialLocale() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored === 'en' || stored === 'fr') {
+      return stored
+    }
+  } catch {
+    // ignore storage access errors
+  }
+
+  return DEFAULT_LOCALE
+}
+
 export function LanguageProvider({ children }) {
-  const [locale, setLocale] = useState(() => localStorage.getItem('locale') || 'fr')
+  const [locale, setLocaleState] = useState(resolveInitialLocale)
 
   useEffect(() => {
-    localStorage.setItem('locale', locale)
     document.documentElement.lang = locale
+    try {
+      localStorage.setItem(STORAGE_KEY, locale)
+    } catch {
+      // ignore storage write errors
+    }
   }, [locale])
 
-  const t = useCallback(
-    (key, vars) => {
-      const value = getNestedValue(locales[locale], key) ?? getNestedValue(locales.en, key) ?? key
-      return typeof value === 'string' ? interpolate(value, vars) : key
-    },
-    [locale],
-  )
+  const setLocale = useCallback((nextLocale) => {
+    if (nextLocale !== 'en' && nextLocale !== 'fr') {
+      return
+    }
+    setLocaleState(nextLocale)
+  }, [])
+
+  const t = useCallback((key, vars) => {
+    const dictionary = dictionaries[locale] ?? fr
+    const value = getNestedValue(dictionary, key) ?? getNestedValue(fr, key) ?? getNestedValue(en, key) ?? key
+    return typeof value === 'string' ? interpolate(value, vars) : key
+  }, [locale])
 
   const value = useMemo(
     () => ({
@@ -36,7 +60,7 @@ export function LanguageProvider({ children }) {
       setLocale,
       t,
     }),
-    [locale, t],
+    [locale, setLocale, t],
   )
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>

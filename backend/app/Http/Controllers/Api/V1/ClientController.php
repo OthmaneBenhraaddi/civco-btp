@@ -14,6 +14,7 @@ use App\Models\Client;
 use App\Services\ActivityLogService;
 use App\Services\ClientPortalProvisioningService;
 use App\Services\ClientQueryService;
+use App\Services\NotificationService;
 use App\Support\TenantManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ class ClientController extends Controller
         private readonly ActivityLogService $activityLogService,
         private readonly ClientQueryService $clientQuery,
         private readonly ClientPortalProvisioningService $portalProvisioning,
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -236,11 +238,15 @@ class ClientController extends Controller
         ]);
 
         try {
-            $this->portalProvisioning->setPortalActive(
+            $portalUser = $this->portalProvisioning->setPortalActive(
                 $client,
                 $this->company($request),
                 $validated['active'],
             );
+
+            if ($validated['active']) {
+                $this->notificationService->notifyOpenTicketsAfterPortalActivation($portalUser);
+            }
         } catch (\InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }

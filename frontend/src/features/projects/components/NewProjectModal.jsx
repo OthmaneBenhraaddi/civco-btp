@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
+import NeonButton from '../../../components/prodigy/NeonButton'
 import WizardProgress from '../../../components/wizard/WizardProgress'
 import { SectorCard, TypeCard } from '../../../components/wizard/wizardCards'
 import { useWizardResetOnOpen } from '../../../hooks/useWizardResetOnOpen'
@@ -9,12 +11,7 @@ import * as lotsApi from '../../../api/lots'
 import * as sectorsApi from '../../../api/sectors'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
 import { handleWizardEnterKey } from '../../../utils/wizardForm'
-import {
-  BTN_GHOST,
-  BTN_PRIMARY,
-  FIELD_CLASS,
-  LABEL_CLASS,
-} from '../../../theme/designTokens'
+import { FIELD_CLASS, LABEL_CLASS } from '../../../theme/designTokens'
 import {
   DEFAULT_PROJECT_FORM,
   PAYMENT_STATES,
@@ -255,12 +252,17 @@ export default function NewProjectModal({
               <div>
                 <span className={LABEL_CLASS}>{t('projects.form.sector')}</span>
                 <p className="mb-3 text-xs text-slate-500">{t('projects.wizard.sectorTypeHint')}</p>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {PROJECT_SECTORS.map((sector) => (
                     <TypeCard
                       key={sector}
                       active={form.sector === sector}
                       title={sector}
+                      description={
+                        sector === 'PRIVÉ'
+                          ? t('projects.wizard.sectorPrivateDesc')
+                          : t('projects.wizard.sectorPublicDesc')
+                      }
                       onClick={() => updateForm({ sector })}
                     />
                   ))}
@@ -308,7 +310,7 @@ export default function NewProjectModal({
                           className={[
                             'flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-200',
                             checked
-                              ? 'border-white/15 bg-white/[0.05] text-white'
+                              ? 'border-emerald-400/70 bg-emerald-500/[0.12] text-white shadow-[0_0_0_1px_rgba(52,211,153,0.28)]'
                               : 'border-white/[0.06] bg-[#121316] hover:bg-white/[0.02]',
                           ].join(' ')}
                         >
@@ -316,9 +318,16 @@ export default function NewProjectModal({
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleLot(lot.id)}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-slate-600 bg-[#1c1d22] text-indigo-400 focus:ring-indigo-500/30"
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-slate-600 bg-[#1c1d22] text-emerald-400 focus:ring-emerald-500/30"
                           />
-                          <span className="text-xs leading-snug text-slate-300">{lot.name}</span>
+                          <span
+                            className={[
+                              'text-xs leading-snug',
+                              checked ? 'font-semibold text-emerald-200' : 'text-slate-300',
+                            ].join(' ')}
+                          >
+                            {lot.name}
+                          </span>
                         </label>
                       )
                     })}
@@ -332,18 +341,20 @@ export default function NewProjectModal({
             <div className="wizard-step space-y-5">
               <label>
                 <span className={LABEL_CLASS}>{t('projects.form.client')}</span>
-                <select
-                  className={FIELD_CLASS}
+                <CutSelect
+                  className="w-full"
+                  size="sm"
                   value={form.client_id}
-                  onChange={(event) => updateForm({ client_id: event.target.value })}
-                >
-                  <option value="">{t('projects.selectClient')}</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => updateForm({ client_id: next })}
+                  placeholder={t('projects.selectClient')}
+                  options={[
+                    { value: '', label: t('projects.selectClient') },
+                    ...clients.map((client) => ({
+                      value: client.id,
+                      label: client.name,
+                    })),
+                  ]}
+                />
               </label>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -366,17 +377,16 @@ export default function NewProjectModal({
 
                 <label>
                   <span className={LABEL_CLASS}>{t('projects.form.paymentState')}</span>
-                  <select
-                    className={FIELD_CLASS}
+                  <CutSelect
+                    className="w-full"
+                    size="sm"
                     value={form.etatPaiement}
-                    onChange={(event) => updateForm({ etatPaiement: event.target.value })}
-                  >
-                    {PAYMENT_STATES.map((state) => (
-                      <option key={state} value={state}>
-                        {state}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(next) => updateForm({ etatPaiement: next })}
+                    options={PAYMENT_STATES.map((state) => ({
+                      value: state,
+                      label: state,
+                    }))}
+                  />
                 </label>
 
                 <label>
@@ -509,33 +519,28 @@ export default function NewProjectModal({
 
         <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] pt-5">
           {step > 0 ? (
-            <button type="button" onClick={goBack} className={BTN_GHOST}>
+            <NeonButton type="button" onClick={goBack} variant="ghost" size="sm">
               {t('projects.wizard.back')}
-            </button>
+            </NeonButton>
           ) : (
-            <button type="button" onClick={onClose} className={BTN_GHOST}>
+            <NeonButton type="button" onClick={onClose} variant="ghost" size="sm">
               {t('common.cancel')}
-            </button>
+            </NeonButton>
           )}
 
           {step < WIZARD_STEPS.length - 1 ? (
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={!canAdvance()}
-              className={BTN_PRIMARY}
-            >
+            <NeonButton type="button" onClick={goNext} disabled={!canAdvance()} size="sm">
               {t('projects.wizard.next')}
-            </button>
+            </NeonButton>
           ) : (
-            <button
+            <NeonButton
               type="button"
               onClick={handleFinalSubmit}
               disabled={saving || !form.objet.trim() || !form.selectedSectorId || !form.client_id}
-              className={`new-project-modal-btn ${BTN_PRIMARY}`}
+              size="sm"
             >
               {saving ? t('projects.creating') : t('projects.create')}
-            </button>
+            </NeonButton>
           )}
         </div>
       </div>

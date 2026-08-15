@@ -5,6 +5,7 @@ import {
   History,
   MessageSquare,
   Receipt,
+  Ticket,
   Trash2,
   UserPlus,
   CheckCircle2,
@@ -15,9 +16,13 @@ const TYPE_ICON_MAP = {
   chat: { Icon: MessageSquare, tone: 'text-sky-400' },
   quote_signed: { Icon: FileText, tone: 'text-emerald-400' },
   invoice_created: { Icon: Receipt, tone: 'text-amber-400' },
-  project_alert: { Icon: FolderKanban, tone: 'text-indigo-400' },
+  project_alert: { Icon: FolderKanban, tone: 'text-emerald-400' },
   amendment_pending: { Icon: FileText, tone: 'text-amber-400' },
   amendment_resolved: { Icon: CheckCircle2, tone: 'text-emerald-400' },
+  contract_signed: { Icon: FileText, tone: 'text-emerald-400' },
+  ticket_created: { Icon: Ticket, tone: 'text-sky-400' },
+  ticket_replied: { Icon: MessageSquare, tone: 'text-amber-400' },
+  ticket_closed: { Icon: CheckCircle2, tone: 'text-slate-400' },
 }
 
 const TITLE_ICON_RULES = [
@@ -25,7 +30,7 @@ const TITLE_ICON_RULES = [
   { test: /client/i, Icon: UserPlus, tone: 'text-violet-400' },
   { test: /projet supprim/i, Icon: Trash2, tone: 'text-rose-400' },
   { test: /statut|phase termin|tâche termin/i, Icon: CheckCircle2, tone: 'text-emerald-400' },
-  { test: /projet|chantier/i, Icon: FolderKanban, tone: 'text-indigo-400' },
+  { test: /projet|chantier/i, Icon: FolderKanban, tone: 'text-emerald-400' },
 ]
 
 export function resolveNotificationIcon(title = '', isActivity = false, type = null) {

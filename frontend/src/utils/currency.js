@@ -1,10 +1,10 @@
-export function formatMoney(amount, locale = 'fr') {
-  const { amount: formattedAmount, currency } = formatMoneyParts(amount, locale)
+export function formatMoney(amount) {
+  const { amount: formattedAmount, currency } = formatMoneyParts(amount)
   return `${formattedAmount} ${currency}`.trim()
 }
 
-export function formatMoneyParts(amount, locale = 'fr') {
-  const numberLocale = locale === 'fr' ? 'fr-MA' : 'en-MA'
+export function formatMoneyParts(amount) {
+  const numberLocale = 'fr-MA'
 
   const parts = new Intl.NumberFormat(numberLocale, {
     style: 'currency',

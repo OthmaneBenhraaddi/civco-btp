@@ -35,7 +35,8 @@ return [
     'login_scheme' => env('TENANCY_LOGIN_SCHEME', 'http'),
     'login_port' => env('TENANCY_LOGIN_PORT', '8000'),
     'frontend_port' => env('TENANCY_FRONTEND_PORT', '5173'),
-    'fallback_path' => '/login',
+    // Guests on bare localhost/base domain land on the SPA marketing home (not /login).
+    'fallback_path' => '/',
     'super_admin_path' => '/super-admin',
 
     'local_hosts' => [

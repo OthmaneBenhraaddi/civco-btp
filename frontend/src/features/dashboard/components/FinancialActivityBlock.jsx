@@ -35,19 +35,19 @@ function formatRevenueAxis(value) {
 }
 
 export default function FinancialActivityBlock({ financial }) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { colors } = useTheme()
 
   const chartData = useMemo(
-    () => buildFinancialActivitySeries(locale, {
+    () => buildFinancialActivitySeries({
       activitySeries: financial?.activity_series ?? [],
     }),
-    [financial?.activity_series, locale],
+    [financial?.activity_series],
   )
 
   return (
     <article className={`p-6 ${DASHBOARD_CARD_CLASS}`}>
-      <h2 className="mb-6 text-base font-semibold text-white">{t('dashboard.financialActivity')}</h2>
+      <h2 className="mb-6 text-sm font-bold uppercase tracking-[0.12em] text-white">{t('dashboard.financialActivity')}</h2>
 
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -91,7 +91,7 @@ export default function FinancialActivityBlock({ financial }) {
               labelStyle={CHART_TOOLTIP_LABEL_STYLE}
               formatter={(value, name) => {
                 if (name === t('dashboard.revenueSeries')) {
-                  return [formatMoney(value, locale), name]
+                  return [formatMoney(value), name]
                 }
 
                 return [value, name]

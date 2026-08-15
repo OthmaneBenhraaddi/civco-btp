@@ -1,3 +1,4 @@
+import CutSelect from '../../components/prodigy/CutSelect'
 import { FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 
 export const EMPTY_BRANDING_FORM = {
@@ -131,15 +132,17 @@ export default function TenantBrandingFields({ form, onChange, t, passwordHint }
 
           <label className={LABEL_CLASS}>
             {t('superAdmin.branding.mailEncryption')}
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
+              size="sm"
               value={form.mail_encryption}
-              onChange={(event) => update('mail_encryption', event.target.value)}
-            >
-              <option value="tls">TLS</option>
-              <option value="ssl">SSL</option>
-              <option value="none">{t('superAdmin.branding.mailEncryptionNone')}</option>
-            </select>
+              onChange={(next) => update('mail_encryption', next)}
+              options={[
+                { value: 'tls', label: 'TLS' },
+                { value: 'ssl', label: 'SSL' },
+                { value: 'none', label: t('superAdmin.branding.mailEncryptionNone') },
+              ]}
+            />
           </label>
         </div>
       </div>

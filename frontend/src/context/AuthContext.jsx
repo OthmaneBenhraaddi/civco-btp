@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { isClientUser as checkIsClientUser } from '../routes/routeAccess'
 import * as authApi from '../api/auth'
-import { setActiveCompanyId, setAuthBootstrapComplete } from '../api/client'
+import * as demoApi from '../api/demo'
+import { ensureCsrfCookie, setActiveCompanyId, setAuthBootstrapComplete } from '../api/client'
 import { clearDevTenantSlug, getDevTenantSlug, setDevTenantSlug } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin, sessionMatchesTenantContext } from '../utils/authIdentity'
 import { userHasPermission } from '../utils/permissionResolver'
@@ -15,6 +16,7 @@ const EMPTY_CONTEXT = {
   roles: [],
   permissions: [],
   tenant: null,
+  demo: null,
 }
 
 export function AuthProvider({ children }) {
@@ -24,6 +26,7 @@ export function AuthProvider({ children }) {
   const [roles, setRoles] = useState([])
   const [permissions, setPermissions] = useState([])
   const [tenant, setTenant] = useState(null)
+  const [demo, setDemo] = useState(null)
   const [loading, setLoading] = useState(true)
   const bootstrappingRef = useRef(false)
 
@@ -41,6 +44,7 @@ export function AuthProvider({ children }) {
       setRoles([])
       setPermissions([])
       setTenant(null)
+      setDemo(null)
       setActiveCompanyId(null)
       return false
     }
@@ -51,6 +55,15 @@ export function AuthProvider({ children }) {
     setRoles(context.roles ?? [])
     setPermissions(context.permissions ?? [])
     setTenant(context.tenant ?? null)
+    setDemo(context.demo ?? (
+      context.user?.is_demo
+        ? {
+            expires_at: context.user.demo_expires_at,
+            remaining_seconds: null,
+            is_expired: false,
+          }
+        : null
+    ))
     setActiveCompanyId(context.company?.id ?? null)
 
     if (isPlatformSuperAdmin(context.user)) {
@@ -68,27 +81,6 @@ export function AuthProvider({ children }) {
     clearDevTenantSlug()
   }, [applyContext])
 
-  const bootstrapSession = useCallback(async () => {
-    if (bootstrappingRef.current) {
-      return null
-    }
-
-    bootstrappingRef.current = true
-
-    try {
-      const context = await authApi.fetchMe()
-      if (context?.user && applyContext(context)) {
-        return context
-      }
-    } catch {
-    } finally {
-      bootstrappingRef.current = false
-    }
-
-    clearContext()
-    return null
-  }, [applyContext, clearContext])
-
   const refresh = useCallback(async (companyId) => {
     const context = await authApi.fetchMe(companyId)
     applyContext(context)
@@ -97,14 +89,33 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false
+    const bootstrapId = Symbol('auth-bootstrap')
+    bootstrappingRef.current = bootstrapId
 
-    bootstrapSession()
-      .finally(() => {
-        if (!cancelled) {
+    ;(async () => {
+      try {
+        const context = await authApi.fetchMe()
+        if (cancelled || bootstrappingRef.current !== bootstrapId) {
+          return
+        }
+
+        if (context?.user && applyContext(context)) {
+          return
+        }
+
+        clearContext()
+      } catch {
+        if (!cancelled && bootstrappingRef.current === bootstrapId) {
+          clearContext()
+        }
+      } finally {
+        if (!cancelled && bootstrappingRef.current === bootstrapId) {
+          bootstrappingRef.current = false
           setLoading(false)
           setAuthBootstrapComplete(true)
         }
-      })
+      }
+    })()
 
     const onUnauthorized = () => {
       if (!bootstrappingRef.current) {
@@ -118,10 +129,17 @@ export function AuthProvider({ children }) {
       cancelled = true
       window.removeEventListener('auth:unauthorized', onUnauthorized)
     }
-  }, [bootstrapSession, clearContext])
+  }, [applyContext, clearContext])
 
   const login = useCallback(async (credentials) => {
     const context = await authApi.login(credentials)
+    applyContext(context)
+    return context
+  }, [applyContext])
+
+  const redeemDemo = useCallback(async (code) => {
+    await ensureCsrfCookie()
+    const context = await demoApi.redeemDemoCode(code)
     applyContext(context)
     return context
   }, [applyContext])
@@ -143,6 +161,7 @@ export function AuthProvider({ children }) {
   const isAdmin = user?.role === 'admin'
   const isSuperAdmin = isPlatformSuperAdmin(user) || user?.is_super_admin === true
   const isClientPortalUser = checkIsClientUser(user, roles)
+  const isDemo = Boolean(user?.is_demo || demo?.expires_at)
 
   const value = useMemo(
     () => ({
@@ -152,9 +171,12 @@ export function AuthProvider({ children }) {
       roles,
       permissions,
       tenant,
+      demo,
       loading,
       isAuthenticated: Boolean(user),
+      isDemo,
       login,
+      redeemDemo,
       logout,
       refresh,
       hasPermission,
@@ -169,8 +191,11 @@ export function AuthProvider({ children }) {
       roles,
       permissions,
       tenant,
+      demo,
       loading,
+      isDemo,
       login,
+      redeemDemo,
       logout,
       refresh,
       hasPermission,

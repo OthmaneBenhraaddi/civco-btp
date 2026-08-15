@@ -2,7 +2,6 @@ import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
 import { resolveProfileRoleLabel } from '../utils/authIdentity'
 import GlobalSearch from './GlobalSearch'
-import LanguageSwitcher from './LanguageSwitcher'
 import NotificationDropdown from './NotificationDropdown'
 
 function IconMenu({ className }) {
@@ -55,8 +54,6 @@ export default function AppHeader({
       </div>
 
       <div className="flex h-full shrink-0 items-center gap-3 sm:gap-5">
-        <LanguageSwitcher variant="header" />
-
         <NotificationDropdown />
 
         <div className="flex items-center gap-3 border-l border-slate-800/80 pl-4">

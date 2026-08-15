@@ -1,46 +1,74 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell } from 'lucide-react'
+import { Bell, CheckCheck } from 'lucide-react'
 import * as activityLogsApi from '../api/activityLogs'
 import * as notificationsApi from '../api/notifications'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n/LanguageContext'
+import { useActionToast } from '../hooks/useActionToast'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 import { resolveNavPath } from '../routes/routeAccess'
+import NeonButton from './prodigy/NeonButton'
 import NotificationDropdownItem from './notifications/NotificationDropdownItem'
 
 const BELL_PREVIEW_LIMIT = 8
 const BELL_POLL_MS = 12000
 
 export default function NotificationDropdown() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, isAdmin, isClientPortalUser } = useAuth()
+  const { toastFromNotification } = useActionToast()
   const rootRef = useRef(null)
+  const knownIdsRef = useRef(null)
+  const loadInFlightRef = useRef(false)
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
   const [activityItems, setActivityItems] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [initialLoaded, setInitialLoaded] = useState(false)
   const [markingId, setMarkingId] = useState(null)
   const [markingAll, setMarkingAll] = useState(false)
 
   const showActivityFeed = isAdmin && !isClientPortalUser
 
-  const loadNotifications = useCallback(async () => {
-    if (!user) {
+  useEffect(() => {
+    knownIdsRef.current = null
+    setInitialLoaded(false)
+  }, [user?.id])
+
+  const loadNotifications = useCallback(async ({ silent = false } = {}) => {
+    if (!user || loadInFlightRef.current) {
       return
     }
 
-    setLoading(true)
+    loadInFlightRef.current = true
+    if (!silent) {
+      setLoading(true)
+    }
 
     try {
       const notificationsResult = await notificationsApi.fetchUnreadNotifications({
         limit: BELL_PREVIEW_LIMIT,
       })
 
-      setItems(notificationsResult.items)
+      const nextItems = notificationsResult.items ?? []
+      setItems(nextItems)
       setUnreadCount(notificationsResult.unreadCount)
+
+      const nextIds = new Set(nextItems.map((item) => String(item.id)))
+      if (knownIdsRef.current === null) {
+        knownIdsRef.current = nextIds
+      } else {
+        for (const notification of nextItems) {
+          const id = String(notification.id)
+          if (!knownIdsRef.current.has(id)) {
+            toastFromNotification(notification)
+          }
+        }
+        knownIdsRef.current = new Set([...knownIdsRef.current, ...nextIds])
+      }
 
       if (showActivityFeed) {
         const activityResult = await activityLogsApi.fetchActivityLogs({ per_page: BELL_PREVIEW_LIMIT })
@@ -49,16 +77,22 @@ export default function NotificationDropdown() {
         setActivityItems([])
       }
     } catch {
-      setItems([])
-      setActivityItems([])
-      setUnreadCount(0)
+      if (!silent) {
+        setItems([])
+        setActivityItems([])
+        setUnreadCount(0)
+      }
     } finally {
-      setLoading(false)
+      loadInFlightRef.current = false
+      setInitialLoaded(true)
+      if (!silent) {
+        setLoading(false)
+      }
     }
-  }, [showActivityFeed, user])
+  }, [showActivityFeed, toastFromNotification, user])
 
   useAutoRefresh(
-    () => loadNotifications(),
+    (options) => loadNotifications(options),
     [loadNotifications],
     { intervalMs: BELL_POLL_MS, runOnMount: Boolean(user) },
   )
@@ -78,7 +112,7 @@ export default function NotificationDropdown() {
     setOpen((value) => {
       const next = !value
       if (next) {
-        loadNotifications()
+        loadNotifications({ silent: initialLoaded })
       }
       return next
     })
@@ -143,7 +177,8 @@ export default function NotificationDropdown() {
   const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount)
   const hasAlerts = items.length > 0
   const hasActivity = showActivityFeed && activityItems.length > 0
-  const showEmptyState = !loading && !hasAlerts && !hasActivity
+  const showLoading = loading && !initialLoaded && !hasAlerts && !hasActivity
+  const showEmptyState = initialLoaded && !loading && !hasAlerts && !hasActivity
 
   if (!user) {
     return null
@@ -176,117 +211,119 @@ export default function NotificationDropdown() {
       {open ? (
         <div
           id="notification-dropdown-panel"
-          className={[
-            'notification-dropdown-panel absolute right-0 top-full z-50 mt-3 w-[min(24rem,calc(100vw-2rem))] overflow-hidden',
-            'rounded-2xl border border-white/[0.08] bg-[#121316] shadow-2xl shadow-black/60',
-          ].join(' ')}
+          className="notification-dropdown-panel pg-cut-shell pg-cut-shell--md absolute right-0 top-[calc(100%+0.55rem)] z-50 w-[min(24rem,calc(100vw-2rem))] shadow-2xl shadow-black/55"
         >
-          <div className="border-b border-slate-800/60 px-5 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold tracking-tight text-white">
-                  {t('notifications.title')}
-                </p>
-                <p className="notification-dropdown-subtitle mt-1 text-xs text-slate-400">
-                  {unreadCount > 0
-                    ? t('notifications.subtitleUnread', { count: unreadCount })
-                    : hasActivity
-                      ? t('notifications.subtitleActivity')
-                      : t('notifications.subtitleEmpty')}
-                </p>
+          <div className="pg-cut-shell__inner overflow-hidden bg-[#0e131f]">
+            <div className="border-b border-slate-800 px-4 py-3.5 sm:px-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold uppercase tracking-[0.08em] text-white">
+                    {t('notifications.title')}
+                  </p>
+                  <p className="notification-dropdown-subtitle mt-1 text-xs text-slate-500">
+                    {unreadCount > 0
+                      ? t('notifications.subtitleUnread', { count: unreadCount })
+                      : hasActivity
+                        ? t('notifications.subtitleActivity')
+                        : t('notifications.subtitleEmpty')}
+                  </p>
+                </div>
+                {unreadCount > 0 ? (
+                  <NeonButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMarkAllRead}
+                    disabled={markingAll}
+                    className="notification-mark-all-btn shrink-0"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <CheckCheck className="h-3 w-3" strokeWidth={2} />
+                      {t('notifications.markAllRead')}
+                    </span>
+                  </NeonButton>
+                ) : null}
               </div>
-              {unreadCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  disabled={markingAll}
-                  className="mark-all-read-btn shrink-0 text-[11px] font-medium text-slate-400 transition-colors hover:text-white disabled:opacity-50"
-                >
-                  {t('notifications.markAllRead')}
-                </button>
+            </div>
+
+            <div className="max-h-[min(26rem,58vh)] overflow-y-auto overscroll-contain custom-scrollbar py-2">
+              {showLoading ? (
+                <p className="px-5 py-12 text-center text-xs text-slate-500">{t('notifications.loading')}</p>
+              ) : null}
+
+              {showEmptyState ? (
+                <div className="px-5 py-14 text-center">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800/80 ring-1 ring-white/[0.05]">
+                    <Bell className="h-4 w-4 text-slate-500" strokeWidth={1.75} />
+                  </div>
+                  <p className="text-sm font-medium text-slate-300">{t('notifications.emptyTitle')}</p>
+                  <p className="mx-auto mt-2 max-w-[16rem] text-xs leading-relaxed text-slate-500">
+                    {t('notifications.emptyBody')}
+                  </p>
+                </div>
+              ) : null}
+
+              {hasAlerts ? (
+                <section>
+                  <p className="px-5 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    {t('notifications.alertsSection')}
+                  </p>
+                  <ul className="m-0 list-none p-0 pt-1">
+                    {items.map((notification) => (
+                      <li key={notification.id} className="m-0 list-none p-0">
+                        <NotificationDropdownItem
+                          title={notification.title}
+                          message={notification.message}
+                          type={notification.type}
+                          createdAt={notification.created_at}
+                          isUnread
+                          isMarking={markingId === notification.id}
+                          markReadLabel={t('notifications.markRead')}
+                          onMarkRead={() => handleMarkRead(notification.id)}
+                          onOpen={() => handleOpenNotification(notification)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {hasActivity ? (
+                <section>
+                  <p className="px-5 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    {t('notifications.activitySection')}
+                  </p>
+                  <ul className="m-0 list-none p-0 pt-1">
+                    {activityItems.map((entry) => (
+                      <li key={entry.id} className="m-0 list-none p-0">
+                        <NotificationDropdownItem
+                          title={activityTitle(entry)}
+                          message={entry.message ?? entry.description}
+                          meta={entry.actor}
+                          createdAt={entry.created_at ?? entry.timestamp}
+                          isUnread={false}
+                          isActivity
+                          onOpen={handleActivityClick}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ) : null}
             </div>
-          </div>
 
-          <div className="max-h-[min(26rem,58vh)] overflow-y-auto overscroll-contain custom-scrollbar">
-            {loading && !hasAlerts && !hasActivity ? (
-              <p className="px-5 py-12 text-center text-xs text-slate-500">{t('notifications.loading')}</p>
-            ) : null}
-
-            {showEmptyState ? (
-              <div className="px-5 py-14 text-center">
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-800/60 ring-1 ring-white/[0.05]">
-                  <Bell className="h-4 w-4 text-slate-500" strokeWidth={1.75} />
-                </div>
-                <p className="text-sm font-medium text-slate-300">{t('notifications.emptyTitle')}</p>
-                <p className="mx-auto mt-2 max-w-[16rem] text-xs leading-relaxed text-slate-500">
-                  {t('notifications.emptyBody')}
-                </p>
+            {showActivityFeed ? (
+              <div className="border-t border-slate-800">
+                <Link
+                  to={resolveNavPath('/history', user)}
+                  onClick={() => setOpen(false)}
+                  className="block px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 transition-colors duration-200 hover:bg-white/[0.03] hover:text-green-400"
+                >
+                  {t('notifications.viewAllHistory')}
+                </Link>
               </div>
             ) : null}
-
-            {hasAlerts ? (
-              <section>
-                <p className="px-5 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  {t('notifications.alertsSection')}
-                </p>
-                <ul className="m-0 list-none p-0 pt-1">
-                  {items.map((notification) => (
-                    <li key={notification.id} className="m-0 list-none p-0">
-                      <NotificationDropdownItem
-                        title={notification.title}
-                        message={notification.message}
-                        type={notification.type}
-                        createdAt={notification.created_at}
-                        locale={locale}
-                        isUnread
-                        isMarking={markingId === notification.id}
-                        markReadLabel={t('notifications.markRead')}
-                        onMarkRead={() => handleMarkRead(notification.id)}
-                        onOpen={() => handleOpenNotification(notification)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {hasActivity ? (
-              <section>
-                <p className="px-5 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  {t('notifications.activitySection')}
-                </p>
-                <ul className="m-0 list-none p-0 pt-1">
-                  {activityItems.map((entry) => (
-                    <li key={entry.id} className="m-0 list-none p-0">
-                      <NotificationDropdownItem
-                        title={activityTitle(entry)}
-                        message={entry.message ?? entry.description}
-                        meta={entry.actor}
-                        createdAt={entry.created_at ?? entry.timestamp}
-                        locale={locale}
-                        isUnread={false}
-                        isActivity
-                        onOpen={handleActivityClick}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
           </div>
-
-          {showActivityFeed ? (
-            <div className="border-t border-slate-800/60 px-5 py-3.5">
-              <Link
-                to={resolveNavPath('/history', user)}
-                onClick={() => setOpen(false)}
-                className="block text-center text-xs font-medium text-slate-400 transition-colors duration-200 hover:text-white"
-              >
-                {t('notifications.viewAllHistory')}
-              </Link>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>

@@ -1,4 +1,4 @@
-import { Building2, HardHat, Layers, Route } from 'lucide-react'
+import { Building2, Check, HardHat, Layers, Route } from 'lucide-react'
 
 export const SECTOR_ICONS = {
   bâtiment: Building2,
@@ -28,18 +28,24 @@ export function SectorCard({ sector, active, lotCount, lotLabel, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={[
-        'wizard-sector-card group flex flex-col items-start rounded-2xl border p-5 text-left transition-all duration-200',
+        'wizard-sector-card group relative flex flex-col items-start overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200',
         active
-          ? 'border-indigo-500/50 bg-[#1c1d22] shadow-[0_0_0_1px_rgba(99,102,241,0.25),0_0_20px_rgba(99,102,241,0.12)]'
+          ? 'border-emerald-400/80 bg-emerald-500/[0.13] shadow-[0_0_0_1px_rgba(52,211,153,0.38),0_0_24px_rgba(34,197,94,0.2)]'
           : 'border-white/[0.08] bg-[#1c1d22] hover:border-white/15 hover:bg-[#16171b]',
       ].join(' ')}
     >
+      {active ? (
+        <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-emerald-400 text-[#052e16] shadow-[0_0_14px_rgba(74,222,128,0.55)]">
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </span>
+      ) : null}
       <span
         className={[
           'mb-3 flex h-10 w-10 items-center justify-center rounded-xl ring-1',
           active
-            ? 'bg-indigo-500/20 text-indigo-300 ring-indigo-500/30'
+            ? 'bg-emerald-400/20 text-emerald-300 ring-emerald-400/50'
             : 'bg-white/[0.04] text-slate-400 ring-white/[0.06] group-hover:text-slate-200',
         ].join(' ')}
       >
@@ -58,16 +64,31 @@ export function TypeCard({ active, title, description, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={[
-        'wizard-type-card flex flex-1 flex-col items-start rounded-2xl border p-4 text-left transition-all duration-200',
+        'wizard-type-card relative flex flex-1 flex-col items-start justify-center overflow-hidden rounded-2xl border text-left transition-all duration-200',
         active
-          ? 'border-indigo-500/50 bg-[#1c1d22] shadow-[0_0_0_1px_rgba(99,102,241,0.25),0_0_20px_rgba(99,102,241,0.12)]'
+          ? 'border-emerald-400/80 bg-emerald-500/[0.13] shadow-[0_0_0_1px_rgba(52,211,153,0.38),0_0_24px_rgba(34,197,94,0.2)]'
           : 'border-white/[0.08] bg-[#1c1d22] hover:border-white/15 hover:bg-[#16171b]',
       ].join(' ')}
     >
-      <span className="text-sm font-semibold text-white">{title}</span>
+      {active ? (
+        <span className="wizard-type-card__check absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-emerald-400 text-[#052e16] shadow-[0_0_14px_rgba(74,222,128,0.55)]">
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </span>
+      ) : null}
+      <span
+        className={[
+          'pr-8 text-sm font-bold uppercase tracking-[0.08em]',
+          active ? 'text-emerald-300' : 'text-white',
+        ].join(' ')}
+      >
+        {title}
+      </span>
       {description ? (
-        <span className="mt-1 text-xs text-slate-400">{description}</span>
+        <span className="mt-1.5 max-w-[16rem] text-xs leading-snug text-slate-400">
+          {description}
+        </span>
       ) : null}
     </button>
   )

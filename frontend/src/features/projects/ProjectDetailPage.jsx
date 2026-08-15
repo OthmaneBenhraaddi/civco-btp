@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useTranslation } from '../../i18n/LanguageContext'
@@ -9,6 +12,7 @@ import ProjectDocumentsTab from './ProjectDocumentsTab'
 import ProjectExpensesTab from './ProjectExpensesTab'
 import ProjectAmendmentsTab from './ProjectAmendmentsTab'
 import ProjectExcelImportPanel from './components/ProjectExcelImportPanel'
+import ProjectPhasesTasksPanel from './components/ProjectPhasesTasksPanel'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
 import {
   logProjectUpdated,
@@ -17,6 +21,13 @@ import {
 import { formatProjectOverviewDescription } from './utils/projectOverview'
 import { formatMoney } from '../../utils/currency'
 import { canManageAllTasks, canManageTask } from '../tasks/utils/taskPermissions'
+import {
+  BENTO_CARD_CLASS,
+  FIELD_CLASS,
+  LABEL_CLASS,
+  PG_STAT_ACCENT_CLASS,
+  PG_STAT_CLASS,
+} from '../../theme/designTokens'
 
 const TAB_KEYS = ['overview', 'planning', 'team', 'progress', 'documents', 'expenses', 'amendments']
 
@@ -251,22 +262,36 @@ export default function ProjectDetailPage() {
     }
   }
 
-  async function handleTaskProgressCommit(task) {
-    const progress = taskProgress[task.id] ?? task.progress_percent
-    if (Number(progress) === Number(task.progress_percent)) {
+  async function handleTaskStatusChange(task, { status, progress_percent }) {
+    const nextProgress = Number(progress_percent)
+    const nextStatus = status
+
+    if (
+      nextStatus === task.status
+      && Number(taskProgress[task.id] ?? task.progress_percent) === nextProgress
+    ) {
       return
     }
+
+    setTaskProgress((current) => ({
+      ...current,
+      [task.id]: nextProgress,
+    }))
 
     setSaving(true)
     setError('')
     try {
       await projectsApi.updateTask(task.id, {
-        progress_percent: Number(progress),
-        status: Number(progress) === 100 ? 'done' : 'in_progress',
+        status: nextStatus,
+        progress_percent: nextProgress,
       })
       await loadProject()
       showTaskToast('modification', t('projects.planning.taskUpdatedToast', { title: task.title }))
     } catch (err) {
+      setTaskProgress((current) => ({
+        ...current,
+        [task.id]: task.progress_percent,
+      }))
       setError(extractErrorMessage(err, t('projects.planning.updateTaskError')))
     } finally {
       setSaving(false)
@@ -429,7 +454,7 @@ export default function ProjectDetailPage() {
   const progressSnapshots = unwrapResource(project.progress_snapshots)
 
   return (
-    <div>
+    <div className="list-page project-detail-page">
       <header className="page-header">
         <div>
           <p className="breadcrumb">
@@ -462,23 +487,51 @@ export default function ProjectDetailPage() {
       </div>
 
       {tab === 'overview' ? (
-        <section className="card">
+        <section className="card space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={PG_STAT_CLASS}>
+              <p className="pg-stat__label">{t('projects.status')}</p>
+              <p className="pg-stat__value capitalize">{t(`status.${project.status}`)}</p>
+            </div>
+            <div className={PG_STAT_ACCENT_CLASS}>
+              <p className="pg-stat__label">{t('clientPortal.overallProgress')}</p>
+              <p className="pg-stat__value">{project.progress_percent ?? 0}%</p>
+            </div>
+            <div className={PG_STAT_CLASS}>
+              <p className="pg-stat__label">{t('projects.overview.budget')}</p>
+              <p className="pg-stat__value">
+                {project.budget == null ? '—' : formatMoney(project.budget, locale)}
+              </p>
+            </div>
+            <div className={PG_STAT_CLASS}>
+              <p className="pg-stat__label">{t('clientPortal.revisedBudget')}</p>
+              <p className="pg-stat__value">
+                {project.revised_budget == null ? '—' : formatMoney(project.revised_budget, locale)}
+              </p>
+              {project.revised_end_date ? (
+                <p className="pg-stat__hint">{project.revised_end_date}</p>
+              ) : null}
+            </div>
+          </div>
           <div className="form-row">
-            <label>
-              {t('projects.status')}
-              <select
+            <div>
+              <span className={LABEL_CLASS}>{t('projects.status')}</span>
+              <CutSelect
+                className="mt-1 w-full"
+                size="sm"
                 value={project.status}
                 disabled={!canUpdate}
-                onChange={(event) => handleProjectUpdate('status', event.target.value)}
-              >
-                <option value="draft">{t('status.draft')}</option>
-                <option value="planned">{t('status.planned')}</option>
-                <option value="in_progress">{t('status.in_progress')}</option>
-                <option value="on_hold">{t('status.on_hold')}</option>
-                <option value="completed">{t('status.completed')}</option>
-                <option value="cancelled">{t('status.cancelled')}</option>
-              </select>
-            </label>
+                onChange={(status) => handleProjectUpdate('status', status)}
+                options={[
+                  { value: 'draft', label: t('status.draft') },
+                  { value: 'planned', label: t('status.planned') },
+                  { value: 'in_progress', label: t('status.in_progress') },
+                  { value: 'on_hold', label: t('status.on_hold') },
+                  { value: 'completed', label: t('status.completed') },
+                  { value: 'cancelled', label: t('status.cancelled') },
+                ]}
+              />
+            </div>
             <label>
               {t('projects.overview.budget')}
               <input
@@ -500,7 +553,7 @@ export default function ProjectDetailPage() {
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${project.progress_percent}%` }} />
           </div>
-          <div className="mt-4 rounded-lg border border-slate-800/60 bg-[#0a0b0d]/40 p-4">
+          <div className="pg-inner-tile mt-4 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 {t('projects.siteAddress')}
@@ -571,132 +624,59 @@ export default function ProjectDetailPage() {
               onImported={() => loadProject()}
             />
           ) : null}
-          {canManagePhases ? (
-            <form className="inline-form card" onSubmit={handleAddPhase}>
-              <input
-                placeholder={t('projects.planning.newPhase')}
-                value={phaseName}
-                onChange={(event) => setPhaseName(event.target.value)}
-              />
-              <button type="submit" disabled={saving}>{t('projects.planning.addPhase')}</button>
-            </form>
-          ) : null}
-
-          {phases.length === 0 ? (
-            <p className="hint card">{t('projects.planning.noPhases')}</p>
-          ) : null}
-
-          {phases.map((phase) => (
-            <article key={phase.id} className="card">
-              <header className="card-header">
-                <div>
-                  <h3>{phase.name}</h3>
-                  <p>{t('projects.planning.phaseProgress', { percent: phase.progress_percent })}</p>
-                </div>
-                {canManagePhases ? (
-                  <button type="button" className="ghost danger" onClick={() => handleDeletePhase(phase.id)}>
-                    {t('projects.planning.deletePhase')}
-                  </button>
-                ) : null}
-              </header>
-
-              <ul className="task-list">
-                {unwrapResource(phase.tasks).map((task) => (
-                  <li key={task.id} className="task-item">
-                    <div>
-                      <strong>{task.title}</strong>
-                      <div className="inline-meta">
-                        <StatusBadge status={task.status} />
-                        <span>{taskProgress[task.id] ?? task.progress_percent}%</span>
-                        {task.assigned_to ? <span>{task.assigned_to.full_name}</span> : null}
-                        {task.quantity != null && task.unit_price != null ? (
-                          <span>
-                            {task.quantity} {task.unit || 'u'} × {formatMoney(task.unit_price, locale)}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    {canManageProjectTask(task) ? (
-                      <div className="task-actions">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={taskProgress[task.id] ?? task.progress_percent}
-                          onChange={(event) => setTaskProgress({
-                            ...taskProgress,
-                            [task.id]: Number(event.target.value),
-                          })}
-                          onMouseUp={() => handleTaskProgressCommit(task)}
-                          onTouchEnd={() => handleTaskProgressCommit(task)}
-                        />
-                        <button type="button" className="ghost danger" onClick={() => handleDeleteTask(task.id)}>
-                          {t('common.delete')}
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-
-              {canManagePhases ? (
-                <div className="inline-form">
-                  <input
-                    placeholder={t('projects.planning.newTask')}
-                    value={taskForms[phase.id]?.title ?? ''}
-                    onChange={(event) => setTaskForms({
-                      ...taskForms,
-                      [phase.id]: {
-                        ...(taskForms[phase.id] ?? {}),
-                        title: event.target.value,
-                      },
-                    })}
-                  />
-                  <select
-                    value={taskForms[phase.id]?.assigned_to_user_id ?? ''}
-                    onChange={(event) => setTaskForms({
-                      ...taskForms,
-                      [phase.id]: {
-                        ...(taskForms[phase.id] ?? { title: '' }),
-                        assigned_to_user_id: event.target.value,
-                      },
-                    })}
-                  >
-                    <option value="">{t('projects.planning.unassigned')}</option>
-                    {companyUsers.map((user) => (
-                      <option key={user.id} value={user.id}>{user.full_name}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={() => handleAddTask(phase.id)} disabled={saving}>
-                    {t('projects.planning.addTask')}
-                  </button>
-                </div>
-              ) : null}
-            </article>
-          ))}
+          <ProjectPhasesTasksPanel
+            phases={phases}
+            companyUsers={companyUsers}
+            phaseName={phaseName}
+            setPhaseName={setPhaseName}
+            taskForms={taskForms}
+            setTaskForms={setTaskForms}
+            taskProgress={taskProgress}
+            saving={saving}
+            canManagePhases={canManagePhases}
+            canManageProjectTask={canManageProjectTask}
+            locale={locale}
+            onAddPhase={handleAddPhase}
+            onAddTask={handleAddTask}
+            onDeletePhase={handleDeletePhase}
+            onDeleteTask={handleDeleteTask}
+            onTaskStatusChange={handleTaskStatusChange}
+          />
         </section>
       ) : null}
 
       {tab === 'team' ? (
         <section className="stack">
           {isAdmin ? (
-            <form className="inline-form card" onSubmit={handleAddTeamMember}>
-              <select
-                value={teamForm.user_id}
-                onChange={(event) => setTeamForm({ ...teamForm, user_id: event.target.value })}
-                required
-              >
-                <option value="">{t('projects.team.selectUser')}</option>
-                {companyUsers.map((user) => (
-                  <option key={user.id} value={user.id}>{user.full_name}</option>
-                ))}
-              </select>
+            <form
+              className={`${BENTO_CARD_CLASS} flex flex-col gap-3 p-4 sm:flex-row sm:items-center`}
+              onSubmit={handleAddTeamMember}
+            >
+              <div className="min-w-0 flex-1">
+                <CutSelect
+                  className="w-full"
+                  size="sm"
+                  value={teamForm.user_id}
+                  onChange={(userId) => setTeamForm({ ...teamForm, user_id: userId })}
+                  placeholder={t('projects.team.selectUser')}
+                  options={[
+                    { value: '', label: t('projects.team.selectUser') },
+                    ...companyUsers.map((user) => ({
+                      value: String(user.id),
+                      label: user.full_name,
+                    })),
+                  ]}
+                />
+              </div>
               <input
+                className={`${FIELD_CLASS} sm:max-w-[16rem]`}
                 placeholder={t('projects.team.roleLabel')}
                 value={teamForm.role_label}
                 onChange={(event) => setTeamForm({ ...teamForm, role_label: event.target.value })}
               />
-              <button type="submit" disabled={saving}>{t('projects.team.addMember')}</button>
+              <NeonButton type="submit" size="sm" disabled={saving || !teamForm.user_id}>
+                {t('projects.team.addMember')}
+              </NeonButton>
             </form>
           ) : null}
 
@@ -722,35 +702,40 @@ export default function ProjectDetailPage() {
                       <td>{member.role_label || '—'}</td>
                       {isAdmin ? (
                         <td>
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={Boolean(member.can_chat_with_client)}
-                            aria-label={t('projects.team.chatWithClient')}
-                            onClick={() => handleToggleMemberChat(member, !member.can_chat_with_client)}
-                            className={[
-                              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-                              member.can_chat_with_client ? 'bg-emerald-500/80' : 'bg-slate-700',
-                            ].join(' ')}
-                          >
-                            <span
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={Boolean(member.can_chat_with_client)}
+                              aria-label={t('projects.team.chatWithClient')}
+                              onClick={() => handleToggleMemberChat(member, !member.can_chat_with_client)}
                               className={[
-                                'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
-                                member.can_chat_with_client ? 'translate-x-5' : 'translate-x-0.5',
-                              ].join(' ')}
-                            />
-                          </button>
-                          <span className="ml-2 text-xs text-slate-400">
-                            {member.can_chat_with_client
-                              ? t('projects.team.chatOn')
-                              : t('projects.team.chatOff')}
-                          </span>
+                                'pg-toggle',
+                                member.can_chat_with_client ? 'is-on' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            >
+                              <span className="pg-toggle__knob" />
+                            </button>
+                            <span className="text-xs text-slate-400">
+                              {member.can_chat_with_client
+                                ? t('projects.team.chatOn')
+                                : t('projects.team.chatOff')}
+                            </span>
+                          </div>
                         </td>
                       ) : null}
                       {isAdmin ? (
                         <td>
-                          <button type="button" className="ghost danger" onClick={() => handleRemoveTeamMember(member.id)}>
-                            {t('projects.team.remove')}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeamMember(member.id)}
+                            aria-label={t('projects.team.remove')}
+                            title={t('projects.team.remove')}
+                            className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
                           </button>
                         </td>
                       ) : null}

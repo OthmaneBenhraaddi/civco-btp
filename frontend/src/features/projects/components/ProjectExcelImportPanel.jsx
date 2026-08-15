@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 import { FileSpreadsheet, Upload } from 'lucide-react'
 import * as projectsApi from '../../../api/projects'
+import NeonButton from '../../../components/prodigy/NeonButton'
 import { useToast } from '../../../context/ToastContext'
 import { useTranslation } from '../../../i18n/LanguageContext'
-import { BENTO_CARD_CLASS, BTN_GHOST, BTN_PRIMARY } from '../../../theme/designTokens'
+import { BENTO_CARD_CLASS } from '../../../theme/designTokens'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
 
 function importErrorsFromResponse(error) {
@@ -93,13 +94,15 @@ export default function ProjectExcelImportPanel({ projectId, projectReference, o
     <section className={`${BENTO_CARD_CLASS} p-5`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">{t('projects.planning.import.title')}</h3>
-          <p className="mt-1 text-xs text-slate-500">{t('projects.planning.import.subtitle')}</p>
+          <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-white">{t('projects.planning.import.title')}</h3>
+          <p className="mt-1 text-xs text-[var(--pg-text-dim)]">{t('projects.planning.import.subtitle')}</p>
         </div>
-        <button type="button" className={BTN_GHOST} onClick={downloadTemplate} disabled={busy}>
-          <FileSpreadsheet className="mr-2 h-4 w-4" />
-          {t('projects.planning.import.download')}
-        </button>
+        <NeonButton type="button" variant="ghost" size="sm" onClick={downloadTemplate} disabled={busy}>
+          <span className="inline-flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            {t('projects.planning.import.download')}
+          </span>
+        </NeonButton>
       </div>
 
       <div
@@ -109,37 +112,41 @@ export default function ProjectExcelImportPanel({ projectId, projectReference, o
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`rounded-xl border border-dashed px-4 py-6 text-center transition-colors ${
-          dragOver
-            ? 'border-indigo-400/60 bg-indigo-500/10'
-            : 'border-white/[0.08] bg-[#121316]'
-        }`}
+        className={`pg-dropzone ${dragOver ? 'is-active' : ''}`}
       >
-        <Upload className="mx-auto mb-2 h-5 w-5 text-slate-500" />
-        <p className="text-sm text-slate-300">{t('projects.planning.import.dropHint')}</p>
-        <p className="mt-1 text-xs text-slate-500">{t('projects.planning.import.fileHint')}</p>
-        <button
-          type="button"
-          className={`${BTN_PRIMARY} mt-4`}
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-        >
-          {busy ? t('projects.planning.import.importing') : t('projects.planning.import.chooseFile')}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          className="hidden"
-          onChange={(event) => importFile(event.target.files?.[0])}
-        />
+        <div className="pg-dropzone__face">
+          <Upload className="mx-auto mb-2 h-5 w-5 text-[var(--pg-accent)]" />
+          <p className="text-sm text-slate-300">{t('projects.planning.import.dropHint')}</p>
+          <p className="mt-1 text-xs text-[var(--pg-text-dim)]">{t('projects.planning.import.fileHint')}</p>
+          <div className="mt-4 flex justify-center">
+            <NeonButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                {busy ? t('projects.planning.import.importing') : t('projects.planning.import.chooseFile')}
+              </span>
+            </NeonButton>
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(event) => importFile(event.target.files?.[0])}
+          />
+        </div>
       </div>
 
       {busy ? (
         <div className="mt-4">
-          <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="h-2 overflow-hidden bg-[#1e293b]">
             <div
-              className="h-full rounded-full bg-indigo-400 transition-all"
+              className="h-full bg-[linear-gradient(90deg,var(--pg-accent-soft),var(--pg-accent))] transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>

@@ -32,7 +32,7 @@ export default function AddTenantAdminForm({ tenant, saving, onSubmit, onCancel 
 
   return (
     <form
-      className="mt-4 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-4"
+      className="mt-4 border border-dashed border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] p-4"
       onSubmit={handleSubmit}
     >
       <h4 className="text-sm font-semibold text-white">{t('superAdmin.addAdmin.title')}</h4>

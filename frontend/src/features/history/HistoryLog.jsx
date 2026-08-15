@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as activityLogsApi from '../../api/activityLogs'
 import * as projectsApi from '../../api/projects'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { useAutoRefresh } from '../../hooks/useAutoRefresh'
@@ -10,7 +11,7 @@ import ActivityLogFeed from './ActivityLogFeed'
 const ACTION_TYPE_OPTIONS = ['created', 'updated', 'deleted']
 
 export default function HistoryLog() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const [logs, setLogs] = useState([])
   const [meta, setMeta] = useState({})
@@ -126,53 +127,56 @@ export default function HistoryLog() {
       </header>
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <label className="text-xs text-slate-500">
+        <div className="text-xs text-slate-500">
           <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.user')}</span>
-          <select
-            className="filter-select w-full"
+          <CutSelect
+            className="w-full"
             value={filters.user_id}
-            onChange={(event) => updateFilter('user_id', event.target.value)}
-          >
-            <option value="">{t('history.filters.allUsers')}</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.full_name ?? user.name ?? user.email}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(value) => updateFilter('user_id', value)}
+            placeholder={t('history.filters.allUsers')}
+            options={[
+              { value: '', label: t('history.filters.allUsers') },
+              ...users.map((user) => ({
+                value: user.id,
+                label: user.full_name ?? user.name ?? user.email,
+              })),
+            ]}
+          />
+        </div>
 
-        <label className="text-xs text-slate-500">
+        <div className="text-xs text-slate-500">
           <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.project')}</span>
-          <select
-            className="filter-select w-full"
+          <CutSelect
+            className="w-full"
             value={filters.project_id}
-            onChange={(event) => updateFilter('project_id', event.target.value)}
-          >
-            <option value="">{t('history.filters.allProjects')}</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.reference} — {project.title}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(value) => updateFilter('project_id', value)}
+            placeholder={t('history.filters.allProjects')}
+            options={[
+              { value: '', label: t('history.filters.allProjects') },
+              ...projects.map((project) => ({
+                value: project.id,
+                label: `${project.reference} — ${project.title}`,
+              })),
+            ]}
+          />
+        </div>
 
-        <label className="text-xs text-slate-500">
+        <div className="text-xs text-slate-500">
           <span className="mb-1.5 block font-semibold uppercase tracking-wider">{t('history.filters.action')}</span>
-          <select
-            className="filter-select w-full"
+          <CutSelect
+            className="w-full"
             value={filters.action_type}
-            onChange={(event) => updateFilter('action_type', event.target.value)}
-          >
-            <option value="">{t('history.filters.allActions')}</option>
-            {ACTION_TYPE_OPTIONS.map((actionType) => (
-              <option key={actionType} value={actionType}>
-                {t(`history.actionTypes.${actionType}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(value) => updateFilter('action_type', value)}
+            placeholder={t('history.filters.allActions')}
+            options={[
+              { value: '', label: t('history.filters.allActions') },
+              ...ACTION_TYPE_OPTIONS.map((actionType) => ({
+                value: actionType,
+                label: t(`history.actionTypes.${actionType}`),
+              })),
+            ]}
+          />
+        </div>
       </div>
 
       {error ? <p className="mb-6 text-sm text-red-400">{error}</p> : null}
@@ -185,7 +189,6 @@ export default function HistoryLog() {
         lastPage={lastPage}
         onPageChange={setPage}
         t={t}
-        locale={locale}
       />
     </article>
   )

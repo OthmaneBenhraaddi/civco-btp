@@ -3,11 +3,14 @@
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\EnsureCompanyContext;
+use App\Http\Middleware\EnsureDemoSessionValid;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\IdentifyTenantBySubdomain;
+use App\Http\Middleware\RejectDemoDestructiveActions;
 use App\Http\Middleware\ResolveLocalTenantFallback;
 use App\Http\Middleware\ResolveStealthMode;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +40,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'user.status' => CheckUserStatus::class,
             'tenant.subdomain' => IdentifyTenantBySubdomain::class,
             'super_admin' => EnsureSuperAdmin::class,
+            'demo.valid' => EnsureDemoSessionValid::class,
+            'demo.guard' => RejectDemoDestructiveActions::class,
         ]);
 
         $middleware->appendToGroup('web', [
@@ -47,7 +52,12 @@ return Application::configure(basePath: dirname(__DIR__))
             CheckUserStatus::class,
             ResolveLocalTenantFallback::class,
             ResolveStealthMode::class,
+            EnsureDemoSessionValid::class,
+            RejectDemoDestructiveActions::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('demo:purge-expired')->hourly();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

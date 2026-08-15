@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import SearchInput from '../../components/SearchInput'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { useProjectTasks } from '../../hooks/useProjectTasks'
@@ -16,6 +18,8 @@ import {
   canManageTask,
   filterVisibleTasks,
 } from './utils/taskPermissions'
+import { TASKS_COC_CLASS, TASKS_COC_ENABLED } from './tasksTheme'
+import './tasksCoc.css'
 
 const VIEWS = {
   spreadsheet: 'spreadsheet',
@@ -25,7 +29,7 @@ const VIEWS = {
 
 function TasksEmptyProjectState({ t }) {
   return (
-    <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-slate-800/80 bg-[#0f1013] py-20 text-center">
+    <div className="tasks-empty-state mt-6 flex flex-col items-center justify-center rounded-xl border border-slate-800/80 bg-[#0f1013] py-20 text-center">
       <p className="text-base font-medium text-white">{t('tasks.noProjectSelected')}</p>
       <p className="mt-1 text-sm text-slate-500">{t('tasks.noProjectSelectedHint')}</p>
     </div>
@@ -33,7 +37,7 @@ function TasksEmptyProjectState({ t }) {
 }
 
 export default function TasksPage() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { user, isAdmin, hasPermission } = useAuth()
   const taskAccess = { user, isAdmin, hasPermission }
   const showCreateButton = canCreateTasks(taskAccess)
@@ -57,6 +61,28 @@ export default function TasksPage() {
     { id: VIEWS.dashboard, label: t('tasks.views.dashboard') },
     { id: VIEWS.calendar, label: t('tasks.views.calendar') },
   ]
+
+  const projectOptions = useMemo(
+    () => [
+      { value: '', label: t('tasks.projectSelector.placeholder') },
+      ...projects.map((project) => ({
+        value: String(project.id),
+        label: project.title,
+      })),
+    ],
+    [projects, t],
+  )
+
+  const statusOptions = useMemo(
+    () => [
+      { value: '', label: t('tasks.allStatuses') },
+      { value: 'working', label: t('tasks.statuses.working') },
+      { value: 'done', label: t('tasks.statuses.done') },
+      { value: 'stuck', label: t('tasks.statuses.stuck') },
+      { value: 'not_started', label: t('tasks.statuses.not_started') },
+    ],
+    [t],
+  )
 
   const visibleTasks = useMemo(
     () => filterVisibleTasks(tasks, taskAccess),
@@ -101,9 +127,8 @@ export default function TasksPage() {
     refresh()
   }
 
-  function handleProjectChange(event) {
-    const value = event.target.value
-    setSelectedProjectId(value === '' ? null : value)
+  function handleProjectChange(next) {
+    setSelectedProjectId(next === '' ? null : next)
     setSearch('')
     setStatusFilter('')
   }
@@ -112,13 +137,19 @@ export default function TasksPage() {
     || visibleTasks.some((task) => canManageTask(task, taskAccess))
 
   return (
-    <div className="tasks-page mx-auto flex max-w-[1600px] flex-col gap-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">{t('tasks.title')}</h1>
+    <div className={`tasks-page list-page mx-auto flex max-w-[1600px] flex-col gap-y-6 ${TASKS_COC_CLASS}`.trim()}>
+      <header className="page-header flex flex-wrap items-center justify-between gap-4">
+        <h1>{t('tasks.title')}</h1>
         {hasProjectSelected && showCreateButton ? (
-          <button type="button" className="tasks-create-btn" onClick={() => setCreateOpen(true)}>
-            {t('tasks.new')}
-          </button>
+          TASKS_COC_ENABLED ? (
+            <NeonButton type="button" size="sm" onClick={() => setCreateOpen(true)}>
+              {t('tasks.new')}
+            </NeonButton>
+          ) : (
+            <button type="button" className="tasks-create-btn" onClick={() => setCreateOpen(true)}>
+              {t('tasks.new')}
+            </button>
+          )
         ) : null}
       </header>
 
@@ -126,19 +157,14 @@ export default function TasksPage() {
         <label className="text-xs font-semibold uppercase tracking-widest text-slate-500">
           {t('tasks.projectSelector.label')}
         </label>
-        <select
-          className="tasks-project-select filter-select min-w-[240px] max-w-md"
+        <CutSelect
+          className="tasks-project-select min-w-[240px] max-w-md"
           value={selectedProjectId ?? ''}
-          onChange={handleProjectChange}
+          options={projectOptions}
+          placeholder={t('tasks.projectSelector.placeholder')}
           disabled={projectsLoading}
-        >
-          <option value="">{t('tasks.projectSelector.placeholder')}</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.title}
-            </option>
-          ))}
-        </select>
+          onChange={handleProjectChange}
+        />
       </div>
 
       {!hasProjectSelected ? (
@@ -154,24 +180,18 @@ export default function TasksPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <select
-                className="filter-select min-w-[180px]"
+              <CutSelect
+                className="min-w-[180px]"
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="">{t('tasks.allStatuses')}</option>
-                <option value="working">{t('tasks.statuses.working')}</option>
-                <option value="done">{t('tasks.statuses.done')}</option>
-                <option value="stuck">{t('tasks.statuses.stuck')}</option>
-                <option value="not_started">{t('tasks.statuses.not_started')}</option>
-              </select>
+                options={statusOptions}
+                onChange={setStatusFilter}
+              />
             </div>
 
             <div className="tasks-view-panel">
               {activeView === VIEWS.spreadsheet && (
                 <TaskTableView
                   tasks={filteredTasks}
-                  locale={locale}
                   t={t}
                   canManageTask={hasAnyTaskActions ? (task) => canManageTask(task, taskAccess) : null}
                   onEditTask={setEditingTask}
@@ -183,7 +203,7 @@ export default function TasksPage() {
               )}
 
               {activeView === VIEWS.calendar && (
-                <TaskCalendarView tasks={filteredTasks} locale={locale} t={t} />
+                <TaskCalendarView tasks={filteredTasks} t={t} />
               )}
             </div>
           </div>

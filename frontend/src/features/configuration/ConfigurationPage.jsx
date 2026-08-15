@@ -80,18 +80,34 @@ export default function ConfigurationPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-800/80 pb-3">
-        {visibleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={activeTab === tab.id ? 'filter-select active' : 'filter-select ghost'}
-            onClick={() => selectTab(tab.id)}
-          >
-            {t(tab.labelKey)}
-          </button>
-        ))}
-      </div>
+      <nav
+        className="configuration-tabs mt-2 py-2"
+        aria-label={t('configuration.title')}
+      >
+        <div className="flex flex-wrap items-center gap-2 px-1" role="tablist">
+          {visibleTabs.map((tab) => {
+            const active = activeTab === tab.id
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={[
+                  'configuration-tab whitespace-nowrap rounded-md border px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200',
+                  active
+                    ? 'border-green-500/50 bg-green-500/10 text-green-400 shadow-sm shadow-green-500/20'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-white',
+                ].join(' ')}
+                onClick={() => selectTab(tab.id)}
+              >
+                {t(tab.labelKey)}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       <div className="mt-6">
         {activeTab === 'entity' ? (

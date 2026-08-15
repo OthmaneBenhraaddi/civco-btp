@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as documentTemplatesApi from '../../api/documentTemplates'
+import CutFrame from '../../components/prodigy/CutFrame'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
+import UseDocumentTemplateModal from '../../components/UseDocumentTemplateModal'
 import { useTranslation } from '../../i18n/LanguageContext'
 import {
   BENTO_CARD_CLASS,
-  BTN_GHOST,
-  BTN_PRIMARY,
   FIELD_CLASS,
   LABEL_CLASS,
 } from '../../theme/designTokens'
@@ -22,12 +24,24 @@ const TEMPLATE_TYPES = [
 
 const DEFAULT_PLACEHOLDERS = [
   '{client.name}',
+  '{client.contact_name}',
   '{client.email}',
   '{client.phone}',
+  '{client.address}',
+  '{client.postal_code}',
   '{client.city}',
+  '{client.country}',
   '{project.name}',
   '{project.reference}',
+  '{project.address}',
+  '{project.postal_code}',
   '{project.city}',
+  '{project.start_date}',
+  '{project.end_date}',
+  '{project.budget}',
+  '{project.progress}',
+  '{project.status}',
+  '{project.sector}',
   '{tenant.name}',
   '{company.name}',
   '{date}',
@@ -40,12 +54,49 @@ const EMPTY_FORM = {
   body: '',
 }
 
+function IconFile({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" strokeLinejoin="round" />
+      <path d="M14 3v5h5" strokeLinejoin="round" />
+      <path d="M9 13h6M9 17h4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconPencil({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M12 20h9" strokeLinecap="round" />
+      <path d="M16.5 3.5a2.1 2.1 0 013 3L8 18l-4 1 1-4 11.5-11.5z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconTrash({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M4 7h16" strokeLinecap="round" />
+      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
+      <path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" strokeLinejoin="round" />
+      <path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function previewBody(body) {
+  const text = String(body ?? '').replace(/\s+/g, ' ').trim()
+  if (!text) return '—'
+  return text.length > 110 ? `${text.slice(0, 110)}…` : text
+}
+
 export default function DocumentTemplatesSettingsPanel() {
   const { t } = useTranslation()
   const [templates, setTemplates] = useState([])
   const [placeholders, setPlaceholders] = useState(DEFAULT_PLACEHOLDERS)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
+  const [usingTemplate, setUsingTemplate] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -94,6 +145,9 @@ export default function DocumentTemplatesSettingsPanel() {
     })
     setError('')
     setSuccess('')
+    window.requestAnimationFrame(() => {
+      document.getElementById('document-template-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   function insertPlaceholder(token) {
@@ -177,7 +231,7 @@ export default function DocumentTemplatesSettingsPanel() {
           </p>
         ) : null}
 
-        <form className="space-y-4" onSubmit={handleSave}>
+        <form id="document-template-form" className="space-y-4" onSubmit={handleSave}>
           <label className={LABEL_CLASS}>
             {t('documentTemplates.name')}
             <input
@@ -191,18 +245,17 @@ export default function DocumentTemplatesSettingsPanel() {
 
           <label className={LABEL_CLASS}>
             {t('documentTemplates.type')}
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="w-full"
+              size="sm"
               value={form.type}
-              onChange={(event) => setForm({ ...form, type: event.target.value })}
+              onChange={(next) => setForm({ ...form, type: next })}
               required
-            >
-              {TEMPLATE_TYPES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {t(item.labelKey)}
-                </option>
-              ))}
-            </select>
+              options={TEMPLATE_TYPES.map((item) => ({
+                value: item.value,
+                label: t(item.labelKey),
+              }))}
+            />
           </label>
 
           <label className={LABEL_CLASS}>
@@ -216,22 +269,23 @@ export default function DocumentTemplatesSettingsPanel() {
             />
           </label>
 
-          <div className="flex flex-wrap gap-2">
-            <button
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            <NeonButton
               type="submit"
-              className={BTN_PRIMARY}
+              size="sm"
               disabled={saving || (atLimit && !editingId)}
+              className={saving || (atLimit && !editingId) ? 'opacity-45' : ''}
             >
               {saving
                 ? t('common.saving')
                 : editingId
                   ? t('documentTemplates.update')
                   : t('documentTemplates.create')}
-            </button>
+            </NeonButton>
             {editingId ? (
-              <button type="button" className={BTN_GHOST} onClick={resetForm}>
+              <NeonButton type="button" variant="neon" size="sm" onClick={resetForm}>
                 {t('common.cancel')}
-              </button>
+              </NeonButton>
             ) : null}
           </div>
 
@@ -240,41 +294,86 @@ export default function DocumentTemplatesSettingsPanel() {
           ) : null}
         </form>
 
-        <div>
-          <h3 className="mb-3 text-sm font-semibold text-white">{t('documentTemplates.listTitle')}</h3>
+        <div className="border-t border-white/[0.06] pt-5">
+          <div className="mb-4">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              {t('documentTemplates.listTitle')}
+            </h3>
+            <p className="mt-1 text-sm text-slate-400">
+              {templates.length === 0
+                ? t('documentTemplates.empty')
+                : t('documentTemplates.usage', { count: templates.length, limit: MAX_TEMPLATES })}
+            </p>
+          </div>
+
           {loading ? (
             <p className="text-sm text-slate-400">{t('common.loading')}</p>
           ) : templates.length === 0 ? (
-            <p className="text-sm text-slate-500">{t('documentTemplates.empty')}</p>
+            <CutFrame size="md" innerClassName="bg-[#0e131f] px-5 py-10 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/25">
+                <IconFile className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-slate-300">{t('documentTemplates.empty')}</p>
+            </CutFrame>
           ) : (
-            <ul className="space-y-2">
-              {templates.map((template) => (
-                <li
-                  key={template.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-[#0a0b0d]/40 px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">{template.name}</p>
-                    <p className="text-xs text-slate-500">{typeLabel(template.type)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-slate-300 hover:bg-white/5"
-                      onClick={() => startEdit(template)}
+            <ul className="space-y-2.5">
+              {templates.map((template) => {
+                const isEditing = editingId === template.id
+                return (
+                  <li key={template.id}>
+                    <CutFrame
+                      size="sm"
+                      className="block"
+                      innerClassName={[
+                        'bg-[#0e131f] px-4 py-3.5 transition-colors',
+                        isEditing ? 'ring-1 ring-emerald-500/35' : '',
+                      ].join(' ')}
                     >
-                      {t('common.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-rose-500/30 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-500/10"
-                      onClick={() => handleDelete(template)}
-                    >
-                      {t('common.delete')}
-                    </button>
-                  </div>
-                </li>
-              ))}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-emerald-400 ring-1 ring-white/[0.06]">
+                            <IconFile className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm font-semibold text-white">{template.name}</p>
+                              <span className="inline-flex items-center rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                {typeLabel(template.type)}
+                              </span>
+                              {isEditing ? (
+                                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">
+                                  {t('common.edit')}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
+                              {previewBody(template.body)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                          <NeonButton type="button" size="sm" onClick={() => setUsingTemplate(template)}>
+                            {t('documentTemplates.use')}
+                          </NeonButton>
+                          <NeonButton type="button" variant="ghost" size="sm" onClick={() => startEdit(template)}>
+                            <span className="inline-flex items-center gap-1.5">
+                              <IconPencil className="h-3.5 w-3.5" />
+                              {t('common.edit')}
+                            </span>
+                          </NeonButton>
+                          <NeonButton type="button" variant="danger" size="sm" onClick={() => handleDelete(template)}>
+                            <span className="inline-flex items-center gap-1.5">
+                              <IconTrash className="h-3.5 w-3.5" />
+                              {t('common.delete')}
+                            </span>
+                          </NeonButton>
+                        </div>
+                      </div>
+                    </CutFrame>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -303,6 +402,12 @@ export default function DocumentTemplatesSettingsPanel() {
           {t('documentTemplates.guideHint')}
         </p>
       </aside>
+
+      <UseDocumentTemplateModal
+        open={Boolean(usingTemplate)}
+        template={usingTemplate}
+        onClose={() => setUsingTemplate(null)}
+      />
     </div>
   )
 }

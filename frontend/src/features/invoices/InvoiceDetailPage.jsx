@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import StatusBadge from '../../components/StatusBadge'
+import CutSelect from '../../components/prodigy/CutSelect'
 import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
 import PolicyPrintWrapper from '../../components/print/PolicyPrintWrapper'
 import PrintOptionsModal from '../../components/print/PrintOptionsModal'
@@ -431,19 +432,20 @@ export default function InvoiceDetailPage() {
                 required
               />
             </label>
-            <label>
-              {t('invoices.paymentMethod')}
-              <select
+            <div>
+              <span>{t('invoices.paymentMethod')}</span>
+              <CutSelect
                 value={paymentForm.method}
-                onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })}
-              >
-                <option value="bank_transfer">{t('invoices.methods.bank_transfer')}</option>
-                <option value="cash">{t('invoices.methods.cash')}</option>
-                <option value="check">{t('invoices.methods.check')}</option>
-                <option value="card">{t('invoices.methods.card')}</option>
-                <option value="other">{t('invoices.methods.other')}</option>
-              </select>
-            </label>
+                onChange={(method) => setPaymentForm({ ...paymentForm, method })}
+                options={[
+                  { value: 'bank_transfer', label: t('invoices.methods.bank_transfer') },
+                  { value: 'cash', label: t('invoices.methods.cash') },
+                  { value: 'check', label: t('invoices.methods.check') },
+                  { value: 'card', label: t('invoices.methods.card') },
+                  { value: 'other', label: t('invoices.methods.other') },
+                ]}
+              />
+            </div>
             <label>
               {t('invoices.paymentReference')}
               <input

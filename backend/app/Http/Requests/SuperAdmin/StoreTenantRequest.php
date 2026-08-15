@@ -29,7 +29,7 @@ class StoreTenantRequest extends FormRequest
                 Rule::notIn(config('tenancy.ignored_subdomains', [])),
             ],
             'status' => ['required', Rule::enum(TenantStatus::class)],
-            'logo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
             ...$this->brandingRules(),
         ];
     }

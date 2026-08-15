@@ -86,9 +86,11 @@ api.interceptors.response.use(
     const path = String(url).split('?')[0]
     const isMeEndpoint = /\/api\/v1\/me\/?$/.test(path) || path === '/api/v1/me'
 
-    if (authBootstrapComplete && !path.includes('/login')) {
+    if (authBootstrapComplete && !path.includes('/login') && !path.includes('/demo/redeem')) {
       if (status === 401) {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      } else if (status === 403 && error.response?.data?.code === 'demo_expired') {
+        window.dispatchEvent(new CustomEvent('auth:demo-expired'))
       } else if (status === 403 && isMeEndpoint) {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }

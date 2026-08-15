@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/Modal'
+import CutSelect from '../../components/prodigy/CutSelect'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
@@ -91,15 +92,16 @@ export default function EntityEditModal({ tenant, open, saving, onClose, onSubmi
 
         <label className={LABEL_CLASS}>
           {t('superAdmin.status')}
-          <select
-            className={FIELD_CLASS}
+          <CutSelect
+            className="w-full"
             value={form.status}
-            onChange={(event) => setForm({ ...form, status: event.target.value })}
-          >
-            <option value="active">{t('status.active')}</option>
-            <option value="inactive">{t('status.inactive')}</option>
-            <option value="archived">{t('status.archived')}</option>
-          </select>
+            onChange={(nextValue) => setForm({ ...form, status: nextValue })}
+            options={[
+              { value: 'active', label: t('status.active') },
+              { value: 'inactive', label: t('status.inactive') },
+              { value: 'archived', label: t('status.archived') },
+            ]}
+          />
         </label>
 
         <TenantBrandingFields

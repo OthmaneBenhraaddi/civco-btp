@@ -40,7 +40,7 @@ function IconChevronRight({ className }) {
 }
 
 export default function WorkspaceCalendar() {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const [currentDate, setCurrentDate] = useState(() => new Date(2026, 5, 1))
 
   const today = new Date()
@@ -48,11 +48,11 @@ export default function WorkspaceCalendar() {
   const month = currentDate.getMonth()
 
   const monthLabel = useMemo(
-    () => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', {
+    () => new Intl.DateTimeFormat('fr-FR', {
       month: 'long',
       year: 'numeric',
     }).format(currentDate),
-    [currentDate, locale],
+    [currentDate],
   )
 
   const cells = useMemo(() => buildMonthGrid(year, month), [month, year])

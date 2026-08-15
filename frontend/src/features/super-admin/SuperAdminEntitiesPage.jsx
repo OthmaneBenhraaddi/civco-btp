@@ -152,22 +152,26 @@ export default function SuperAdminEntitiesPage() {
       <section className="card p-6">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-white">{t('superAdmin.existingEntities')}</h2>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((filter) => (
-              <button
-                key={filter.value || 'all'}
-                type="button"
-                className={[
-                  'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                  statusFilter === filter.value
-                    ? 'bg-white/10 text-white ring-1 ring-white/15'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200',
-                ].join(' ')}
-                onClick={() => setStatusFilter(filter.value)}
-              >
-                {t(filter.labelKey)}
-              </button>
-            ))}
+          <div className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/80 p-1">
+            {STATUS_FILTERS.map((filter) => {
+              const active = statusFilter === filter.value
+
+              return (
+                <button
+                  key={filter.value || 'all'}
+                  type="button"
+                  className={[
+                    'rounded-md px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200',
+                    active
+                      ? 'border border-green-500/30 bg-green-500/10 text-green-400 shadow-sm shadow-green-500/10'
+                      : 'border border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-white',
+                  ].join(' ')}
+                  onClick={() => setStatusFilter(filter.value)}
+                >
+                  {t(filter.labelKey)}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -219,7 +223,7 @@ export default function SuperAdminEntitiesPage() {
                           href={workspaceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-500/15"
+                          className="border border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--pg-accent)] transition hover:bg-[rgba(34,197,94,0.2)]"
                         >
                           {t('superAdmin.quickAccess')}
                         </a>
@@ -242,7 +246,7 @@ export default function SuperAdminEntitiesPage() {
                   <div className="border-t border-white/[0.06] px-4 py-3">
                     <button
                       type="button"
-                      className="text-sm font-medium text-indigo-300 hover:text-indigo-200"
+                      className="text-sm font-medium text-[var(--pg-accent)] hover:text-[var(--pg-accent-soft)]"
                       onClick={() => toggleExpanded(tenant.id)}
                     >
                       {expanded ? t('superAdmin.hideAdmins') : t('superAdmin.showAdmins', { count: admins.length })}
@@ -305,7 +309,7 @@ export default function SuperAdminEntitiesPage() {
                         ) : (
                           <button
                             type="button"
-                            className="mt-4 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/15"
+                            className="mt-4 border border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-[var(--pg-accent)] hover:bg-[rgba(34,197,94,0.2)]"
                             onClick={() => {
                               setAddingAdminTenantId(tenant.id)
                               setAdminProvisionResult(null)

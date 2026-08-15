@@ -1,0 +1,116 @@
+.team--coc {
+  --team-coc-border: rgba(52, 211, 153, 0.16);
+  --team-coc-line: rgba(255, 255, 255, 0.055);
+}
+
+.team--coc.list-page,
+.team--coc .list-page {
+  gap: 1rem;
+}
+
+.team--coc .page-header {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding: 0 0 1.15rem 1rem;
+  border-bottom: 1px solid var(--team-coc-line);
+}
+
+.team--coc .page-header::before {
+  position: absolute;
+  inset: 0 auto 1.15rem 0;
+  width: 2px;
+  background: var(--pg-accent);
+  box-shadow: 0 0 14px var(--pg-accent-glow);
+  content: '';
+}
+
+.team--coc .page-header h1 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.team--coc .card,
+.team--coc section.card {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, 0.035), transparent 28%),
+    var(--pg-card);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  filter:
+    drop-shadow(0 0 0.7px var(--team-coc-border))
+    drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
+  box-shadow: none !important;
+}
+
+.team--coc .card h2 {
+  position: relative;
+  padding-left: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.team--coc .card h2::before {
+  position: absolute;
+  inset: 0.1em auto 0.1em 0;
+  width: 2px;
+  background: var(--pg-accent);
+  content: '';
+}
+
+.team--coc .team-members-table {
+  border: 1px solid var(--team-coc-line);
+  background: #101722;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.team--coc .team-members-table thead th {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7f8ea3;
+  background: #0e141e;
+  border-bottom: 1px solid var(--team-coc-line);
+}
+
+.team--coc .team-members-table tbody tr:hover {
+  background: rgba(34, 197, 94, 0.035);
+}
+
+.team--coc .team-members-table tbody td {
+  border-bottom: 1px solid var(--team-coc-line);
+}
+
+.team--coc .team-action-btn,
+.team--coc button.ghost {
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+
+.team--coc .modal {
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  border: 0 !important;
+  background: #0e131f;
+  filter:
+    drop-shadow(0 0 0.8px var(--team-coc-border))
+    drop-shadow(0 24px 40px rgba(0, 0, 0, 0.45));
+}
+
+.team--coc .modal-header {
+  border-bottom: 1px solid var(--team-coc-line);
+}
+
+.team--coc .modal-header h2 {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .team--coc .page-header {
+    padding-left: 0.75rem;
+  }
+}

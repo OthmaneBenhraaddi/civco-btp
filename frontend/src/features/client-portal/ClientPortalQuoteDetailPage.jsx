@@ -4,6 +4,7 @@ import CommercialPrintSheet from '../../components/print/CommercialPrintSheet'
 import * as clientPortalQuotesApi from '../../api/clientPortalQuotes'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { useActionToast } from '../../hooks/useActionToast'
 import { resolveNavPath } from '../../routes/routeAccess'
 import { BENTO_CARD_CLASS, PAGE_SUBTITLE_CLASS, PAGE_TITLE_CLASS } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
@@ -13,6 +14,7 @@ export default function ClientPortalQuoteDetailPage() {
   const { id } = useParams()
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { toastSuccess, toastError } = useActionToast()
 
   const [quote, setQuote] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -64,8 +66,11 @@ export default function ClientPortalQuoteDetailPage() {
       setQuote(updated)
       setPreview(previewData)
       setSuccess(t('clientPortal.quotes.acceptSuccess'))
+      toastSuccess(t('toast.messages.quoteAccepted'))
     } catch (err) {
-      setError(extractErrorMessage(err, t('clientPortal.quotes.acceptError')))
+      const message = extractErrorMessage(err, t('clientPortal.quotes.acceptError'))
+      setError(message)
+      toastError(message)
     } finally {
       setSubmitting(false)
     }
@@ -81,7 +86,7 @@ export default function ClientPortalQuoteDetailPage() {
         <p className="text-sm text-rose-300">{error || t('clientPortal.quotes.notFound')}</p>
         <Link
           to={resolveNavPath('/portal/quotes', user)}
-          className="text-sm text-indigo-300 hover:text-indigo-200"
+          className="text-sm text-[var(--pg-accent)] hover:text-[var(--pg-accent-soft)]"
         >
           {t('clientPortal.quotes.backToList')}
         </Link>

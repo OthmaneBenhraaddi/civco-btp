@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmArchiveModal from '../../components/ConfirmArchiveModal'
+import Modal from '../../components/Modal'
+import CutSelect from '../../components/prodigy/CutSelect'
+import NeonButton from '../../components/prodigy/NeonButton'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { useDemoGuards } from '../../hooks/useDemoGuards'
+import { useActionToast } from '../../hooks/useActionToast'
 import * as rolesApi from '../../api/roles'
 import * as teamMembersApi from '../../api/teamMembers'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { isPlatformSuperAdmin } from '../../utils/authIdentity'
-import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
+import { FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import { filterTeamAssignableRoles, resolveMemberFunction } from './teamRoleUtils'
 import { TEAM_DIRECTORY_REFRESH_EVENT } from '../profile/profileSyncEvents'
+import { TEAM_COC_CLASS } from './teamTheme'
+import './teamCoc.css'
 
 const emptyForm = {
   first_name: '',
@@ -20,39 +27,6 @@ const emptyForm = {
   password: '',
   role_id: '',
   job_title: '',
-}
-
-function PasswordCell({ password, hasStored, canReveal, t }) {
-  const [visible, setVisible] = useState(false)
-
-  if (!canReveal) {
-    return (
-      <span className="text-xs text-slate-500" title={t('team.credentialsRestricted')}>
-        {hasStored ? t('team.credentialsRestricted') : '—'}
-      </span>
-    )
-  }
-
-  if (!hasStored && !password) {
-    return <span className="text-slate-500">—</span>
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="font-mono text-xs text-amber-300">
-        {visible ? (password ?? '—') : '••••••••'}
-      </span>
-      {password ? (
-        <button
-          type="button"
-          className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-slate-400 hover:bg-white/5"
-          onClick={() => setVisible((value) => !value)}
-        >
-          {visible ? t('team.hidePassword') : t('team.showPassword')}
-        </button>
-      ) : null}
-    </div>
-  )
 }
 
 function canToggleMemberStatus(member, currentUser, isSuperAdmin) {
@@ -69,6 +43,14 @@ function canToggleMemberStatus(member, currentUser, isSuperAdmin) {
 
 function canChangeMemberRole(member, currentUser, isSuperAdmin) {
   if (isSuperAdmin) {
+    return false
+  }
+
+  return canToggleMemberStatus(member, currentUser, isSuperAdmin)
+}
+
+function canArchiveMember(member, currentUser, isSuperAdmin) {
+  if (member.status === 'archived') {
     return false
   }
 
@@ -99,22 +81,27 @@ function MemberRoleCell({
   })()
 
   if (!canChange) {
-    return <span>{resolveMemberFunction(member)}</span>
+    return (
+      <span className="block truncate" title={resolveMemberFunction(member)}>
+        {resolveMemberFunction(member)}
+      </span>
+    )
   }
 
   return (
-    <select
-      className={[
-        FIELD_CLASS,
-        'min-w-[10rem] py-1.5 text-xs',
-        updating ? 'cursor-wait opacity-60' : '',
-      ].join(' ')}
+    <CutSelect
+      size="sm"
+      align="right"
+      className="w-full max-w-full min-w-0"
       value={currentRoleId ? String(currentRoleId) : ''}
       disabled={updating || rolesLoading || roleOptions.length === 0}
-      aria-busy={updating}
-      aria-label={t('team.role')}
-      onChange={(event) => {
-        const nextRoleId = Number(event.target.value)
+      placeholder={rolesLoading ? t('common.loading') : t('team.role')}
+      options={roleOptions.map((role) => ({
+        value: String(role.id),
+        label: role.name,
+      }))}
+      onChange={(nextValue) => {
+        const nextRoleId = Number(nextValue)
 
         if (!nextRoleId || nextRoleId === Number(currentRoleId)) {
           return
@@ -122,29 +109,8 @@ function MemberRoleCell({
 
         onChange(member.id, nextRoleId)
       }}
-    >
-      {rolesLoading ? (
-        <option value="">{t('common.loading')}</option>
-      ) : (
-        <>
-          {!currentRoleId ? <option value="">{t('team.role')}</option> : null}
-          {roleOptions.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </>
-      )}
-    </select>
+    />
   )
-}
-
-function canArchiveMember(member, currentUser, isSuperAdmin) {
-  if (member.status === 'archived') {
-    return false
-  }
-
-  return canToggleMemberStatus(member, currentUser, isSuperAdmin)
 }
 
 function IconArchive({ className }) {
@@ -157,35 +123,88 @@ function IconArchive({ className }) {
   )
 }
 
-function StatusToggle({ member, disabled, canToggle, onToggle, t }) {
+function IconUserOff({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M17 8l5 5M22 8l-5 5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconUserCheck({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M16 11l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconPlus({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+const actionBtnClass =
+  'team-action-btn inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:opacity-50'
+
+function MemberActions({
+  member,
+  toggling,
+  canToggle,
+  canArchive,
+  onToggle,
+  onArchive,
+  t,
+}) {
   const isActive = member.status === 'active'
 
-  if (!canToggle) {
-    return <span className="text-xs text-slate-500">—</span>
-  }
-
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onToggle(member.id)}
-      className={[
-        'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60',
-        isActive
-          ? 'border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/15'
-          : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15',
-      ].join(' ')}
-    >
-      {isActive ? t('team.deactivateAccess') : t('team.activateAccess')}
-    </button>
+    <div className="flex items-center justify-end gap-1.5">
+      {member.status !== 'archived' && canToggle ? (
+        <button
+          type="button"
+          disabled={toggling}
+          title={isActive ? t('team.deactivateAccess') : t('team.activateAccess')}
+          aria-label={isActive ? t('team.deactivateAccess') : t('team.activateAccess')}
+          onClick={() => onToggle(member.id)}
+          className={[
+            actionBtnClass,
+            isActive
+              ? 'border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/15'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15',
+          ].join(' ')}
+        >
+          {isActive ? <IconUserOff className="h-3.5 w-3.5" /> : <IconUserCheck className="h-3.5 w-3.5" />}
+        </button>
+      ) : null}
+      {canArchive ? (
+        <button
+          type="button"
+          title={t('team.archive')}
+          aria-label={t('team.archive')}
+          onClick={() => onArchive(member)}
+          className={`${actionBtnClass} border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15`}
+        >
+          <IconArchive className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </div>
   )
 }
 
 export default function TeamManagementPage() {
   const { t } = useTranslation()
-  const { user, isAdmin } = useAuth()
+  const { user } = useAuth()
+  const { blockDestructive } = useDemoGuards()
+  const { toastSuccess, toastUpdated, toastError } = useActionToast()
   const isSuperAdmin = isPlatformSuperAdmin(user)
-  const canViewTeamCredentials = isSuperAdmin || (isAdmin && Boolean(user?.tenant_id))
 
   const [tenants, setTenants] = useState([])
   const [selectedTenantId, setSelectedTenantId] = useState('')
@@ -193,6 +212,7 @@ export default function TeamManagementPage() {
   const [rolesLoading, setRolesLoading] = useState(!isSuperAdmin)
   const [members, setMembers] = useState([])
   const [form, setForm] = useState(emptyForm)
+  const [addOpen, setAddOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
@@ -310,6 +330,20 @@ export default function TeamManagementPage() {
     return () => window.removeEventListener(TEAM_DIRECTORY_REFRESH_EVENT, handleDirectoryRefresh)
   }, [loadMembers])
 
+  function resetForm() {
+    setForm({
+      ...emptyForm,
+      role_id: selectedRole
+        ? String(selectedRole.id)
+        : (assignableRoles[0] ? String(assignableRoles[0].id) : ''),
+    })
+  }
+
+  function handleCloseAdd() {
+    setAddOpen(false)
+    resetForm()
+  }
+
   function handleRoleChange(roleId) {
     const role = assignableRoles.find((item) => String(item.id) === String(roleId))
 
@@ -337,14 +371,14 @@ export default function TeamManagementPage() {
         role_id: Number(form.role_id),
         job_title: form.job_title.trim() || selectedRole?.name || undefined,
       })
-      setForm({
-        ...emptyForm,
-        role_id: selectedRole ? String(selectedRole.id) : (assignableRoles[0] ? String(assignableRoles[0].id) : ''),
-      })
+      resetForm()
+      setAddOpen(false)
       setSuccess(t('team.createdSuccess'))
+      toastSuccess(t('toast.messages.teamCreated'))
       await loadMembers()
     } catch (err) {
       setError(extractErrorMessage(err, t('team.createError')))
+      toastError(extractErrorMessage(err, t('team.createError')))
     } finally {
       setSaving(false)
     }
@@ -377,8 +411,10 @@ export default function TeamManagementPage() {
         member.id === userId ? { ...member, ...updatedMember } : member
       )))
       setSuccess(t('team.roleUpdateSuccess'))
+      toastUpdated(t('toast.messages.teamRoleUpdated'))
     } catch (err) {
       setError(extractErrorMessage(err, t('team.roleUpdateError')))
+      toastError(extractErrorMessage(err, t('team.roleUpdateError')))
       await loadMembers()
     } finally {
       setUpdatingRoleId(null)
@@ -387,6 +423,10 @@ export default function TeamManagementPage() {
 
   async function confirmArchiveMember() {
     if (!archiveTarget) {
+      return
+    }
+
+    if (blockDestructive(t('team.archive'))) {
       return
     }
 
@@ -411,29 +451,33 @@ export default function TeamManagementPage() {
   }
 
   return (
-    <div className="list-page">
+    <div className={`list-page team ${TEAM_COC_CLASS}`.trim()}>
       <header className="page-header">
         <div>
           <h1>{t('team.title')}</h1>
           <p>{isSuperAdmin ? t('team.subtitleSuperAdmin') : t('team.subtitle')}</p>
         </div>
+        {!isSuperAdmin ? (
+          <NeonButton type="button" onClick={() => setAddOpen(true)}>
+            <IconPlus className="h-4 w-4" />
+            {t('team.addMember')}
+          </NeonButton>
+        ) : null}
       </header>
 
       {isSuperAdmin ? (
         <section className="card mb-6 p-4">
           <label className={LABEL_CLASS}>
             {t('team.filterByEntity')}
-            <select
-              className={FIELD_CLASS}
+            <CutSelect
+              className="mt-2 w-full max-w-md"
               value={selectedTenantId}
-              onChange={(event) => setSelectedTenantId(event.target.value)}
-            >
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name} ({tenant.subdomain})
-                </option>
-              ))}
-            </select>
+              options={tenants.map((tenant) => ({
+                value: String(tenant.id),
+                label: `${tenant.name} (${tenant.subdomain})`,
+              }))}
+              onChange={(next) => setSelectedTenantId(next)}
+            />
           </label>
         </section>
       ) : null}
@@ -441,198 +485,194 @@ export default function TeamManagementPage() {
       {error ? <p className="error">{error}</p> : null}
       {success ? <p className="hint text-emerald-400">{success}</p> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        {!isSuperAdmin ? (
-          <section className="card p-6">
-            <h2 className="mb-4 text-lg font-semibold text-white">{t('team.addMember')}</h2>
-            <form className="stack" onSubmit={handleSubmit}>
-              <label className={LABEL_CLASS}>
-                {t('team.firstName')}
-                <input
-                  className={FIELD_CLASS}
-                  value={form.first_name}
-                  onChange={(event) => setForm({ ...form, first_name: event.target.value })}
-                  required
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.lastName')}
-                <input
-                  className={FIELD_CLASS}
-                  value={form.last_name}
-                  onChange={(event) => setForm({ ...form, last_name: event.target.value })}
-                  required
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.cin')}
-                <input
-                  className={FIELD_CLASS}
-                  value={form.cin}
-                  onChange={(event) => setForm({ ...form, cin: event.target.value })}
-                  placeholder="AB123456"
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.phone')}
-                <input
-                  className={FIELD_CLASS}
-                  value={form.phone}
-                  onChange={(event) => setForm({ ...form, phone: event.target.value })}
-                  placeholder="+212 6..."
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.email')}
-                <input
-                  type="email"
-                  className={FIELD_CLASS}
-                  value={form.email}
-                  onChange={(event) => setForm({ ...form, email: event.target.value })}
-                  required
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.password')}
-                <input
-                  type="password"
-                  className={FIELD_CLASS}
-                  value={form.password}
-                  onChange={(event) => setForm({ ...form, password: event.target.value })}
-                  minLength={8}
-                  required
-                />
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.role')}
-                <select
-                  className={FIELD_CLASS}
-                  value={form.role_id}
-                  onChange={(event) => handleRoleChange(event.target.value)}
-                  required
-                  disabled={rolesLoading || assignableRoles.length === 0}
-                >
-                  {rolesLoading ? (
-                    <option value="">{t('common.loading')}</option>
-                  ) : (
-                    assignableRoles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-              <label className={LABEL_CLASS}>
-                {t('team.jobTitle')}
-                <input
-                  className={FIELD_CLASS}
-                  value={form.job_title}
-                  onChange={(event) => setForm({ ...form, job_title: event.target.value })}
-                  placeholder={selectedRole?.name ?? t('team.jobTitlePlaceholder')}
-                />
-              </label>
-              <button
+      <section className="card w-full min-w-0 p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">{t('team.membersList')}</h2>
+        {loading ? (
+          <p>{t('common.loading')}</p>
+        ) : (
+          <div className="team-members-table w-full min-w-0 overflow-hidden">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <colgroup>
+                <col className="w-[17%]" />
+                <col className="w-[11%]" />
+                <col className="w-[13%]" />
+                <col className="w-[22%]" />
+                <col className="w-[17%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="truncate">{t('team.fullName')}</th>
+                  <th className="truncate">{t('team.cin')}</th>
+                  <th className="truncate">{t('team.phone')}</th>
+                  <th className="truncate">{t('team.email')}</th>
+                  <th className="truncate">{t('team.role')}</th>
+                  <th className="truncate">{t('team.status')}</th>
+                  <th className="truncate text-right">{t('common.actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>{t('team.empty')}</td>
+                  </tr>
+                ) : (
+                  members.map((member) => (
+                    <tr
+                      key={member.id}
+                      className={member.status === 'archived' ? 'opacity-55' : undefined}
+                    >
+                      <td className="truncate" title={member.full_name}>
+                        {member.full_name}
+                      </td>
+                      <td className="truncate font-mono text-sm" title={member.cin ?? undefined}>
+                        {member.cin ?? '—'}
+                      </td>
+                      <td className="truncate" title={member.phone ?? undefined}>
+                        {member.phone ?? '—'}
+                      </td>
+                      <td className="truncate font-mono text-sm" title={member.email}>
+                        {member.email}
+                      </td>
+                      <td className="min-w-0 overflow-hidden">
+                        <MemberRoleCell
+                          member={member}
+                          roles={assignableRoles}
+                          rolesLoading={rolesLoading}
+                          canChange={canChangeMemberRole(member, user, isSuperAdmin) && member.status !== 'archived'}
+                          updating={updatingRoleId === member.id}
+                          onChange={handleMemberRoleChange}
+                          t={t}
+                        />
+                      </td>
+                      <td>
+                        <StatusBadge status={member.status} />
+                      </td>
+                      <td>
+                        <MemberActions
+                          member={member}
+                          toggling={togglingId === member.id}
+                          canToggle={canToggleMemberStatus(member, user, isSuperAdmin)}
+                          canArchive={canArchiveMember(member, user, isSuperAdmin)}
+                          onToggle={handleToggleStatus}
+                          onArchive={setArchiveTarget}
+                          t={t}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {!isSuperAdmin ? (
+        <Modal
+          title={t('team.addMember')}
+          open={addOpen}
+          onClose={handleCloseAdd}
+          panelClassName="max-w-lg"
+        >
+          <form className="stack" onSubmit={handleSubmit}>
+            <label className={LABEL_CLASS}>
+              {t('team.firstName')}
+              <input
+                className={FIELD_CLASS}
+                value={form.first_name}
+                onChange={(event) => setForm({ ...form, first_name: event.target.value })}
+                required
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.lastName')}
+              <input
+                className={FIELD_CLASS}
+                value={form.last_name}
+                onChange={(event) => setForm({ ...form, last_name: event.target.value })}
+                required
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.cin')}
+              <input
+                className={FIELD_CLASS}
+                value={form.cin}
+                onChange={(event) => setForm({ ...form, cin: event.target.value })}
+                placeholder="AB123456"
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.phone')}
+              <input
+                className={FIELD_CLASS}
+                value={form.phone}
+                onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                placeholder="+212 6..."
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.email')}
+              <input
+                type="email"
+                className={FIELD_CLASS}
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                required
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.password')}
+              <input
+                type="password"
+                className={FIELD_CLASS}
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                minLength={8}
+                required
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.role')}
+              <CutSelect
+                className="w-full"
+                size="sm"
+                value={form.role_id}
+                disabled={rolesLoading || assignableRoles.length === 0}
+                placeholder={rolesLoading ? t('common.loading') : t('team.role')}
+                options={assignableRoles.map((role) => ({
+                  value: String(role.id),
+                  label: role.name,
+                }))}
+                onChange={(nextValue) => handleRoleChange(nextValue)}
+              />
+            </label>
+            <label className={LABEL_CLASS}>
+              {t('team.jobTitle')}
+              <input
+                className={FIELD_CLASS}
+                value={form.job_title}
+                onChange={(event) => setForm({ ...form, job_title: event.target.value })}
+                placeholder={selectedRole?.name ?? t('team.jobTitlePlaceholder')}
+              />
+            </label>
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+              <NeonButton type="button" variant="ghost" onClick={handleCloseAdd}>
+                {t('common.cancel')}
+              </NeonButton>
+              <NeonButton
                 type="submit"
-                className={BTN_PRIMARY}
                 disabled={saving || rolesLoading || assignableRoles.length === 0}
+                className={saving || rolesLoading || assignableRoles.length === 0 ? 'opacity-45' : ''}
               >
                 {saving ? t('team.creating') : t('team.create')}
-              </button>
-            </form>
-          </section>
-        ) : null}
-
-        <section className={`card p-6 ${isSuperAdmin ? 'xl:col-span-2' : ''}`}>
-          <h2 className="mb-4 text-lg font-semibold text-white">{t('team.membersList')}</h2>
-          {loading ? (
-            <p>{t('common.loading')}</p>
-          ) : (
-            <div className="table-wrap overflow-x-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t('team.fullName')}</th>
-                    <th>{t('team.cin')}</th>
-                    <th>{t('team.phone')}</th>
-                    <th>{t('team.email')}</th>
-                    {canViewTeamCredentials ? <th>{t('team.password')}</th> : null}
-                    <th>{t('team.role')}</th>
-                    <th>{t('team.status')}</th>
-                    <th>{t('common.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.length === 0 ? (
-                    <tr>
-                      <td colSpan={canViewTeamCredentials ? 8 : 7}>{t('team.empty')}</td>
-                    </tr>
-                  ) : (
-                    members.map((member) => (
-                      <tr
-                        key={member.id}
-                        className={member.status === 'archived' ? 'opacity-55' : undefined}
-                      >
-                        <td>{member.full_name}</td>
-                        <td className="font-mono text-sm">{member.cin ?? '—'}</td>
-                        <td>{member.phone ?? '—'}</td>
-                        <td className="font-mono text-sm">{member.email}</td>
-                        {canViewTeamCredentials ? (
-                          <td>
-                            <PasswordCell
-                              password={member.stored_password}
-                              hasStored={member.has_stored_credentials}
-                              canReveal={Boolean(member.stored_password) || member.has_stored_credentials}
-                              t={t}
-                            />
-                          </td>
-                        ) : null}
-                        <td>
-                          <MemberRoleCell
-                            member={member}
-                            roles={assignableRoles}
-                            rolesLoading={rolesLoading}
-                            canChange={canChangeMemberRole(member, user, isSuperAdmin) && member.status !== 'archived'}
-                            updating={updatingRoleId === member.id}
-                            onChange={handleMemberRoleChange}
-                            t={t}
-                          />
-                        </td>
-                        <td>
-                          <StatusBadge status={member.status} />
-                        </td>
-                        <td>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {member.status !== 'archived' ? (
-                              <StatusToggle
-                                member={member}
-                                disabled={togglingId === member.id}
-                                canToggle={canToggleMemberStatus(member, user, isSuperAdmin)}
-                                onToggle={handleToggleStatus}
-                                t={t}
-                              />
-                            ) : null}
-                            {canArchiveMember(member, user, isSuperAdmin) ? (
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
-                                onClick={() => setArchiveTarget(member)}
-                              >
-                                <IconArchive className="h-3.5 w-3.5" />
-                                {t('team.archive')}
-                              </button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              </NeonButton>
             </div>
-          )}
-        </section>
-      </div>
+          </form>
+        </Modal>
+      ) : null}
 
       <ConfirmArchiveModal
         open={Boolean(archiveTarget)}

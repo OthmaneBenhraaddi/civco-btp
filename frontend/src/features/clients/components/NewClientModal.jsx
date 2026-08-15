@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import Modal from '../../../components/Modal'
+import CutSelect from '../../../components/prodigy/CutSelect'
 import { useWizardResetOnOpen } from '../../../hooks/useWizardResetOnOpen'
 import { useTranslation } from '../../../i18n/LanguageContext'
-import * as sectorsApi from '../../../api/sectors'
 import { CONTACT_ROLE_OPTIONS } from '../../../api/clientContacts'
-import { extractErrorMessage } from '../../../utils/apiHelpers'
 import { handleWizardEnterKey } from '../../../utils/wizardForm'
-import ClientBadge from '../../../components/ClientBadge'
+import { hexToRgba } from '../../../utils/colorUtils'
 import { isBadgeSelected, normalizeBadgeIds } from '../ClientBadgesPanel'
 import {
-  BTN_GHOST,
-  BTN_PRIMARY,
   FIELD_CLASS,
   LABEL_CLASS,
 } from '../../../theme/designTokens'
 import WizardProgress from '../../../components/wizard/WizardProgress'
-import { SectorCard, TypeCard } from '../../../components/wizard/wizardCards'
+import { TypeCard } from '../../../components/wizard/wizardCards'
+import NeonButton from '../../../components/prodigy/NeonButton'
 
 const WIZARD_STEPS = ['general', 'coordinates', 'contacts']
 
@@ -42,7 +40,6 @@ export const DEFAULT_CLIENT_WIZARD_FORM = {
   country: 'FR',
   phone: '',
   email: '',
-  selectedSectorId: '',
   notes: '',
   contact_name: '',
 }
@@ -60,9 +57,6 @@ export default function NewClientModal({
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(DEFAULT_CLIENT_WIZARD_FORM)
   const [extraContacts, setExtraContacts] = useState([])
-  const [sectors, setSectors] = useState([])
-  const [catalogLoading, setCatalogLoading] = useState(false)
-  const [catalogError, setCatalogError] = useState('')
 
   const stepLabels = [
     t('clients.wizard.stepGeneral'),
@@ -70,45 +64,14 @@ export default function NewClientModal({
     t('clients.wizard.stepContacts'),
   ]
 
-  const selectedSector = sectors.find(
-    (sector) => String(sector.id) === String(form.selectedSectorId),
-  )
-
   const resetWizard = useCallback(() => {
     setStep(0)
     setForm(DEFAULT_CLIENT_WIZARD_FORM)
     setExtraContacts([])
-    setCatalogError('')
     finalSubmitLockRef.current = false
   }, [])
 
   useWizardResetOnOpen(open, resetWizard)
-
-  useEffect(() => {
-    if (!open) return
-
-    async function loadSectors() {
-      setCatalogLoading(true)
-      setCatalogError('')
-
-      try {
-        const data = await sectorsApi.fetchSectors()
-        const nextSectors = data.data ?? []
-        setSectors(nextSectors)
-        setForm((current) => ({
-          ...current,
-          selectedSectorId: current.selectedSectorId || String(nextSectors[0]?.id ?? ''),
-        }))
-      } catch (err) {
-        setSectors([])
-        setCatalogError(extractErrorMessage(err, t('sectors.loadError')))
-      } finally {
-        setCatalogLoading(false)
-      }
-    }
-
-    loadSectors()
-  }, [open, t])
 
   useEffect(() => {
     if (!open) {
@@ -131,7 +94,6 @@ export default function NewClientModal({
 
   function canAdvance() {
     if (step === 0) return Boolean(form.name.trim())
-    if (step === 1) return Boolean(form.selectedSectorId)
     return true
   }
 
@@ -167,9 +129,6 @@ export default function NewClientModal({
         ? t('clients.wizard.typeInternal')
         : t('clients.wizard.typeExternal'),
     )
-    if (selectedSector?.name) {
-      parts.push(`${t('clients.wizard.sectorLabel')}: ${selectedSector.name}`)
-    }
     if (form.notes.trim()) {
       parts.push(form.notes.trim())
     }
@@ -235,12 +194,12 @@ export default function NewClientModal({
       onClose={onClose}
       panelClassName="new-client-modal w-full max-w-2xl text-white"
     >
-      <div className="space-y-2" onKeyDown={handleWizardKeyDown}>
+      <div className="space-y-4" onKeyDown={handleWizardKeyDown}>
         <WizardProgress currentStep={step} stepCount={WIZARD_STEPS.length} labels={stepLabels} />
 
-        <div ref={stepContentRef} className="relative min-h-[16rem]">
+        <div ref={stepContentRef} className="relative min-h-[12rem]">
           {step === 0 ? (
-            <div className="wizard-step space-y-5">
+            <div className="wizard-step space-y-4">
               <label>
                 <span className={LABEL_CLASS}>{t('clients.name')}</span>
                 <input
@@ -254,7 +213,7 @@ export default function NewClientModal({
 
               <div>
                 <span className={LABEL_CLASS}>{t('clients.wizard.clientType')}</span>
-                <p className="mb-3 text-xs text-slate-400">{t('clients.wizard.clientTypeHint')}</p>
+                <p className="mb-2 text-xs text-slate-400">{t('clients.wizard.clientTypeHint')}</p>
                 <div className="flex gap-3">
                   {CLIENT_TYPES.map((type) => (
                     <TypeCard
@@ -276,78 +235,84 @@ export default function NewClientModal({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#121316] px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">{t('common.active')}</p>
-                  <p className="text-xs text-slate-400">{t('clients.wizard.activeHint')}</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                  <div className="min-w-0 pr-3">
+                    <p className="text-sm font-medium text-white">{t('common.active')}</p>
+                    <p className="mt-0.5 text-xs leading-snug text-slate-400">
+                      {t('clients.wizard.activeHint')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.is_active}
+                    aria-label={t('common.active')}
+                    onClick={() => updateForm({ is_active: !form.is_active })}
+                    className={['pg-toggle', form.is_active ? 'is-on' : ''].filter(Boolean).join(' ')}
+                  >
+                    <span className="pg-toggle__knob" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.is_active}
-                  onClick={() => updateForm({ is_active: !form.is_active })}
-                  className={[
-                    'relative h-6 w-11 rounded-full transition-colors duration-200',
-                    form.is_active ? 'bg-emerald-500/80' : 'bg-slate-700',
-                  ].join(' ')}
-                >
-                  <span
-                    className={[
-                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
-                      form.is_active ? 'translate-x-5' : 'translate-x-0.5',
-                    ].join(' ')}
-                  />
-                </button>
-              </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#121316] px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">{t('clients.isOfficial')}</p>
-                  <p className="text-xs text-slate-400">{t('clients.isOfficialHint')}</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.is_official}
-                  onClick={() => updateForm({ is_official: !form.is_official })}
-                  className={[
-                    'relative h-6 w-11 rounded-full transition-colors duration-200',
-                    form.is_official ? 'bg-sky-500/80' : 'bg-slate-700',
-                  ].join(' ')}
-                >
-                  <span
+                <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                  <div className="min-w-0 pr-3">
+                    <p className="text-sm font-medium text-white">{t('clients.isOfficial')}</p>
+                    <p className="mt-0.5 text-xs leading-snug text-slate-400">
+                      {t('clients.isOfficialHint')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.is_official}
+                    aria-label={t('clients.isOfficial')}
+                    onClick={() => updateForm({ is_official: !form.is_official })}
                     className={[
-                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
-                      form.is_official ? 'translate-x-5' : 'translate-x-0.5',
-                    ].join(' ')}
-                  />
-                </button>
+                      'pg-toggle',
+                      form.is_official ? 'is-on is-sky' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span className="pg-toggle__knob" />
+                  </button>
+                </div>
               </div>
 
               {availableBadges.length > 0 ? (
                 <div>
                   <span className={LABEL_CLASS}>{t('clients.assignBadges')}</span>
-                  <div className="mt-3 flex flex-col gap-2">
-                    {availableBadges.map((badge) => (
-                      <label
-                        key={badge.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.06] bg-[#121316] px-3 py-2.5 hover:bg-white/[0.02]"
-                      >
-                        <input
-                          type="checkbox"
-                          className="rounded border-slate-600 bg-[#1c1d22] text-indigo-400"
-                          checked={isBadgeSelected(form.badge_ids, badge.id)}
-                          onChange={(event) => {
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {availableBadges.map((badge) => {
+                      const active = isBadgeSelected(form.badge_ids, badge.id)
+                      const color = badge.color || '#64748B'
+
+                      return (
+                        <button
+                          key={badge.id}
+                          type="button"
+                          aria-pressed={active}
+                          className={['pg-badge-pill', active ? 'is-active' : ''].filter(Boolean).join(' ')}
+                          style={{
+                            '--badge-color': color,
+                            '--badge-bg': hexToRgba(color, active ? 0.28 : 0.06),
+                            '--badge-border': hexToRgba(color, active ? 0.9 : 0.28),
+                            '--badge-text': active ? '#ffffff' : hexToRgba(color, 0.75),
+                            '--badge-glow': hexToRgba(color, 0.42),
+                          }}
+                          onClick={() => {
                             const badgeId = Number(badge.id)
-                            const badgeIds = event.target.checked
-                              ? normalizeBadgeIds([...form.badge_ids, badgeId])
-                              : normalizeBadgeIds(form.badge_ids).filter((id) => id !== badgeId)
+                            const badgeIds = active
+                              ? normalizeBadgeIds(form.badge_ids).filter((id) => id !== badgeId)
+                              : normalizeBadgeIds([...form.badge_ids, badgeId])
                             updateForm({ badge_ids: badgeIds })
                           }}
-                        />
-                        <ClientBadge name={badge.name} color={badge.color} />
-                      </label>
-                    ))}
+                        >
+                          {badge.name}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ) : null}
@@ -403,28 +368,6 @@ export default function NewClientModal({
                     onChange={(event) => updateForm({ email: event.target.value })}
                   />
                 </label>
-              </div>
-
-              <div>
-                <span className={LABEL_CLASS}>{t('clients.wizard.workSector')}</span>
-                <p className="mb-4 text-xs text-slate-400">{t('clients.wizard.workSectorHint')}</p>
-                {catalogError ? <p className="mb-3 text-xs text-rose-400">{catalogError}</p> : null}
-                {catalogLoading ? (
-                  <p className="text-xs text-slate-400">{t('common.loading')}</p>
-                ) : sectors.length === 0 ? (
-                  <p className="text-xs text-slate-400">{t('sectors.empty')}</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {sectors.map((sector) => (
-                      <SectorCard
-                        key={sector.id}
-                        sector={sector}
-                        active={String(form.selectedSectorId) === String(sector.id)}
-                        onClick={() => updateForm({ selectedSectorId: String(sector.id) })}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           ) : null}
@@ -512,19 +455,18 @@ export default function NewClientModal({
                           </label>
                           <label className="md:col-span-2">
                             <span className="mb-1.5 block text-xs text-slate-400">{t('clientContacts.role')}</span>
-                            <select
-                              className={FIELD_CLASS}
+                            <CutSelect
+                              className="w-full"
+                              size="sm"
                               value={contact.contact_role}
-                              onChange={(event) =>
-                                updateExtraContact(index, { contact_role: event.target.value })
+                              onChange={(next) =>
+                                updateExtraContact(index, { contact_role: next })
                               }
-                            >
-                              {CONTACT_ROLE_OPTIONS.map((role) => (
-                                <option key={role} value={role}>
-                                  {t(`clientContacts.roles.${role}`)}
-                                </option>
-                              ))}
-                            </select>
+                              options={CONTACT_ROLE_OPTIONS.map((role) => ({
+                                value: role,
+                                label: t(`clientContacts.roles.${role}`),
+                              }))}
+                            />
                           </label>
                         </div>
                       </div>
@@ -549,28 +491,28 @@ export default function NewClientModal({
 
         <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] pt-5">
           {step > 0 ? (
-            <button type="button" onClick={goBack} className={BTN_GHOST}>
+            <NeonButton type="button" onClick={goBack} variant="ghost" size="sm">
               {t('clients.wizard.back')}
-            </button>
+            </NeonButton>
           ) : (
-            <button type="button" onClick={onClose} className={BTN_GHOST}>
+            <NeonButton type="button" onClick={onClose} variant="ghost" size="sm">
               {t('common.cancel')}
-            </button>
+            </NeonButton>
           )}
 
           {step < WIZARD_STEPS.length - 1 ? (
-            <button type="button" onClick={goNext} disabled={!canAdvance()} className={BTN_PRIMARY}>
+            <NeonButton type="button" onClick={goNext} disabled={!canAdvance()} size="sm">
               {t('clients.wizard.next')}
-            </button>
+            </NeonButton>
           ) : (
-            <button
+            <NeonButton
               type="button"
               onClick={handleFinalSubmit}
               disabled={saving || !form.name.trim()}
-              className={BTN_PRIMARY}
+              size="sm"
             >
               {saving ? t('common.saving') : t('clients.create')}
-            </button>
+            </NeonButton>
           )}
         </div>
       </div>

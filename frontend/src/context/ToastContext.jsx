@@ -16,7 +16,7 @@ function ToastIcon({ action }) {
     )
   }
 
-  if (action === 'suppression') {
+  if (action === 'suppression' || action === 'error') {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
@@ -51,31 +51,36 @@ function ToastStack({ toasts, onDismiss }) {
           <div
             key={toast.id}
             className={[
-              'action-toast pointer-events-auto flex gap-3 rounded-xl px-4 py-3 shadow-lg',
+              'pg-cut-shell pg-cut-shell--sm action-toast pointer-events-auto',
               'animate-[toast-in_0.28s_ease-out]',
-              styles.container,
+              styles.shell,
             ].join(' ')}
             role="status"
           >
-            <span className={['mt-0.5 shrink-0', styles.icon].join(' ')}>
-              <ToastIcon action={toast.action} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className={['text-sm font-semibold', styles.title].join(' ')}>
-                {t(`toast.titles.${toast.action}`)}
-              </p>
-              <p className="mt-0.5 text-sm leading-snug text-slate-400">{toast.message}</p>
+            <div className="pg-cut-shell__inner relative bg-[#0e121b]/95 px-4 pb-3.5 pt-3.5 backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => onDismiss(toast.id)}
+                className="action-toast-close absolute right-2 top-2 z-[1] grid h-7 w-7 place-items-center text-slate-500 transition hover:bg-white/5 hover:text-white"
+                aria-label={t('common.close')}
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+
+              <div className="flex gap-3 pr-7">
+                <span className={['mt-0.5 shrink-0', styles.icon].join(' ')}>
+                  <ToastIcon action={toast.action} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className={['text-sm font-semibold', styles.title].join(' ')}>
+                    {t(`toast.titles.${toast.action}`)}
+                  </p>
+                  <p className="mt-0.5 text-sm leading-snug text-slate-400">{toast.message}</p>
+                </div>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => onDismiss(toast.id)}
-              className="action-toast-close -mr-1 shrink-0 rounded-lg p-1 text-slate-500 transition hover:bg-white/5 hover:text-slate-300"
-              aria-label={t('common.close')}
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
           </div>
         )
       })}
