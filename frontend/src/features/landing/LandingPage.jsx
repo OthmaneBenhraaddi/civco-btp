@@ -10,13 +10,37 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import { appendTenantQuery } from '../../utils/tenantDevContext'
 import { FEATURE_CARDS, KEY_STATS, LIVE_SITES, QUICK_ACTIONS } from './landingData'
 import DemoCodeModal from './DemoCodeModal'
+import DemoRequestModal from './DemoRequestModal'
+import PartnerLogoMarquee from './PartnerLogoMarquee'
+import * as homepageApi from '../../api/homepage'
+
+const DEFAULT_HERO = {
+  title: 'Entrez dans un monde de chantiers illimités',
+  highlight: 'chantiers illimités',
+  description:
+    'Une ville de chantiers où les relations font les contrats. Ouvrez un projet, approvisionnez un autre, construisez un empire de lots — avec de vrais outils pour chaque équipe.',
+  background_url: null,
+}
 
 export default function LandingPage() {
   const { t } = useTranslation()
   const { isAuthenticated, loading } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [demoOpen, setDemoOpen] = useState(false)
+  const [requestOpen, setRequestOpen] = useState(false)
   const [expiredNotice, setExpiredNotice] = useState(false)
+  const [cms, setCms] = useState({
+    hero: DEFAULT_HERO,
+    partners: [],
+    cards: FEATURE_CARDS.map((card) => ({
+      id: card.id,
+      slug: card.id,
+      title: card.title,
+      description: card.description,
+      image_url: card.image,
+      tall: card.tall,
+    })),
+  })
 
   useEffect(() => {
     if (searchParams.get('demo') === 'expired') {
@@ -26,6 +50,48 @@ export default function LandingPage() {
       setSearchParams(next, { replace: true })
     }
   }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    let cancelled = false
+
+    homepageApi.fetchHomepageContent()
+      .then((data) => {
+        if (cancelled || !data) {
+          return
+        }
+
+        setCms({
+          hero: { ...DEFAULT_HERO, ...(data.hero ?? {}) },
+          partners: data.partners ?? [],
+          cards: data.cards?.length
+            ? data.cards
+            : FEATURE_CARDS.map((card) => ({
+                id: card.id,
+                slug: card.id,
+                title: card.title,
+                description: card.description,
+                image_url: card.image,
+                tall: card.tall,
+              })),
+        })
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const hero = cms.hero
+  const featureCards = cms.cards
+  const tallCards = featureCards.filter((card) => card.tall)
+  const shortCards = featureCards.filter((card) => !card.tall)
+  const gridCards = [
+    tallCards[0] ?? featureCards[0],
+    shortCards[0] ?? featureCards[1],
+    tallCards[1] ?? featureCards[3],
+    shortCards[1] ?? featureCards[2],
+  ].filter(Boolean)
 
   return (
     <div className="pg-shell h-full overflow-y-auto overscroll-contain bg-[#0b0f17]">
@@ -43,7 +109,7 @@ export default function LandingPage() {
 
           <div className="flex items-center justify-end gap-2 sm:gap-3">
             {loading ? null : isAuthenticated ? (
-              <ProfileDropdown />
+              <ProfileDropdown variant="landing" />
             ) : (
               <>
                 <NeonButton
@@ -54,6 +120,15 @@ export default function LandingPage() {
                   onClick={() => setDemoOpen(true)}
                 >
                   {t('demo.navCta')}
+                </NeonButton>
+                <NeonButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="landing-nav-cta"
+                  onClick={() => setRequestOpen(true)}
+                >
+                  {t('demo.requestNavCta')}
                 </NeonButton>
                 <NeonButton to={appendTenantQuery('/login')} size="sm" className="landing-nav-cta">
                   {t('auth.signIn')}
@@ -71,7 +146,18 @@ export default function LandingPage() {
       ) : null}
 
       <div className="pb-20">
-        <section className="pg-hero-bg relative overflow-hidden">
+        <section
+          className="pg-hero-bg relative overflow-hidden"
+          style={hero.background_url ? {
+            backgroundImage: [
+              'radial-gradient(ellipse 70% 50% at 50% 18%, rgba(34, 197, 94, 0.07), transparent 55%)',
+              'linear-gradient(180deg, rgba(11, 15, 23, 0.28) 0%, rgba(11, 15, 23, 0.82) 52%, #0b0f17 100%)',
+              `url('${hero.background_url}')`,
+            ].join(', '),
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : undefined}
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_45%)]" />
           <div className="relative mx-auto flex min-h-[78vh] max-w-7xl flex-col justify-center px-4 pb-10 pt-16 sm:px-6 lg:px-8">
             <motion.div
@@ -81,18 +167,10 @@ export default function LandingPage() {
               className="mx-auto max-w-4xl text-center"
             >
               <h1 className="font-[family-name:var(--pg-font-display)] text-[clamp(2.1rem,5vw,3.6rem)] font-extrabold leading-[1.08] tracking-tight text-white">
-                Entrez dans un monde de{' '}
-                <span className="text-[var(--pg-accent)]">chantiers illimités</span>
+                <HeroTitle title={hero.title} highlight={hero.highlight} />
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-300 sm:text-base">
-                Une ville de chantiers où les{' '}
-                <span className="font-semibold text-[var(--pg-accent)]">relations</span> font les
-                contrats. Ouvrez un{' '}
-                <span className="font-semibold text-[var(--pg-accent)]">projet</span>, approvisionnez
-                un autre, construisez un{' '}
-                <span className="font-semibold text-[var(--pg-accent)]">empire</span> de lots — avec de
-                vrais <span className="font-semibold text-[var(--pg-accent)]">outils</span> pour chaque
-                équipe.
+                {hero.description}
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -141,6 +219,8 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </section>
+
+        <PartnerLogoMarquee partners={cms.partners} />
 
         <section className="relative border-t border-[var(--pg-border)] bg-[var(--pg-bg-elevated)]">
           <div
@@ -191,10 +271,10 @@ export default function LandingPage() {
           </Reveal>
 
           <div className="mt-10 grid gap-4 lg:grid-cols-3 lg:grid-rows-2">
-            <FeatureCard card={FEATURE_CARDS[0]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0} />
-            <FeatureCard card={FEATURE_CARDS[1]} className="min-h-[16rem]" delay={0.08} />
-            <FeatureCard card={FEATURE_CARDS[3]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0.12} />
-            <FeatureCard card={FEATURE_CARDS[2]} className="min-h-[16rem]" delay={0.16} />
+            <FeatureCard card={gridCards[0]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0} />
+            <FeatureCard card={gridCards[1]} className="min-h-[16rem]" delay={0.08} />
+            <FeatureCard card={gridCards[2]} className="lg:row-span-2 min-h-[22rem] lg:min-h-0" delay={0.12} />
+            <FeatureCard card={gridCards[3]} className="min-h-[16rem]" delay={0.16} />
           </div>
         </section>
 
@@ -254,11 +334,31 @@ export default function LandingPage() {
       </div>
 
       <DemoCodeModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+      <DemoRequestModal open={requestOpen} onClose={() => setRequestOpen(false)} />
     </div>
   )
 }
 
+function HeroTitle({ title, highlight }) {
+  if (!highlight || !title?.includes(highlight)) {
+    return title
+  }
+
+  const [before, after] = title.split(highlight)
+
+  return (
+    <>
+      {before}
+      <span className="text-[var(--pg-accent)]">{highlight}</span>
+      {after}
+    </>
+  )
+}
+
 function FeatureCard({ card, className = '', delay = 0 }) {
+  if (!card) {
+    return null
+  }
   return (
     <Reveal delay={delay} className={`group h-full ${className}`}>
       <CutFrame
@@ -267,7 +367,7 @@ function FeatureCard({ card, className = '', delay = 0 }) {
         innerClassName="relative h-full min-h-[16rem] overflow-hidden lg:min-h-full"
       >
         <img
-          src={card.image}
+          src={card.image_url || card.image}
           alt=""
           className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
         />

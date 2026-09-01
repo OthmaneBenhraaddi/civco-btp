@@ -4,6 +4,7 @@ namespace App\Http\Requests\SuperAdmin;
 
 use App\Enums\TenantStatus;
 use App\Http\Requests\SuperAdmin\Concerns\ValidatesTenantBrandingFields;
+use App\Rules\SecureImageUpload;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class StoreTenantRequest extends FormRequest
                 Rule::notIn(config('tenancy.ignored_subdomains', [])),
             ],
             'status' => ['required', Rule::enum(TenantStatus::class)],
-            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048', new SecureImageUpload],
             ...$this->brandingRules(),
         ];
     }

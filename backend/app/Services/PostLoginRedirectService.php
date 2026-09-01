@@ -67,7 +67,7 @@ class PostLoginRedirectService
     private function defaultPathFor(User $user): string
     {
         if ($user->role === 'admin') {
-            return '/';
+            return '/dashboard';
         }
 
         $company = $user->tenant_id !== null
@@ -75,7 +75,7 @@ class PostLoginRedirectService
             : $user->primaryCompany();
 
         if ($company === null) {
-            return '/';
+            return '/dashboard';
         }
 
         $permissions = $this->permissionResolver->expand(
@@ -87,14 +87,14 @@ class PostLoginRedirectService
             'invoice.view' => '/invoices',
             'quote.view' => '/quotes',
             'client.view' => '/clients',
-            'dashboard.view' => '/',
+            'dashboard.view' => '/dashboard',
         ] as $permission => $path) {
             if (in_array($permission, $permissions, true)) {
                 return $path;
             }
         }
 
-        return '/';
+        return '/dashboard';
     }
 
     private function withTenantContext(string $path, User $user): string

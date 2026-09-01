@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class DocumentService
 {
@@ -77,7 +76,7 @@ class DocumentService
 
     private function storeFile(UploadedFile $file, int $companyId): string
     {
-        $filename = Str::uuid()->toString().'_'.$file->getClientOriginalName();
+        $filename = \App\Support\SecureUpload::uuidPrefixedFilename($file);
 
         return $file->storeAs("documents/{$companyId}", $filename, self::DISK);
     }

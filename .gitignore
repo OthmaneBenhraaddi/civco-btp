@@ -1,12 +1,27 @@
-# dependencies
-node_modules/
-vendor/
-
 # environment & secrets
 .env
 .env.*
 !.env.example
 !**/.env.example
+
+# dependencies
+/vendor
+/node_modules
+vendor/
+node_modules/
+
+# public storage symlink & local uploads
+/public/storage
+backend/public/storage
+backend/storage/app/private/*
+!backend/storage/app/private/.gitignore
+backend/storage/app/public/*
+!backend/storage/app/public/.gitignore
+
+# local SQLite databases
+*.sqlite
+*.sqlite-*
+backend/database/*.sqlite*
 
 # frontend build
 frontend/dist/
@@ -15,7 +30,6 @@ frontend/dist-ssr/
 # laravel runtime & cache
 backend/public/build/
 backend/public/hot
-backend/public/storage
 backend/storage/*.key
 backend/storage/pail
 backend/bootstrap/cache/*.php
@@ -35,6 +49,8 @@ backend/frontend/
 # os / editor / ide
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
+*Zone.Identifier
 .idea/
 .vscode/
 .cursor/

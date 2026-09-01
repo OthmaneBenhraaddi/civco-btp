@@ -4,14 +4,12 @@ namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 final class TenantLogoStorage
 {
     public static function store(UploadedFile $file, string $subdomain): string
     {
-        $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'png';
-        $filename = Str::slug($subdomain).'-'.Str::uuid()->toString().'.'.strtolower($extension);
+        $filename = SecureUpload::uuidImageFilename($file, $subdomain);
 
         return $file->storeAs('tenant-logos', $filename, 'public');
     }

@@ -33,8 +33,8 @@ function matchesPrefix(pathname, prefix, exact = false) {
 }
 
 function findRouteRule(pathname) {
-  if (pathname === '/' || pathname === '') {
-    return { prefix: '/', permission: 'dashboard.view', exact: true }
+  if (pathname === '/dashboard' || pathname === '/dashboard/') {
+    return { prefix: '/dashboard', permission: 'dashboard.view', exact: true }
   }
 
   const sorted = [...ERP_ROUTE_RULES].sort((a, b) => b.prefix.length - a.prefix.length)
@@ -96,7 +96,7 @@ export function getDefaultHomePath(user, roles = [], permissions = []) {
   }
 
   if (user?.role === 'admin') {
-    return appendTenantQuery('/')
+    return appendTenantQuery('/dashboard')
   }
 
   if (userHasPermission(permissions, 'project.view')) {
@@ -116,22 +116,22 @@ export function getDefaultHomePath(user, roles = [], permissions = []) {
   }
 
   if (userHasPermission(permissions, 'dashboard.view')) {
-    return appendTenantQuery('/')
+    return appendTenantQuery('/dashboard')
   }
 
-  return appendTenantQuery('/')
+  return appendTenantQuery('/dashboard')
 }
 
 export function getDashboardNavPath(user, roles = []) {
   if (isPlatformSuperAdmin(user)) {
-    return '/'
+    return '/super-admin/overview'
   }
 
   if (roles.some((role) => role.slug === 'client_extern') || user?.client_id) {
     return '/portal'
   }
 
-  return appendTenantQuery('/')
+  return appendTenantQuery('/dashboard')
 }
 
 export function navItemVisible(item, ctx) {

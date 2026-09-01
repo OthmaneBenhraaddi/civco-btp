@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { extractErrorMessage } from '../../utils/apiHelpers'
-import { resolveRedirectPath } from '../../routes/routeAccess'
 import { getSafeReturnPath } from '../../utils/returnPath'
 import CutFrame from '../../components/prodigy/CutFrame'
 import NeonButton from '../../components/prodigy/NeonButton'
@@ -31,9 +30,13 @@ export default function LoginPage() {
     setSubmitting(true)
 
     try {
-      const context = await login({ email, password })
-      const fallback = resolveRedirectPath(context)
-      navigate(getSafeReturnPath(location.state?.from, fallback), { replace: true })
+      await login({ email, password })
+      const returnFrom = location.state?.from
+      const fallback = '/'
+      const target = returnFrom && returnFrom !== '/' && returnFrom !== ''
+        ? getSafeReturnPath(returnFrom, fallback)
+        : fallback
+      navigate(target, { replace: true })
     } catch (err) {
       const validationError = err.response?.data?.errors?.email?.[0]
       setError(validationError ?? extractErrorMessage(err, t('auth.invalidCredentials')))

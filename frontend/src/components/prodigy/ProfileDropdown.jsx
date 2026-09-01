@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLogout } from '../../hooks/useLogout'
 import { useTranslation } from '../../i18n/LanguageContext'
-import { resolveNavPath } from '../../routes/routeAccess'
+import { resolveNavPath, getDashboardNavPath } from '../../routes/routeAccess'
 import { resolveProfileRoleLabel } from '../../utils/authIdentity'
 
-export default function ProfileDropdown() {
+export default function ProfileDropdown({ variant = 'app' }) {
   const { user, company, tenant, roles, isAdmin, isSuperAdmin, isClientPortalUser } = useAuth()
   const logout = useLogout()
   const { t } = useTranslation()
@@ -23,6 +23,7 @@ export default function ProfileDropdown() {
     .slice(0, 2)
     .toUpperCase()
   const avatarUrl = user?.avatar_url || null
+  const dashboardPath = getDashboardNavPath(user, roles)
 
   function AvatarMark({ size = 'md' }) {
     const sizeClass = size === 'lg' ? 'h-9 w-9 text-xs' : 'h-8 w-8 text-[11px]'
@@ -41,26 +42,33 @@ export default function ProfileDropdown() {
     )
   }
 
-  const menuItems = isSuperAdmin
+  const menuItems = variant === 'landing'
     ? [
-        { to: '/super-admin/overview', label: t('nav.superAdminOverview'), icon: IconGrid },
-        { to: '/super-admin/entities', label: t('nav.superAdminEntities'), icon: IconBriefcase },
-        { to: '/super-admin/create', label: t('nav.superAdminCreate'), icon: IconBriefcase },
-        { to: '/super-admin/demo-codes', label: t('nav.superAdminDemoCodes'), icon: IconClock },
-        { to: '/super-admin/members', label: t('nav.superAdminMembers'), icon: IconShield },
-        { to: '/super-admin/logs', label: t('nav.superAdminLogs'), icon: IconClock },
+        { to: dashboardPath, label: t('nav.dashboard'), icon: IconGrid },
+        { to: '/profile', label: t('nav.profile'), icon: IconShield },
       ]
-    : isClientPortalUser
+    : isSuperAdmin
       ? [
-          { to: '/portal', label: t('nav.clientDashboard'), icon: IconGrid },
-          { to: '/portal/quotes', label: t('nav.clientQuotes'), icon: IconBriefcase },
+          { to: '/super-admin/overview', label: t('nav.superAdminOverview'), icon: IconGrid },
+          { to: '/super-admin/entities', label: t('nav.superAdminEntities'), icon: IconBriefcase },
+          { to: '/super-admin/create', label: t('nav.superAdminCreate'), icon: IconBriefcase },
+          { to: '/super-admin/demo-codes', label: t('nav.superAdminDemoCodes'), icon: IconClock },
+          { to: '/super-admin/demo-requests', label: t('nav.superAdminDemoRequests'), icon: IconClock },
+          { to: '/super-admin/homepage', label: t('nav.superAdminHomepage'), icon: IconBriefcase },
+          { to: '/super-admin/members', label: t('nav.superAdminMembers'), icon: IconShield },
+          { to: '/super-admin/logs', label: t('nav.superAdminLogs'), icon: IconClock },
         ]
-      : [
-          { to: '/', label: t('nav.dashboard'), icon: IconGrid },
-          { to: '/projects', label: t('nav.projects'), icon: IconBriefcase },
-          { to: '/profile', label: t('nav.profile'), icon: IconShield },
-          ...(isAdmin ? [{ to: '/configuration', label: t('nav.configuration'), icon: IconClock }] : []),
-        ]
+      : isClientPortalUser
+        ? [
+            { to: '/portal', label: t('nav.clientDashboard'), icon: IconGrid },
+            { to: '/portal/quotes', label: t('nav.clientQuotes'), icon: IconBriefcase },
+          ]
+        : [
+            { to: '/dashboard', label: t('nav.dashboard'), icon: IconGrid },
+            { to: '/projects', label: t('nav.projects'), icon: IconBriefcase },
+            { to: '/profile', label: t('nav.profile'), icon: IconShield },
+            ...(isAdmin ? [{ to: '/configuration', label: t('nav.configuration'), icon: IconClock }] : []),
+          ]
 
   useEffect(() => {
     function onPointerDown(event) {

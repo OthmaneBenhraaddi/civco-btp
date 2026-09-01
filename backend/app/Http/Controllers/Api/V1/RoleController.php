@@ -94,7 +94,9 @@ class RoleController extends Controller
     {
         $companyId = $this->companyId($request);
 
-        if ($role->company_id !== null && $role->company_id !== $companyId) {
+        // Company admins may only mutate roles owned by their company.
+        // Shared/system roles (company_id null) are platform-wide and must not be edited here.
+        if ($role->company_id === null || $role->company_id !== $companyId) {
             abort(404);
         }
 
@@ -127,7 +129,7 @@ class RoleController extends Controller
 
         $companyId = $this->companyId($request);
 
-        if ($role->company_id !== null && $role->company_id !== $companyId) {
+        if ($role->company_id === null || $role->company_id !== $companyId) {
             abort(404);
         }
 

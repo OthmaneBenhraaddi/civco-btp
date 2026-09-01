@@ -10,6 +10,7 @@ import {
   LABEL_CLASS,
 } from '../../theme/designTokens'
 import { extractErrorMessage, unwrapResource } from '../../utils/apiHelpers'
+import { sanitizeHtml } from '../../utils/sanitizeHtml'
 import { SignatureCanvasPadSubmit } from '../client-portal/components/SignatureCanvasPad'
 
 const PLACEHOLDERS = [
@@ -299,7 +300,7 @@ export default function ContractTemplateSettingsPanel() {
           {previewHtml ? (
             <div
               className="mt-4 max-h-72 overflow-y-auto rounded-xl border border-white/[0.06] bg-white p-4 text-sm text-slate-800"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
             />
           ) : null}
         </section>

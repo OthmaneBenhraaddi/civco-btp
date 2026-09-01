@@ -4,6 +4,7 @@ import AuthRedirectListener from '../components/AuthRedirectListener'
 import GuestRoute from '../components/GuestRoute'
 import ProtectedRoute from '../components/ProtectedRoute'
 import LoginPage from '../features/auth/LoginPage'
+import LandingPage from '../features/landing/LandingPage'
 import DashboardPage from '../features/dashboard/DashboardPage'
 import ClientsPage from '../features/clients/ClientsPage'
 import ProjectMapPage from '../features/map/ProjectMapPage'
@@ -27,8 +28,10 @@ import SuperAdminOverviewPage from '../features/super-admin/SuperAdminOverviewPa
 import SuperAdminEntitiesPage from '../features/super-admin/SuperAdminEntitiesPage'
 import SuperAdminCreateEntityPage from '../features/super-admin/SuperAdminCreateEntityPage'
 import SuperAdminDemoCodesPage from '../features/super-admin/SuperAdminDemoCodesPage'
+import SuperAdminDemoRequestsPage from '../features/super-admin/SuperAdminDemoRequestsPage'
 import SuperAdminMembersPage from '../features/super-admin/SuperAdminMembersPage'
 import SuperAdminSystemLogsPage from '../features/super-admin/SuperAdminSystemLogsPage'
+import SuperAdminHomepagePage from '../features/super-admin/SuperAdminHomepagePage'
 import TicketsPage from '../features/tickets/TicketsPage'
 import NewTicketPage from '../features/tickets/NewTicketPage'
 import TicketDetailPage from '../features/tickets/TicketDetailPage'
@@ -45,7 +48,9 @@ export default function AppRoutes() {
 
       <div className="h-full overflow-hidden">
         <Routes>
-          {/* Guests: /login only. Root `/` → LandingPage for guests via ProtectedRoute. */}
+          {/* Public marketing homepage — available to guests and authenticated users. */}
+          <Route path="/" element={<LandingPage />} />
+
           <Route element={<GuestRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
@@ -62,8 +67,7 @@ export default function AppRoutes() {
               <Route path="portal/calendar" element={<ClientPortalCalendarPage />} />
               <Route path="portal/quotes" element={<ClientPortalQuotesPage />} />
               <Route path="portal/quotes/:id" element={<ClientPortalQuoteDetailPage />} />
-              {/* Authenticated home; guests on `/` see LandingPage via ProtectedRoute. */}
-              <Route index element={<DashboardPage />} />
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="map" element={<ProjectMapPage />} />
               <Route path="projects" element={<ProjectsPage />} />
@@ -88,8 +92,10 @@ export default function AppRoutes() {
                 <Route path="entities" element={<SuperAdminEntitiesPage />} />
                 <Route path="create" element={<SuperAdminCreateEntityPage />} />
                 <Route path="demo-codes" element={<SuperAdminDemoCodesPage />} />
+                <Route path="demo-requests" element={<SuperAdminDemoRequestsPage />} />
                 <Route path="members" element={<SuperAdminMembersPage />} />
                 <Route path="logs" element={<SuperAdminSystemLogsPage />} />
+                <Route path="homepage" element={<SuperAdminHomepagePage />} />
               </Route>
 
               <Route element={<AdminRoute />}>
@@ -101,6 +107,7 @@ export default function AppRoutes() {
             </Route>
           </Route>
 
+          <Route path="superadmin/homepage" element={<Navigate to="/super-admin/homepage" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

@@ -88,7 +88,8 @@ class ClientPortalService
 
     public function storeMedia(Project $project, User $user, UploadedFile $image, string $title): ProjectMedia
     {
-        $path = $image->store("project-media/{$project->id}", 'public');
+        $filename = \App\Support\SecureUpload::uuidImageFilename($image);
+        $path = $image->storeAs("project-media/{$project->id}", $filename, 'public');
 
         return ProjectMedia::query()->create([
             'tenant_id' => $project->tenant_id,

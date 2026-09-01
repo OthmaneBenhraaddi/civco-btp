@@ -4,6 +4,7 @@ import { useTranslation } from '../../../i18n/LanguageContext'
 import { useActionToast } from '../../../hooks/useActionToast'
 import { BENTO_CARD_CLASS, PAGE_SUBTITLE_CLASS, PAGE_TITLE_CLASS } from '../../../theme/designTokens'
 import { extractErrorMessage } from '../../../utils/apiHelpers'
+import { sanitizeHtml } from '../../../utils/sanitizeHtml'
 import { SignatureCanvasPadSubmit } from './SignatureCanvasPad'
 
 const STATUS_LABELS = {
@@ -114,7 +115,7 @@ export default function ClientContractSignature({ projectId }) {
 
       <div
         className="contract-document-preview mb-6 max-h-[480px] overflow-y-auto rounded-xl border border-white/[0.06] bg-white p-6 text-sm leading-relaxed text-slate-800"
-        dangerouslySetInnerHTML={{ __html: contract.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(contract.content) }}
       />
 
       {canSign ? (

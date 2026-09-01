@@ -16,7 +16,7 @@ const emptyForm = {
   ...EMPTY_BRANDING_FORM,
 }
 
-const LOGO_ACCEPT = 'image/jpeg,image/png,image/webp,image/svg+xml'
+const LOGO_ACCEPT = 'image/jpeg,image/png'
 
 export default function EntityCreationWizard({ saving, onSubmit }) {
   const { t } = useTranslation()

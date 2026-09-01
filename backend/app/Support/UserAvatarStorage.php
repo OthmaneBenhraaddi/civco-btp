@@ -4,14 +4,12 @@ namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 final class UserAvatarStorage
 {
     public static function store(UploadedFile $file, int $userId): string
     {
-        $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'png';
-        $filename = $userId.'-'.Str::uuid()->toString().'.'.strtolower($extension);
+        $filename = SecureUpload::uuidImageFilename($file, (string) $userId);
 
         return $file->storeAs('user-avatars', $filename, 'public');
     }

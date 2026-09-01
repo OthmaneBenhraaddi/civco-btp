@@ -68,6 +68,7 @@ api.interceptors.request.use(async (config) => {
 
     if (token) {
       config.headers['X-XSRF-TOKEN'] = token
+      config.headers['X-CSRF-TOKEN'] = token
     }
   }
 

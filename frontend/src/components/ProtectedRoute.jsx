@@ -1,6 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import LandingPage from '../features/landing/LandingPage'
 import { useTranslation } from '../i18n/LanguageContext'
 import { appendTenantQuery } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin } from '../utils/authIdentity'
@@ -30,11 +29,6 @@ export default function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    const isRoot = location.pathname === '/' || location.pathname === ''
-    if (isRoot) {
-      return <LandingPage />
-    }
-
     return (
       <Navigate
         to={appendTenantQuery('/login')}
@@ -45,8 +39,9 @@ export default function ProtectedRoute() {
   }
 
   const clientUser = isClientUser(user, roles)
+  const isSharedProfilePath = location.pathname === '/profile' || location.pathname.startsWith('/profile/')
 
-  if (clientUser && !isClientOnlyPath(location.pathname)) {
+  if (clientUser && !isClientOnlyPath(location.pathname) && !isSharedProfilePath) {
     return <Navigate to="/portal" replace />
   }
 

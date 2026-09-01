@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\DemoRequestStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\DemoAccessCodeResource;
+use App\Http\Requests\Demo\StoreDemoRequestRequest;
+use App\Models\DemoRequest;
 use App\Services\AuthContextService;
 use App\Services\DemoAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 class DemoController extends Controller
 {
@@ -28,5 +28,21 @@ class DemoController extends Controller
             ...$result['context'],
             'demo' => $result['demo'],
         ]);
+    }
+
+    public function storeRequest(StoreDemoRequestRequest $request): JsonResponse
+    {
+        $demoRequest = DemoRequest::query()->create([
+            ...$request->validated(),
+            'status' => DemoRequestStatus::Pending,
+        ]);
+
+        return response()->json([
+            'message' => 'Demo request received.',
+            'data' => [
+                'id' => $demoRequest->id,
+                'status' => $demoRequest->status->value,
+            ],
+        ], 201);
     }
 }

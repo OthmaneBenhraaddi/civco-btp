@@ -19,7 +19,8 @@ use Illuminate\Contracts\Console\Kernel;
 
 echo 'Tenants: '.Tenant::count().PHP_EOL;
 echo 'Users: '.User::count().PHP_EOL;
-echo 'Super Admin role: '.User::where('email', 'superadmin@btp.ma')->value('role').PHP_EOL;
+echo 'Super Admin role: '.(User::query()->whereNull('tenant_id')->where('role', 'super_admin')->value('role') ?? 'missing').PHP_EOL;
+echo 'Super Admin email: '.(User::query()->whereNull('tenant_id')->where('role', 'super_admin')->value('email') ?? 'missing').PHP_EOL;
 
 foreach (Tenant::withCount(['clients', 'projects'])->get() as $tenant) {
     echo "{$tenant->subdomain} | {$tenant->name} | clients={$tenant->clients_count} | projects={$tenant->projects_count}".PHP_EOL;

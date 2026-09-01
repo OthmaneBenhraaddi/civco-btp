@@ -238,7 +238,7 @@ class RealisticMultiTenantSeeder extends Seeder
             $users[$member['email']] = $this->createTeamMember(
                 $tenant,
                 $company,
-                $member['email'],
+                $this->uniqueTeamEmail($member['email'], $subdomain),
                 $member['first'],
                 $member['last'],
                 $member['job'],
@@ -293,6 +293,23 @@ class RealisticMultiTenantSeeder extends Seeder
         $credentialService->storeProvisionedPassword($user, self::PASSWORD);
 
         return $user;
+    }
+
+    private function uniqueTeamEmail(string $email, string $subdomain): string
+    {
+        if (! User::query()->where('email', $email)->exists()) {
+            return $email;
+        }
+
+        $local = strstr($email, '@', true) ?: $email;
+        $domain = substr(strstr($email, '@') ?: '@civco.ma', 1);
+        $fallback = "{$local}.{$subdomain}@{$domain}";
+
+        if (! User::query()->where('email', $fallback)->exists()) {
+            return $fallback;
+        }
+
+        return $local.'+'.$subdomain.'.'.uniqid().'@'.$domain;
     }
 
     /**

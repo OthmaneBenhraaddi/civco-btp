@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Support\TenantManager;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ContractAmendmentService
@@ -188,8 +187,11 @@ class ContractAmendmentService
      */
     private function storeFile(UploadedFile $file, int $companyId): array
     {
-        $originalName = $file->getClientOriginalName();
-        $filename = Str::uuid()->toString().'_'.$originalName;
+        $originalName = \App\Support\SecureUpload::sanitizeOriginalFilename(
+            $file->getClientOriginalName(),
+            'amendment',
+        );
+        $filename = \App\Support\SecureUpload::uuidPrefixedFilename($file);
         $path = $file->storeAs("amendments/{$companyId}", $filename, 'local');
 
         return [$path, $originalName];

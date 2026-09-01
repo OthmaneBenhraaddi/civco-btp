@@ -32,7 +32,7 @@ const NAV_ITEMS = [
     audience: 'client',
   },
   {
-    to: '/',
+    to: '/dashboard',
     end: true,
     labelKey: 'nav.dashboard',
     Icon: IconDashboard,
@@ -141,6 +141,16 @@ const SUPER_ADMIN_NAV_ITEMS = [
     to: '/super-admin/create',
     labelKey: 'nav.superAdminCreate',
     Icon: IconPlus,
+  },
+  {
+    to: '/super-admin/homepage',
+    labelKey: 'nav.superAdminHomepage',
+    Icon: IconSettings,
+  },
+  {
+    to: '/super-admin/demo-requests',
+    labelKey: 'nav.superAdminDemoRequests',
+    Icon: IconHistory,
   },
   {
     to: '/super-admin/members',

@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\DocumentTemplateController;
 use App\Http\Controllers\Api\V1\DocumentTypeController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\GlobalSearchController;
+use App\Http\Controllers\Api\V1\HomepageController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\InvoiceLineController;
 use App\Http\Controllers\Api\V1\LotController;
@@ -57,6 +58,8 @@ use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\SuperAdminController;
 use App\Http\Controllers\Api\V1\SuperAdminDemoCodeController;
+use App\Http\Controllers\Api\V1\SuperAdminDemoRequestController;
+use App\Http\Controllers\Api\V1\SuperAdminHomepageController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TenantSettingsController;
@@ -70,8 +73,14 @@ Route::prefix('v1')->group(function (): void {
         'service' => 'btp-backend',
     ]));
 
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/demo/redeem', [DemoController::class, 'redeem']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1');
+    Route::post('/demo/redeem', [DemoController::class, 'redeem'])
+        ->middleware('throttle:10,1');
+    Route::post('/demo/requests', [DemoController::class, 'storeRequest'])
+        ->middleware('throttle:5,1');
+    Route::get('/homepage', [HomepageController::class, 'show'])
+        ->middleware('throttle:60,1');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
@@ -121,6 +130,17 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/demo-codes', [SuperAdminDemoCodeController::class, 'index']);
             Route::post('/demo-codes', [SuperAdminDemoCodeController::class, 'store']);
             Route::delete('/demo-codes/{demoCode}', [SuperAdminDemoCodeController::class, 'destroy']);
+            Route::get('/demo-requests', [SuperAdminDemoRequestController::class, 'index']);
+            Route::patch('/demo-requests/{demoRequest}', [SuperAdminDemoRequestController::class, 'update']);
+            Route::delete('/demo-requests/{demoRequest}', [SuperAdminDemoRequestController::class, 'destroy']);
+            Route::get('/homepage', [SuperAdminHomepageController::class, 'show']);
+            Route::put('/homepage', [SuperAdminHomepageController::class, 'update']);
+            Route::post('/homepage/hero-background', [SuperAdminHomepageController::class, 'storeHeroBackground']);
+            Route::delete('/homepage/hero-background', [SuperAdminHomepageController::class, 'destroyHeroBackground']);
+            Route::post('/homepage/partners', [SuperAdminHomepageController::class, 'storePartner']);
+            Route::delete('/homepage/partners/{partner}', [SuperAdminHomepageController::class, 'destroyPartner']);
+            Route::post('/homepage/cards/{card}/image', [SuperAdminHomepageController::class, 'storeCardImage']);
+            Route::delete('/homepage/cards/{card}/image', [SuperAdminHomepageController::class, 'destroyCardImage']);
         });
 
         Route::get('/team/tenant-options', [TeamController::class, 'tenantOptions']);

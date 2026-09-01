@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Rules\SecureImageUpload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateTenantLogoRequest extends FormRequest
@@ -18,7 +19,7 @@ class UpdateTenantLogoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'logo' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
+            'logo' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048', new SecureImageUpload],
         ];
     }
 

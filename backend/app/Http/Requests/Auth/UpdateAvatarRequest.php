@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\SecureImageUpload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAvatarRequest extends FormRequest
@@ -14,7 +15,7 @@ class UpdateAvatarRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
+            'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048', new SecureImageUpload],
         ];
     }
 

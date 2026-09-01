@@ -13,7 +13,7 @@ const APP_NAV_ITEMS = [
   { to: '/portal/tickets', labelKey: 'nav.tickets', audience: 'client' },
   { to: '/portal/calendar', labelKey: 'nav.clientCalendar', audience: 'client' },
   { to: '/portal/quotes', labelKey: 'nav.clientQuotes', audience: 'client' },
-  { to: '/', end: true, labelKey: 'nav.dashboard', audience: 'erp', permission: 'dashboard.view' },
+  { to: '/dashboard', end: true, labelKey: 'nav.dashboard', audience: 'erp', permission: 'dashboard.view' },
   { to: '/projects', labelKey: 'nav.projects', audience: 'erp', permission: 'project.view' },
   { to: '/clients', labelKey: 'nav.clients', audience: 'erp', permission: 'client.view' },
   {
@@ -38,6 +38,8 @@ const SUPER_ADMIN_NAV_ITEMS = [
   { to: '/super-admin/entities', labelKey: 'nav.superAdminEntities' },
   { to: '/super-admin/create', labelKey: 'nav.superAdminCreate' },
   { to: '/super-admin/demo-codes', labelKey: 'nav.superAdminDemoCodes' },
+  { to: '/super-admin/demo-requests', labelKey: 'nav.superAdminDemoRequests' },
+  { to: '/super-admin/homepage', labelKey: 'nav.superAdminHomepage' },
   { to: '/super-admin/members', labelKey: 'nav.superAdminMembers' },
   { to: '/super-admin/logs', labelKey: 'nav.superAdminLogs' },
 ]
@@ -47,6 +49,7 @@ const SUPER_ADMIN_PRIMARY_KEYS = [
   'nav.superAdminOverview',
   'nav.superAdminEntities',
   'nav.superAdminCreate',
+  'nav.superAdminHomepage',
 ]
 
 export default function ProdigyNavbar() {

@@ -10,6 +10,7 @@ use App\Http\Middleware\IdentifyTenantBySubdomain;
 use App\Http\Middleware\RejectDemoDestructiveActions;
 use App\Http\Middleware\ResolveLocalTenantFallback;
 use App\Http\Middleware\ResolveStealthMode;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -44,16 +45,18 @@ return Application::configure(basePath: dirname(__DIR__))
             'demo.guard' => RejectDemoDestructiveActions::class,
         ]);
 
-        $middleware->appendToGroup('web', [
-            CheckUserStatus::class,
-        ]);
-
         $middleware->appendToGroup('api', [
             CheckUserStatus::class,
             ResolveLocalTenantFallback::class,
             ResolveStealthMode::class,
             EnsureDemoSessionValid::class,
             RejectDemoDestructiveActions::class,
+            SecurityHeaders::class,
+        ]);
+
+        $middleware->appendToGroup('web', [
+            CheckUserStatus::class,
+            SecurityHeaders::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
