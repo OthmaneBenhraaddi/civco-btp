@@ -15,6 +15,7 @@ class ProjectResource extends JsonResource
             'id' => $this->id,
             'company_id' => $this->company_id,
             'client_id' => $this->client_id,
+            'is_official' => (bool) ($this->is_official ?? true),
             'reference' => $this->reference,
             'title' => $this->title,
             'description' => $this->description,

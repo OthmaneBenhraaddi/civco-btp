@@ -13,7 +13,7 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import { resolveNavPath } from '../../routes/routeAccess'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
-import { filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
+import { filterOfficialProjects } from '../../utils/stealthVisibility'
 import MapFitBounds from './MapFitBounds'
 import { buildNeonMarkerIcon, resolveProjectMarkerColor } from './projectMapMarkers'
 
@@ -102,7 +102,7 @@ export default function ProjectMapPage() {
   const [error, setError] = useState('')
 
   const visibleProjects = useMemo(
-    () => (stealthMode ? filterOfficialLinkedRecords(projects) : projects),
+    () => (stealthMode ? filterOfficialProjects(projects) : projects),
     [projects, stealthMode],
   )
 

@@ -7,11 +7,13 @@ import LoginPage from '../features/auth/LoginPage'
 import LandingPage from '../features/landing/LandingPage'
 import DashboardPage from '../features/dashboard/DashboardPage'
 import ClientsPage from '../features/clients/ClientsPage'
-import ProjectMapPage from '../features/map/ProjectMapPage'
+// FREEMIUM FEATURE: Chantier Map temporarily disabled.
+// import ProjectMapPage from '../features/map/ProjectMapPage'
 import ProjectsPage from '../features/projects/ProjectsPage'
 import ProjectDetailPage from '../features/projects/ProjectDetailPage'
 import QuotesPage from '../features/quotes/QuotesPage'
 import QuoteDetailPage from '../features/quotes/QuoteDetailPage'
+import DocumentsPage from '../features/documents/DocumentsPage'
 import DeliveryFormsPage from '../features/delivery-forms/DeliveryFormsPage'
 import DeliveryFormDetailPage from '../features/delivery-forms/DeliveryFormDetailPage'
 import InvoicesPage from '../features/invoices/InvoicesPage'
@@ -32,6 +34,8 @@ import SuperAdminDemoRequestsPage from '../features/super-admin/SuperAdminDemoRe
 import SuperAdminMembersPage from '../features/super-admin/SuperAdminMembersPage'
 import SuperAdminSystemLogsPage from '../features/super-admin/SuperAdminSystemLogsPage'
 import SuperAdminHomepagePage from '../features/super-admin/SuperAdminHomepagePage'
+import SuperAdminTicketsPage from '../features/super-admin/SuperAdminTicketsPage'
+import SuperAdminTicketDetailPage from '../features/super-admin/SuperAdminTicketDetailPage'
 import TicketsPage from '../features/tickets/TicketsPage'
 import NewTicketPage from '../features/tickets/NewTicketPage'
 import TicketDetailPage from '../features/tickets/TicketDetailPage'
@@ -69,7 +73,10 @@ export default function AppRoutes() {
               <Route path="portal/quotes/:id" element={<ClientPortalQuoteDetailPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
-              <Route path="map" element={<ProjectMapPage />} />
+              {/* FREEMIUM FEATURE: Chantier Map temporarily disabled */}
+              {/* <Route path="map" element={<ProjectMapPage />} /> */}
+              <Route path="map" element={<Navigate to="/dashboard" replace />} />
+              <Route path="documents" element={<DocumentsPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
 
@@ -96,6 +103,8 @@ export default function AppRoutes() {
                 <Route path="members" element={<SuperAdminMembersPage />} />
                 <Route path="logs" element={<SuperAdminSystemLogsPage />} />
                 <Route path="homepage" element={<SuperAdminHomepagePage />} />
+                <Route path="tickets" element={<SuperAdminTicketsPage />} />
+                <Route path="tickets/:id" element={<SuperAdminTicketDetailPage />} />
               </Route>
 
               <Route element={<AdminRoute />}>

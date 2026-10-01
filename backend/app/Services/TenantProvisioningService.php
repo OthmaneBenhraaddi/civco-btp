@@ -25,7 +25,13 @@ class TenantProvisioningService
     /**
      * @return array{tenant: Tenant, company: Company, admin: User, temporary_password: string}
      */
-    public function addAdmin(Tenant $tenant, string $firstName, string $lastName, string $email): array
+    public function addAdmin(
+        Tenant $tenant,
+        string $firstName,
+        string $lastName,
+        string $email,
+        ?array $enabledModules = null,
+    ): array
     {
         $temporaryPassword = Str::password(12);
         $company = $this->resolveCompanyForTenant($tenant);
@@ -37,6 +43,7 @@ class TenantProvisioningService
             $lastName,
             $email,
             $temporaryPassword,
+            $enabledModules,
         ): array {
             $adminRole = Role::query()
                 ->whereNull('company_id')
@@ -52,6 +59,7 @@ class TenantProvisioningService
                 'is_active' => true,
                 'status' => UserStatus::Active,
                 'role' => 'admin',
+                'enabled_modules' => $enabledModules,
                 'email_verified_at' => now(),
             ]);
 

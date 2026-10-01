@@ -34,7 +34,8 @@ class TicketController extends Controller
     {
         $query = Ticket::query()
             ->forCompany($this->companyId($request))
-            ->with(['project', 'client', 'createdBy'])
+            ->visibleTo($request->user())
+            ->with(['project', 'client', 'createdBy', 'targetAdmin'])
             ->withCount('messages')
             ->orderByDesc('updated_at');
 
@@ -66,6 +67,10 @@ class TicketController extends Controller
 
     public function store(StoreTicketRequest $request): JsonResponse
     {
+        if ($request->input('recipient') === 'cms') {
+            return $this->storeCmsTicket($request);
+        }
+
         $companyId = $this->companyId($request);
         $this->assertClientBelongsToCompany($request, $request->integer('client_id'));
 
@@ -87,6 +92,7 @@ class TicketController extends Controller
                 'company_id' => $companyId,
                 'project_id' => $project?->id,
                 'client_id' => $client->id,
+                'is_cms_ticket' => false,
                 'created_by_user_id' => $request->user()->id,
                 'title' => $request->string('title')->toString(),
                 'category' => $request->string('category')->toString(),
@@ -95,17 +101,12 @@ class TicketController extends Controller
                 'body' => $request->string('body')->toString(),
             ]);
 
-            TicketMessage::query()->create([
-                ...$this->tenantAttributesForCreate($request),
-                'ticket_id' => $ticket->id,
-                'sender_id' => $request->user()->id,
-                'body' => $request->string('body')->toString(),
-            ]);
+            $this->storeOpeningMessage($request, $ticket);
 
             return $ticket;
         });
 
-        $ticket->load(['project', 'client', 'createdBy', 'messages.sender']);
+        $ticket->load(['project', 'client', 'createdBy', 'targetAdmin', 'messages.sender']);
         $this->notificationService->notifyTicketCreated($ticket, $request->user());
 
         return (new TicketResource($ticket))->response()->setStatusCode(201);
@@ -114,15 +115,17 @@ class TicketController extends Controller
     public function show(Request $request, Ticket $ticket): TicketResource
     {
         $this->ensureTicketBelongsToCompany($request, $ticket);
+        $this->authorize('view', $ticket);
 
         return new TicketResource(
-            $ticket->load(['project', 'client', 'createdBy', 'closedBy', 'messages.sender'])
+            $ticket->load(['project', 'client', 'createdBy', 'targetAdmin', 'closedBy', 'messages.sender'])
         );
     }
 
     public function storeMessage(StoreTicketMessageRequest $request, Ticket $ticket): JsonResponse
     {
         $this->ensureTicketBelongsToCompany($request, $ticket);
+        $this->authorize('reply', $ticket);
 
         if ($ticket->isClosed()) {
             abort(422, 'Ce ticket est clos.');
@@ -132,6 +135,7 @@ class TicketController extends Controller
             ...$this->tenantAttributesForCreate($request),
             'ticket_id' => $ticket->id,
             'sender_id' => $request->user()->id,
+            'sender_role' => TicketMessage::roleFor($request->user()),
             'body' => $request->string('body')->toString(),
         ]);
 
@@ -148,10 +152,11 @@ class TicketController extends Controller
     public function close(Request $request, Ticket $ticket): TicketResource
     {
         $this->ensureTicketBelongsToCompany($request, $ticket);
+        $this->authorize('close', $ticket);
 
         if ($ticket->isClosed()) {
             return new TicketResource(
-                $ticket->load(['project', 'client', 'createdBy', 'closedBy', 'messages.sender'])
+                $ticket->load(['project', 'client', 'createdBy', 'targetAdmin', 'closedBy', 'messages.sender'])
             );
         }
 
@@ -161,10 +166,58 @@ class TicketController extends Controller
             'closed_by_user_id' => $request->user()->id,
         ]);
 
-        $ticket = $ticket->fresh()->load(['project', 'client', 'createdBy', 'closedBy', 'messages.sender']);
+        $ticket = $ticket->fresh()->load(['project', 'client', 'createdBy', 'targetAdmin', 'closedBy', 'messages.sender']);
         $this->notificationService->notifyTicketClosed($ticket, $request->user());
 
         return new TicketResource($ticket);
+    }
+
+    private function storeCmsTicket(StoreTicketRequest $request): JsonResponse
+    {
+        $actor = $request->user();
+
+        if (! $actor->isAdmin()) {
+            abort(403, 'Seul un administrateur d\'entité peut écrire au support CMS.');
+        }
+
+        $companyId = $this->companyId($request);
+
+        $ticket = DB::transaction(function () use ($request, $actor, $companyId) {
+            $ticket = Ticket::query()->create([
+                ...$this->tenantAttributesForCreate($request),
+                'company_id' => $companyId,
+                'project_id' => null,
+                'client_id' => null,
+                'is_cms_ticket' => true,
+                'target_admin_id' => $actor->id,
+                'created_by_user_id' => $actor->id,
+                'title' => $request->string('title')->toString(),
+                'category' => $request->string('category')->toString(),
+                'priority' => TicketPriority::from($request->string('priority')->toString()),
+                'status' => TicketStatus::AwaitingClient,
+                'body' => $request->string('body')->toString(),
+            ]);
+
+            $this->storeOpeningMessage($request, $ticket);
+
+            return $ticket;
+        });
+
+        $ticket->load(['project', 'client', 'createdBy', 'targetAdmin', 'messages.sender']);
+        $this->notificationService->notifyTicketCreated($ticket, $actor);
+
+        return (new TicketResource($ticket))->response()->setStatusCode(201);
+    }
+
+    private function storeOpeningMessage(Request $request, Ticket $ticket): void
+    {
+        TicketMessage::query()->create([
+            ...$this->tenantAttributesForCreate($request),
+            'ticket_id' => $ticket->id,
+            'sender_id' => $request->user()->id,
+            'sender_role' => TicketMessage::roleFor($request->user()),
+            'body' => $request->string('body')->toString(),
+        ]);
     }
 
     private function ensureTicketBelongsToCompany(Request $request, Ticket $ticket): void

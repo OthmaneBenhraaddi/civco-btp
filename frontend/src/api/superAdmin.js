@@ -56,6 +56,14 @@ export async function updateTenantStatus(tenantId, status) {
   return data
 }
 
+export async function updateTenantAdminModules(tenantId, userId, enabledModules) {
+  const { data } = await api.patch(
+    `/api/v1/super-admin/tenants/${tenantId}/admins/${userId}/modules`,
+    { enabled_modules: enabledModules },
+  )
+  return data
+}
+
 export async function updateTenantAdminStatus(tenantId, userId, status) {
   const { data } = await api.patch(
     `/api/v1/super-admin/tenants/${tenantId}/admins/${userId}/status`,

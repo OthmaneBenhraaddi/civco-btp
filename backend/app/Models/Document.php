@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentStatus;
+use App\Models\Concerns\AppliesStealthDocumentFilter;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Document extends Model
 {
-    use BelongsToCompany;
+    use AppliesStealthDocumentFilter, BelongsToCompany;
 
     protected $fillable = [
         'company_id',

@@ -54,6 +54,7 @@ class ClientResource extends JsonResource
             'badges' => $this->whenLoaded('badges', fn () => BadgeResource::collection($this->badges)),
             'contacts' => $this->whenLoaded('contacts', fn () => ClientContactResource::collection($this->contacts)),
             'projects_count' => $this->whenCounted('projects'),
+            'public_projects_count' => $this->whenCounted('public_projects_count'),
             'portal_user' => $portalUser ? [
                 'id' => $portalUser->id,
                 'email' => $portalUser->email,

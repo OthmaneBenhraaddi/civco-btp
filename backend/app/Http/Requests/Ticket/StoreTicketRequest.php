@@ -30,6 +30,12 @@ class StoreTicketRequest extends FormRequest
             return $rules;
         }
 
+        $rules['recipient'] = ['sometimes', Rule::in(['client', 'cms'])];
+
+        if ($this->input('recipient') === 'cms') {
+            return $rules;
+        }
+
         $rules['client_id'] = ['required', 'integer', 'exists:clients,id'];
         $rules['project_id'] = ['nullable', 'integer', 'exists:projects,id'];
 

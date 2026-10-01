@@ -20,9 +20,8 @@ trait AppliesStealthViaProjectPhase
                 $sub->selectRaw('1')
                     ->from('project_phases')
                     ->join('projects', 'projects.id', '=', 'project_phases.project_id')
-                    ->join('clients', 'clients.id', '=', 'projects.client_id')
                     ->whereColumn('project_phases.id', $table.'.project_phase_id')
-                    ->where('clients.is_official', true);
+                    ->where('projects.is_official', true);
             });
         });
     }

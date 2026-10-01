@@ -4,6 +4,22 @@ import { getDevTenantSlug } from '../utils/tenantDevContext'
 let activeCompanyId = null
 let authBootstrapComplete = false
 let stealthModeActive = false
+let includeStealthHeader = false
+
+function readStoredStealthMode() {
+  try {
+    const stored = sessionStorage.getItem('civco_stealth_mode')
+    if (stored === '1' || stored === '0') {
+      includeStealthHeader = true
+      stealthModeActive = stored === '1'
+    }
+  } catch {
+    includeStealthHeader = false
+    stealthModeActive = false
+  }
+}
+
+readStoredStealthMode()
 
 export function setActiveCompanyId(companyId) {
   activeCompanyId = companyId
@@ -15,6 +31,7 @@ export function setAuthBootstrapComplete(value) {
 
 export function setStealthModeActive(active) {
   stealthModeActive = Boolean(active)
+  includeStealthHeader = true
 }
 
 export function isStealthModeActive() {
@@ -41,8 +58,8 @@ api.interceptors.request.use(async (config) => {
     config.headers['X-Company-Id'] = activeCompanyId
   }
 
-  if (stealthModeActive) {
-    config.headers['X-Stealth-Mode'] = 'enabled'
+  if (includeStealthHeader) {
+    config.headers['X-Stealth-Mode'] = stealthModeActive ? 'enabled' : 'disabled'
   } else if (config.headers) {
     delete config.headers['X-Stealth-Mode']
   }

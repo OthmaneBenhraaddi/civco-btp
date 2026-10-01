@@ -24,11 +24,7 @@ function readInitialStealthMode() {
 
 function persistStealthMode(active) {
   try {
-    if (active) {
-      sessionStorage.setItem(STORAGE_KEY, '1')
-    } else {
-      sessionStorage.removeItem(STORAGE_KEY)
-    }
+    sessionStorage.setItem(STORAGE_KEY, active ? '1' : '0')
   } catch {
     // Ignore storage failures (private mode, etc.)
   }
@@ -43,13 +39,16 @@ function broadcastStealthModeChanged(active) {
 }
 
 export function StealthModeProvider({ children }) {
-  const { user, refresh } = useAuth()
+  const { user, refresh, serverStealthEnabled } = useAuth()
   const [stealthMode, setStealthModeState] = useState(readInitialStealthMode)
   const [stealthEpoch, setStealthEpoch] = useState(0)
   const [shortcut, setShortcutState] = useState(() => resolveStealthShortcut(null))
   const [shortcutSaving, setShortcutSaving] = useState(false)
   const shortcutRef = useRef(shortcut)
+  const stealthModeRef = useRef(stealthMode)
+  const hadUserRef = useRef(false)
   shortcutRef.current = shortcut
+  stealthModeRef.current = stealthMode
 
   useEffect(() => {
     setStealthModeActive(stealthMode)
@@ -60,29 +59,56 @@ export function StealthModeProvider({ children }) {
     setShortcutState(resolveStealthShortcut(user?.stealth_shortcut))
   }, [user?.id, user?.stealth_shortcut])
 
-  const applyStealthMode = useCallback((active) => {
+  const applyStealthMode = useCallback((active, { persistRemote = false } = {}) => {
     const next = Boolean(active)
     setStealthModeState(next)
     persistStealthMode(next)
     setStealthModeActive(next)
     setStealthEpoch((value) => value + 1)
     broadcastStealthModeChanged(next)
+
+    if (persistRemote) {
+      authApi.updateStealthMode(next).catch(() => {})
+    }
   }, [])
 
   const setStealthMode = useCallback((next) => {
-    applyStealthMode(next)
+    applyStealthMode(next, { persistRemote: true })
   }, [applyStealthMode])
 
   const toggleStealthMode = useCallback(() => {
-    setStealthModeState((previous) => {
-      const next = !previous
-      persistStealthMode(next)
-      setStealthModeActive(next)
-      setStealthEpoch((value) => value + 1)
-      broadcastStealthModeChanged(next)
-      return next
-    })
-  }, [])
+    applyStealthMode(!stealthModeRef.current, { persistRemote: true })
+  }, [applyStealthMode])
+
+  useEffect(() => {
+    if (typeof serverStealthEnabled !== 'boolean') {
+      return
+    }
+
+    if (serverStealthEnabled === stealthModeRef.current) {
+      return
+    }
+
+    applyStealthMode(serverStealthEnabled)
+  }, [serverStealthEnabled, applyStealthMode])
+
+  useEffect(() => {
+    if (user) {
+      hadUserRef.current = true
+      return
+    }
+
+    if (!hadUserRef.current) {
+      return
+    }
+
+    hadUserRef.current = false
+    if (!stealthModeRef.current) {
+      return
+    }
+
+    applyStealthMode(false)
+  }, [user, applyStealthMode])
 
   const setStealthShortcut = useCallback(async (nextShortcut) => {
     const normalized = resolveStealthShortcut(nextShortcut)

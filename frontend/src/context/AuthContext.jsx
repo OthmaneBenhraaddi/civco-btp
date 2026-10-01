@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
   const [permissions, setPermissions] = useState([])
   const [tenant, setTenant] = useState(null)
   const [demo, setDemo] = useState(null)
+  const [serverStealthEnabled, setServerStealthEnabled] = useState(null)
   const [loading, setLoading] = useState(true)
   const bootstrappingRef = useRef(false)
 
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
       setPermissions([])
       setTenant(null)
       setDemo(null)
+      setServerStealthEnabled(null)
       setActiveCompanyId(null)
       return false
     }
@@ -64,6 +66,9 @@ export function AuthProvider({ children }) {
           }
         : null
     ))
+    setServerStealthEnabled(
+      typeof context.stealth_mode_enabled === 'boolean' ? context.stealth_mode_enabled : null,
+    )
     setActiveCompanyId(context.company?.id ?? null)
 
     if (isPlatformSuperAdmin(context.user)) {
@@ -172,6 +177,7 @@ export function AuthProvider({ children }) {
       permissions,
       tenant,
       demo,
+      serverStealthEnabled,
       loading,
       isAuthenticated: Boolean(user),
       isDemo,
@@ -192,6 +198,7 @@ export function AuthProvider({ children }) {
       permissions,
       tenant,
       demo,
+      serverStealthEnabled,
       loading,
       isDemo,
       login,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\DocumentStatus;
+use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentType;
 use App\Models\Project;
@@ -55,6 +56,34 @@ class DocumentService
             'category_label' => null,
             'status' => DocumentStatus::Active,
         ]);
+    }
+
+    public function assignToProject(Document $document, Project $project): Document
+    {
+        if ((int) $document->company_id !== (int) $project->company_id) {
+            abort(404);
+        }
+
+        $document->update([
+            'documentable_type' => $project->getMorphClass(),
+            'documentable_id' => $project->id,
+        ]);
+
+        return $document->fresh();
+    }
+
+    public function detachFromProject(Document $document, Company $company): Document
+    {
+        if ((int) $document->company_id !== (int) $company->id) {
+            abort(404);
+        }
+
+        $document->update([
+            'documentable_type' => $company->getMorphClass(),
+            'documentable_id' => $company->id,
+        ]);
+
+        return $document->fresh();
     }
 
     public function archive(Document $document): Document

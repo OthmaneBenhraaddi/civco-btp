@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import PermissionGate from '../../components/PermissionGate'
 import Modal from '../../components/Modal'
 import ConfirmArchiveModal from '../../components/ConfirmArchiveModal'
@@ -13,6 +13,7 @@ import { useTranslation } from '../../i18n/LanguageContext'
 import { useDemoGuards } from '../../hooks/useDemoGuards'
 import { useActionToast } from '../../hooks/useActionToast'
 import * as clientsApi from '../../api/clients'
+import * as projectsApi from '../../api/projects'
 import * as badgesApi from '../../api/badges'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import ClientContactsPanel from './ClientContactsPanel'
@@ -24,7 +25,7 @@ import * as clientContactsApi from '../../api/clientContacts'
 import * as teamMembersApi from '../../api/teamMembers'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import { isPlatformSuperAdmin } from '../../utils/authIdentity'
-import { filterOfficialClients, isOfficialClient } from '../../utils/stealthVisibility'
+import { filterOfficialClients, isClientVisibleInStealth, filterOfficialProjects } from '../../utils/stealthVisibility'
 import NewClientModal from './components/NewClientModal'
 import {
   logClientCreated,
@@ -149,6 +150,8 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [selectedClientDetail, setSelectedClientDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [clientProjects, setClientProjects] = useState([])
+  const [clientProjectsLoading, setClientProjectsLoading] = useState(false)
   const [availableBadges, setAvailableBadges] = useState([])
 
   async function loadClients(page = 1, { silent = false } = {}) {
@@ -191,12 +194,10 @@ export default function ClientsPage() {
     loadClients()
   }, [search, tenantFilter, isSuperAdmin])
 
-  useStealthModeRefresh(({ active }) => {
-    if (!active) {
-      if (clientsBaselineRef.current.length > 0) {
-        setClients(clientsBaselineRef.current)
-      }
-      loadClients(meta?.current_page ?? 1, { silent: true })
+  useStealthModeRefresh(() => {
+    loadClients(meta?.current_page ?? 1, { silent: true })
+    if (selectedClientId) {
+      loadClientDetail(selectedClientId)
     }
   })
 
@@ -279,12 +280,50 @@ export default function ClientsPage() {
     if (
       stealthMode
       && selectedClientDetail
-      && !isOfficialClient(selectedClientDetail)
+      && !isClientVisibleInStealth(selectedClientDetail)
     ) {
       setSelectedClientId(null)
       setSelectedClientDetail(null)
     }
   }, [stealthMode, selectedClientDetail])
+
+  useEffect(() => {
+    if (!selectedClientId) {
+      setClientProjects([])
+      setClientProjectsLoading(false)
+      return undefined
+    }
+
+    let cancelled = false
+    setClientProjects([])
+    setClientProjectsLoading(true)
+
+    projectsApi.fetchProjects({ client_id: selectedClientId, per_page: 100 })
+      .then((data) => {
+        if (!cancelled) {
+          setClientProjects(data.data ?? [])
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setClientProjects([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setClientProjectsLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedClientId, stealthMode])
+
+  const visibleClientProjects = useMemo(
+    () => (stealthMode ? filterOfficialProjects(clientProjects) : clientProjects),
+    [clientProjects, stealthMode],
+  )
 
   void roleMapVersion
 
@@ -633,9 +672,29 @@ export default function ClientsPage() {
                       {t('clients.activeProjects')}
                     </p>
                     <p className="mt-2 text-3xl font-bold tabular-nums text-white">
-                      {selectedClient.projects_count ?? 0}
+                      {clientProjectsLoading ? '—' : visibleClientProjects.length}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">{t('clients.projectsLinked')}</p>
+                    {clientProjectsLoading ? (
+                      <p className="mt-3 text-xs text-slate-500">{t('common.loading')}</p>
+                    ) : visibleClientProjects.length === 0 ? (
+                      <p className="mt-3 text-xs text-slate-500">{t('projects.empty')}</p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {visibleClientProjects.map((project) => (
+                          <li key={project.id}>
+                            <Link
+                              to={`/projects/${project.id}`}
+                              className="text-sm text-slate-200 hover:text-white"
+                            >
+                              <span className="text-slate-500">{project.reference}</span>
+                              {' '}
+                              {project.title}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </>

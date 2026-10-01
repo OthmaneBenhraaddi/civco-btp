@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { ADMIN_MODULES } from '../../routes/adminModules'
 import { BTN_PRIMARY, FIELD_CLASS, LABEL_CLASS } from '../../theme/designTokens'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 
@@ -9,9 +10,43 @@ const emptyForm = {
   email: '',
 }
 
+export function AdminModuleFields({ selected, onChange }) {
+  const { t } = useTranslation()
+
+  function toggle(moduleId) {
+    onChange(
+      selected.includes(moduleId)
+        ? selected.filter((id) => id !== moduleId)
+        : [...selected, moduleId],
+    )
+  }
+
+  return (
+    <fieldset className="mt-4">
+      <legend className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        {t('superAdmin.modules.title')}
+      </legend>
+      <p className="mt-1 text-xs text-slate-500">{t('superAdmin.modules.hint')}</p>
+      <div className="mt-3 flex flex-col gap-2">
+        {ADMIN_MODULES.map((module) => (
+          <label key={module.id} className="flex items-center gap-2 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              checked={selected.includes(module.id)}
+              onChange={() => toggle(module.id)}
+            />
+            {t(module.labelKey)}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 export default function AddTenantAdminForm({ tenant, saving, onSubmit, onCancel }) {
   const { t } = useTranslation()
   const [form, setForm] = useState(emptyForm)
+  const [modules, setModules] = useState(ADMIN_MODULES.map((module) => module.id))
   const [error, setError] = useState('')
 
   async function handleSubmit(event) {
@@ -23,8 +58,10 @@ export default function AddTenantAdminForm({ tenant, saving, onSubmit, onCancel 
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         email: form.email.trim().toLowerCase(),
+        enabled_modules: modules,
       })
       setForm(emptyForm)
+      setModules(ADMIN_MODULES.map((module) => module.id))
     } catch (err) {
       setError(extractErrorMessage(err, t('superAdmin.addAdmin.error')))
     }
@@ -73,6 +110,8 @@ export default function AddTenantAdminForm({ tenant, saving, onSubmit, onCancel 
           />
         </label>
       </div>
+
+      <AdminModuleFields selected={modules} onChange={setModules} />
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="submit" className={BTN_PRIMARY} disabled={saving}>

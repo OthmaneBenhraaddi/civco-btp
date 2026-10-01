@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\EnsureCompanyContext;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'company' => EnsureCompanyContext::class,
+            'module' => CheckModuleAccess::class,
             'permission' => CheckPermission::class,
             'admin' => EnsureUserIsAdmin::class,
             'user.status' => CheckUserStatus::class,
@@ -53,6 +55,11 @@ return Application::configure(basePath: dirname(__DIR__))
             RejectDemoDestructiveActions::class,
             SecurityHeaders::class,
         ]);
+
+        $middleware->prependToPriorityList(
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ResolveStealthMode::class,
+        );
 
         $middleware->appendToGroup('web', [
             CheckUserStatus::class,

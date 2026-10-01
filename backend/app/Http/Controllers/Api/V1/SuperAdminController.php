@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdmin\StoreTenantAdminRequest;
 use App\Http\Requests\SuperAdmin\StoreTenantRequest;
+use App\Http\Requests\SuperAdmin\UpdateTenantAdminModulesRequest;
 use App\Http\Requests\SuperAdmin\UpdateTenantAdminStatusRequest;
 use App\Http\Requests\SuperAdmin\UpdateTenantRequest;
 use App\Http\Requests\SuperAdmin\UpdateTenantStatusRequest;
@@ -90,11 +91,16 @@ class SuperAdminController extends Controller
     public function storeAdmin(StoreTenantAdminRequest $request, Tenant $tenant): JsonResponse
     {
         try {
+            $modules = $request->exists('enabled_modules')
+                ? array_values(array_unique($request->input('enabled_modules', [])))
+                : null;
+
             $result = $this->tenantProvisioningService->addAdmin(
                 $tenant,
                 $request->string('first_name')->toString(),
                 $request->string('last_name')->toString(),
                 $request->string('email')->toString(),
+                $modules,
             );
         } catch (\RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
@@ -145,6 +151,20 @@ class SuperAdminController extends Controller
         $user->update([
             'status' => $status,
             'is_active' => $status === UserStatus::Active,
+        ]);
+
+        return new TenantAdminResource($user->fresh());
+    }
+
+    public function updateAdminModules(
+        UpdateTenantAdminModulesRequest $request,
+        Tenant $tenant,
+        User $user,
+    ): TenantAdminResource {
+        $this->ensureTenantAdmin($tenant, $user);
+
+        $user->update([
+            'enabled_modules' => array_values(array_unique($request->input('enabled_modules', []))),
         ]);
 
         return new TenantAdminResource($user->fresh());

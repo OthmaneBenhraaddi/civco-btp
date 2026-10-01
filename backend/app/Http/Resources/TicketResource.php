@@ -16,6 +16,8 @@ class TicketResource extends JsonResource
             'company_id' => $this->company_id,
             'project_id' => $this->project_id,
             'client_id' => $this->client_id,
+            'is_cms_ticket' => (bool) $this->is_cms_ticket,
+            'target_admin_id' => $this->target_admin_id,
             'created_by_user_id' => $this->created_by_user_id,
             'title' => $this->title,
             'category' => $this->category,
@@ -39,6 +41,14 @@ class TicketResource extends JsonResource
                 'id' => $this->createdBy->id,
                 'full_name' => $this->createdBy->full_name,
                 'is_client' => $this->createdBy->client_id !== null,
+            ] : null),
+            'target_admin' => $this->whenLoaded('targetAdmin', fn () => $this->targetAdmin ? [
+                'id' => $this->targetAdmin->id,
+                'full_name' => $this->targetAdmin->full_name,
+            ] : null),
+            'tenant' => $this->whenLoaded('tenant', fn () => $this->tenant ? [
+                'id' => $this->tenant->id,
+                'name' => $this->tenant->name,
             ] : null),
             'closed_by' => $this->whenLoaded('closedBy', fn () => $this->closedBy ? [
                 'id' => $this->closedBy->id,

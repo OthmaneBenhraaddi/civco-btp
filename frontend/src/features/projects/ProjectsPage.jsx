@@ -11,7 +11,7 @@ import { useActionToast } from '../../hooks/useActionToast'
 import * as clientsApi from '../../api/clients'
 import * as projectsApi from '../../api/projects'
 import { extractErrorMessage } from '../../utils/apiHelpers'
-import { filterOfficialClients, filterOfficialLinkedRecords } from '../../utils/stealthVisibility'
+import { filterOfficialClients, filterOfficialProjects } from '../../utils/stealthVisibility'
 import { buildProjectApiPayload } from './constants/projectFormConfig'
 import NewProjectModal from './components/NewProjectModal'
 import {
@@ -117,21 +117,13 @@ export default function ProjectsPage() {
     }
   }, [modalOpen, clients.length, clientsLoading, loadClientOptions])
 
-  useStealthModeRefresh(({ active }) => {
-    if (!active) {
-      if (projectsBaselineRef.current.length > 0) {
-        setProjects(projectsBaselineRef.current)
-      }
-      if (clientsBaselineRef.current.length > 0) {
-        setClients(clientsBaselineRef.current)
-      }
-      loadProjects({ page: meta?.current_page ?? page, silent: true })
-      loadClientOptions()
-    }
+  useStealthModeRefresh(() => {
+    loadProjects({ page: meta?.current_page ?? page, silent: true })
+    loadClientOptions()
   })
 
   const visibleProjects = useMemo(
-    () => (stealthMode ? filterOfficialLinkedRecords(projects) : projects),
+    () => (stealthMode ? filterOfficialProjects(projects) : projects),
     [projects, stealthMode],
   )
 

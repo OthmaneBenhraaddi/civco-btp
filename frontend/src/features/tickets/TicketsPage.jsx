@@ -123,7 +123,12 @@ export default function TicketsPage() {
                   <span className="pg-ticket__face">
                     <span className="pg-ticket-id">#{ticket.id}</span>
                     <span className="min-w-0">
-                      <span className="pg-ticket-title block truncate">{ticket.title}</span>
+                      <span className="pg-ticket-title flex flex-wrap items-center gap-2">
+                        <span className="truncate">{ticket.title}</span>
+                        {ticket.isCmsTicket ? (
+                          <span className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-xs font-bold">CMS SUPPORT / SUPERADMIN</span>
+                        ) : null}
+                      </span>
                       <span className="pg-ticket-meta block truncate">
                         {ticketMetaLine(ticket)}
                         {!isClientPortalUser && ticket.project ? (

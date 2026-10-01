@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDragAutoScroll } from '../../hooks/useDragAutoScroll'
 import KpiCard from '../../components/KpiCard'
 import NeonButton from '../../components/prodigy/NeonButton'
@@ -33,6 +34,7 @@ import './dashboardCoc.css'
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  const location = useLocation()
   const { user, company, isAdmin, hasPermission } = useAuth()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -224,6 +226,11 @@ export default function DashboardPage() {
 
   return (
     <div className={`dashboard list-page mx-auto max-w-[1600px] p-6 ${DASHBOARD_COC_CLASS} ${editMode ? 'dashboard--edit-mode' : ''}`}>
+      {location.state?.unauthorized ? (
+        <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {t('nav.moduleDenied')}
+        </p>
+      ) : null}
       <header className="page-header dashboard-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1>{t('dashboard.title')}</h1>

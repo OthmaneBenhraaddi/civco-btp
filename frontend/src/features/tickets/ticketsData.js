@@ -85,24 +85,40 @@ export function mapTicketListItem(ticket) {
     priority: ticket.priority,
     projectId: ticket.project_id != null ? String(ticket.project_id) : null,
     project: ticket.project?.title ?? ticket.project?.reference ?? null,
-    client: ticket.client?.name ?? '—',
+    client: ticket.client?.name ?? (ticket.is_cms_ticket ? 'CMS' : '—'),
     clientId: ticket.client_id != null ? String(ticket.client_id) : null,
+    isCmsTicket: Boolean(ticket.is_cms_ticket),
+    targetAdmin: ticket.target_admin?.full_name ?? null,
+    tenantName: ticket.tenant?.name ?? null,
     when: ticket.updated_at || ticket.created_at,
     closedAt: ticket.closed_at,
   }
 }
 
 export function ticketMetaLine(ticket) {
+  if (ticket.isCmsTicket) {
+    return ticket.targetAdmin || ticket.tenantName || 'CMS'
+  }
+
   const projectOrClient = ticket.project || ticket.client || '—'
   return projectOrClient
 }
 
 export function mapTicketMessage(message, t) {
   const isClient = Boolean(message.sender?.is_client)
+  const senderRole = message.sender_role
+  let role = isClient ? t('tickets.roles.client') : t('tickets.roles.staff')
+
+  if (senderRole === 'superadmin') {
+    role = t('tickets.roles.superadmin')
+  } else if (senderRole === 'entity_admin') {
+    role = t('tickets.roles.entityAdmin')
+  }
+
   return {
     id: String(message.id),
     author: message.sender?.full_name || t('tickets.clientFallback'),
-    role: isClient ? t('tickets.roles.client') : t('tickets.roles.staff'),
+    role,
     initials: message.sender?.initials || 'U',
     when: message.created_at,
     body: message.body,

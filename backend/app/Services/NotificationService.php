@@ -215,6 +215,20 @@ class NotificationService
     {
         $ticket->loadMissing(['client', 'project']);
 
+        if ($ticket->is_cms_ticket) {
+            $this->notifyCmsAudience(
+                $ticket,
+                'Ticket CMS',
+                $actor->isSuperAdmin()
+                    ? "Le support CMS a ouvert le ticket « {$ticket->title} »."
+                    : "{$actor->full_name} a ouvert un ticket CMS « {$ticket->title} ».",
+                NotificationType::TicketCreated,
+                $actor,
+            );
+
+            return;
+        }
+
         if ($ticket->tenant_id === null) {
             return;
         }
@@ -255,6 +269,19 @@ class NotificationService
         $ticket->loadMissing(['client', 'project']);
         $message->loadMissing('sender');
 
+        if ($ticket->is_cms_ticket) {
+            $senderName = $message->sender?->full_name ?? $actor->full_name;
+            $this->notifyCmsAudience(
+                $ticket,
+                'Réponse ticket CMS',
+                "{$senderName} a répondu sur le ticket « {$ticket->title} ».",
+                NotificationType::TicketReplied,
+                $actor,
+            );
+
+            return;
+        }
+
         if ($ticket->tenant_id === null) {
             return;
         }
@@ -290,6 +317,18 @@ class NotificationService
     public function notifyTicketClosed(Ticket $ticket, User $actor): void
     {
         $ticket->loadMissing(['client', 'project']);
+
+        if ($ticket->is_cms_ticket) {
+            $this->notifyCmsAudience(
+                $ticket,
+                'Ticket CMS clôturé',
+                "{$actor->full_name} a clôturé le ticket « {$ticket->title} ».",
+                NotificationType::TicketClosed,
+                $actor,
+            );
+
+            return;
+        }
 
         if ($ticket->tenant_id === null || $ticket->client_id === null) {
             return;
@@ -502,5 +541,45 @@ class NotificationService
         $thread = $projectId === null ? 'general' : "project:{$projectId}";
 
         return "/portal/tickets?thread={$thread}";
+    }
+
+    private function notifyCmsAudience(
+        Ticket $ticket,
+        string $title,
+        string $message,
+        NotificationType $type,
+        User $actor,
+    ): void {
+        if ($actor->isSuperAdmin()) {
+            $path = "/tickets/{$ticket->id}";
+
+            if ($ticket->target_admin_id !== null) {
+                $admin = User::query()->find($ticket->target_admin_id);
+                if ($admin !== null) {
+                    $this->notify($admin, (int) $ticket->tenant_id, $title, $message, $type, $path);
+                }
+
+                return;
+            }
+
+            $this->notifyTenantAdmins((int) $ticket->tenant_id, $title, $message, $type, $path);
+
+            return;
+        }
+
+        $path = "/super-admin/tickets/{$ticket->id}";
+        $superadmins = User::query()
+            ->whereNull('tenant_id')
+            ->where('role', 'super_admin')
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($superadmins as $superadmin) {
+            if ((int) $superadmin->id === (int) $actor->id) {
+                continue;
+            }
+
+            $this->notify($superadmin, $ticket->tenant_id !== null ? (int) $ticket->tenant_id : null, $title, $message, $type, $path);
+        }
     }
 }

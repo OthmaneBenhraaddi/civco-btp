@@ -45,6 +45,7 @@ const NAV_ITEMS = [
     Icon: IconTasks,
     audience: 'erp',
     anyPermissions: ['project.view', 'task.view_all', 'task.view_own', 'manage_tasks'],
+    module: 'chantier',
   },
   {
     to: '/clients',
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
     Icon: IconClients,
     audience: 'erp',
     permission: 'client.view',
+    module: 'commercial',
   },
   {
     to: '/tickets',
@@ -59,20 +61,31 @@ const NAV_ITEMS = [
     Icon: IconDiscussions,
     audience: 'erp',
     permission: 'ticket.view',
+    module: 'support',
   },
-  {
-    to: '/map',
-    labelKey: 'nav.map',
-    Icon: IconMap,
-    audience: 'erp',
-    permission: 'project.view',
-  },
+  // FREEMIUM FEATURE: Chantier Map temporarily disabled
+  // {
+  //   to: '/map',
+  //   labelKey: 'nav.map',
+  //   Icon: IconMap,
+  //   audience: 'erp',
+  //   permission: 'project.view',
+  // },
   {
     to: '/projects',
     labelKey: 'nav.projects',
     Icon: IconProjects,
     audience: 'erp',
     permission: 'project.view',
+    module: 'chantier',
+  },
+  {
+    to: '/documents',
+    labelKey: 'nav.documents',
+    Icon: IconDocuments,
+    audience: 'erp',
+    permission: 'document.view',
+    module: 'chantier',
   },
   {
     to: '/quotes',
@@ -80,6 +93,7 @@ const NAV_ITEMS = [
     Icon: IconQuotes,
     audience: 'erp',
     permission: 'quote.view',
+    module: 'commercial',
   },
   {
     to: '/delivery-forms',
@@ -87,6 +101,7 @@ const NAV_ITEMS = [
     Icon: IconDeliveryForms,
     audience: 'erp',
     permission: 'delivery_form.view',
+    module: 'commercial',
   },
   {
     to: '/invoices',
@@ -94,6 +109,7 @@ const NAV_ITEMS = [
     Icon: IconInvoices,
     audience: 'erp',
     permission: 'invoice.view',
+    module: 'commercial',
   },
   {
     to: '/history',
@@ -240,11 +256,22 @@ function IconClients({ className }) {
   )
 }
 
+// FREEMIUM FEATURE: Chantier Map temporarily disabled — icon kept for the nav item above.
+// eslint-disable-next-line no-unused-vars
 function IconMap({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
       <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" strokeLinejoin="round" />
       <path d="M9 4v14M15 6v14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconDocuments({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M7 3h7l5 5v13H7z" strokeLinejoin="round" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" strokeLinecap="round" />
     </svg>
   )
 }

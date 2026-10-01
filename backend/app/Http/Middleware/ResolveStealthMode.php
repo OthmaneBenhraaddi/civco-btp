@@ -11,15 +11,24 @@ class ResolveStealthMode
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $header = strtolower(trim((string) $request->header('X-Stealth-Mode', '')));
-        $enabled = in_array($header, ['1', 'true', 'enabled', 'on', 'yes'], true);
-
-        StealthModeManager::setActive($enabled);
+        StealthModeManager::setActive($this->isEnabled($request));
 
         try {
             return $next($request);
         } finally {
             StealthModeManager::disable();
         }
+    }
+
+    private function isEnabled(Request $request): bool
+    {
+        if ($request->headers->has('X-Stealth-Mode')) {
+            $header = strtolower(trim((string) $request->header('X-Stealth-Mode', '')));
+
+            return in_array($header, ['1', 'true', 'enabled', 'on', 'yes'], true);
+        }
+
+        return $request->hasSession()
+            && $request->session()->get(StealthModeManager::SESSION_KEY) === true;
     }
 }

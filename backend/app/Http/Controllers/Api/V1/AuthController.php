@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\UpdateAvatarRequest;
 use App\Services\ActivityLogService;
 use App\Services\AuthContextService;
+use App\Support\StealthModeManager;
 use App\Support\TenantAuthGuard;
 use App\Support\UserAvatarStorage;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +45,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
         }
 
-        return response()->json($authContext->forUser($user));
+        return $this->authResponse($request, $authContext->forUser($user));
     }
 
     public function me(Request $request, AuthContextService $authContext): JsonResponse
@@ -53,9 +54,29 @@ class AuthController extends Controller
             ? $request->integer('company_id')
             : null;
 
-        return response()->json(
+        return $this->authResponse(
+            $request,
             $authContext->forUser($request->user(), $companyId)
         );
+    }
+
+    public function updateStealthMode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['enabled'];
+
+        if ($request->hasSession()) {
+            $request->session()->put(StealthModeManager::SESSION_KEY, $enabled);
+        }
+
+        StealthModeManager::setActive($enabled);
+
+        return response()->json([
+            'stealth_mode_enabled' => $enabled,
+        ]);
     }
 
     public function updateProfile(Request $request, AuthContextService $authContext): JsonResponse
@@ -196,6 +217,17 @@ class AuthController extends Controller
             'meta' => $meta,
             'key' => $key === ' ' ? 'space' : $key,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function authResponse(Request $request, array $payload): JsonResponse
+    {
+        $payload['stealth_mode_enabled'] = $request->hasSession()
+            && $request->session()->get(StealthModeManager::SESSION_KEY) === true;
+
+        return response()->json($payload);
     }
 
     public function logout(Request $request): JsonResponse

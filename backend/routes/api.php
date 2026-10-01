@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\V1\QuoteLineController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\SuperAdminController;
+use App\Http\Controllers\Api\V1\SuperAdminTicketController;
 use App\Http\Controllers\Api\V1\SuperAdminDemoCodeController;
 use App\Http\Controllers\Api\V1\SuperAdminDemoRequestController;
 use App\Http\Controllers\Api\V1\SuperAdminHomepageController;
@@ -85,6 +86,7 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/me', [AuthController::class, 'me']);
         Route::patch('/me', [AuthController::class, 'updateProfile']);
+        Route::put('/me/stealth-mode', [AuthController::class, 'updateStealthMode']);
         Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
         Route::delete('/me/avatar', [AuthController::class, 'destroyAvatar']);
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -118,11 +120,17 @@ Route::prefix('v1')->group(function (): void {
         });
 
         Route::prefix('super-admin')->middleware('super_admin')->group(function (): void {
+            Route::get('/tickets', [SuperAdminTicketController::class, 'index']);
+            Route::post('/tickets', [SuperAdminTicketController::class, 'store']);
+            Route::get('/tickets/{ticket}', [SuperAdminTicketController::class, 'show']);
+            Route::post('/tickets/{ticket}/messages', [SuperAdminTicketController::class, 'storeMessage']);
+            Route::post('/tickets/{ticket}/close', [SuperAdminTicketController::class, 'close']);
             Route::get('/tenants', [SuperAdminController::class, 'index']);
             Route::get('/stats', [SuperAdminController::class, 'stats']);
             Route::post('/tenants', [SuperAdminController::class, 'store']);
             Route::patch('/tenants/{tenant}', [SuperAdminController::class, 'update']);
             Route::post('/tenants/{tenant}/admins', [SuperAdminController::class, 'storeAdmin']);
+            Route::patch('/tenants/{tenant}/admins/{user}/modules', [SuperAdminController::class, 'updateAdminModules']);
             Route::patch('/tenants/{tenant}/status', [SuperAdminController::class, 'updateStatus']);
             Route::patch('/tenants/{tenant}/admins/{user}/status', [SuperAdminController::class, 'updateAdminStatus']);
             Route::get('/tenants/{tenant}/admins/{user}/credentials', [SuperAdminController::class, 'showAdminCredentials']);
@@ -148,13 +156,13 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/team/members/{user}/status', [TeamController::class, 'toggleStatus']);
         Route::patch('/team/members/{user}/archive', [TeamController::class, 'archive']);
 
-        Route::prefix('messaging')->group(function (): void {
+        Route::prefix('messaging')->middleware('module')->group(function (): void {
             Route::get('/threads', [MessagingController::class, 'threads']);
             Route::get('/conversations/{clientUser}', [MessagingController::class, 'thread']);
             Route::post('/messages', [MessagingController::class, 'store']);
         });
 
-        Route::middleware('company')->group(function (): void {
+        Route::middleware(['company', 'module'])->group(function (): void {
             Route::get('/search', GlobalSearchController::class)
                 ->middleware('permission:dashboard.view');
 
@@ -234,6 +242,7 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/sectors/{sector}', [SectorController::class, 'destroy'])
                 ->middleware('permission:role.manage');
 
+            // FREEMIUM FEATURE: Chantier Map temporarily disabled — ?map=1 returns 404.
             Route::get('/projects', [ProjectController::class, 'index'])
                 ->middleware('permission:project.view');
             Route::post('/projects', [ProjectController::class, 'store'])
@@ -287,13 +296,25 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/document-types/{documentType}', [DocumentTypeController::class, 'destroy'])
                 ->middleware('permission:role.manage');
 
+            Route::get('/documents', [DocumentController::class, 'library'])
+                ->middleware('permission:document.view');
+            Route::post('/documents', [DocumentController::class, 'storeLibrary'])
+                ->middleware('permission:document.upload');
             Route::get('/projects/{project}/documents', [DocumentController::class, 'index'])
                 ->middleware('permission:document.view');
             Route::post('/projects/{project}/documents', [DocumentController::class, 'store'])
                 ->middleware('permission:document.upload');
+            Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])
+                ->middleware('permission:document.view');
             Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
                 ->middleware('permission:document.view');
+            Route::put('/documents/{document}/project', [DocumentController::class, 'assignProject'])
+                ->middleware('permission:document.upload');
+            Route::delete('/documents/{document}/project', [DocumentController::class, 'detach'])
+                ->middleware('permission:document.archive');
             Route::put('/documents/{document}/archive', [DocumentController::class, 'archive'])
+                ->middleware('permission:document.archive');
+            Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])
                 ->middleware('permission:document.archive');
 
             Route::post('/projects/{project}/media', [ProjectMediaController::class, 'store'])

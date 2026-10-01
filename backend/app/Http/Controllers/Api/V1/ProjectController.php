@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
+use App\Models\Client;
 use App\Models\Lot;
 use App\Models\Project;
 use App\Services\ProjectReferenceService;
@@ -64,6 +65,11 @@ class ProjectController extends Controller
         }
 
         if ($request->boolean('map')) {
+            // FREEMIUM FEATURE: Chantier Map temporarily disabled.
+            if (! config('features.chantier_map')) {
+                abort(404);
+            }
+
             $query
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
@@ -98,6 +104,7 @@ class ProjectController extends Controller
                 'company_id' => $this->companyId($request),
                 'reference' => $this->referenceService->nextForCompany($this->companyId($request)),
                 'status' => $request->input('status', ProjectStatus::Planned->value),
+                'is_official' => $this->resolveProjectVisibility($request),
             ]);
 
             $this->syncProjectLots($request, $project, $lotIds);
@@ -153,6 +160,19 @@ class ProjectController extends Controller
         $project->delete();
 
         return response()->json(['message' => 'Project deleted.']);
+    }
+
+    private function resolveProjectVisibility(Request $request): bool
+    {
+        if ($request->exists('is_official')) {
+            return $request->boolean('is_official');
+        }
+
+        $clientIsOfficial = Client::query()
+            ->whereKey($request->integer('client_id'))
+            ->value('is_official');
+
+        return (bool) ($clientIsOfficial ?? true);
     }
 
     private function ensureProjectBelongsToCompany(Request $request, Project $project): void

@@ -14,6 +14,7 @@ export const GLOBAL_NAV_ROUTES = [
     labelKey: 'nav.tasks',
     keywords: ['tache', 'tâche', 'tâches', 'task', 'tasks'],
     anyPermissions: ['project.view', 'task.view_all', 'task.view_own', 'manage_tasks'],
+    module: 'chantier',
   },
   {
     id: 'clients',
@@ -21,6 +22,15 @@ export const GLOBAL_NAV_ROUTES = [
     labelKey: 'nav.clients',
     keywords: ['client', 'clients'],
     permission: 'client.view',
+    module: 'commercial',
+  },
+  {
+    id: 'documents',
+    path: '/documents',
+    labelKey: 'nav.documents',
+    keywords: ['document', 'documents', 'fichier', 'fichiers', 'plan', 'contrat'],
+    permission: 'document.view',
+    module: 'chantier',
   },
   {
     id: 'projects',
@@ -28,20 +38,23 @@ export const GLOBAL_NAV_ROUTES = [
     labelKey: 'nav.projects',
     keywords: ['projet', 'projets', 'project', 'projects', 'chantier', 'chantiers'],
     permission: 'project.view',
+    module: 'chantier',
   },
-  {
-    id: 'map',
-    path: '/map',
-    labelKey: 'nav.map',
-    keywords: ['carte', 'map', 'chantier', 'carte des chantiers'],
-    permission: 'project.view',
-  },
+  // FREEMIUM FEATURE: Chantier Map temporarily disabled
+  // {
+  //   id: 'map',
+  //   path: '/map',
+  //   labelKey: 'nav.map',
+  //   keywords: ['carte', 'map', 'chantier', 'carte des chantiers'],
+  //   permission: 'project.view',
+  // },
   {
     id: 'quotes',
     path: '/quotes',
     labelKey: 'nav.quotes',
     keywords: ['devis', 'quote', 'quotes'],
     permission: 'quote.view',
+    module: 'commercial',
   },
   {
     id: 'delivery-forms',
@@ -49,6 +62,7 @@ export const GLOBAL_NAV_ROUTES = [
     labelKey: 'nav.deliveryForms',
     keywords: ['bon de livraison', 'bons de livraison', 'delivery', 'bl', 'livraison'],
     permission: 'delivery_form.view',
+    module: 'commercial',
   },
   {
     id: 'invoices',
@@ -56,6 +70,7 @@ export const GLOBAL_NAV_ROUTES = [
     labelKey: 'nav.invoices',
     keywords: ['facture', 'factures', 'invoice', 'invoices'],
     permission: 'invoice.view',
+    module: 'commercial',
   },
   {
     id: 'super-admin-overview',

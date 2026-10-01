@@ -1,15 +1,53 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge'
 import { useTranslation } from '../../i18n/LanguageContext'
 import * as superAdminApi from '../../api/superAdmin'
 import { extractErrorMessage } from '../../utils/apiHelpers'
 import EntityEditModal from './EntityEditModal'
 import AdminCredentialsPanel from './AdminCredentialsPanel'
-import AddTenantAdminForm from './AddTenantAdminForm'
+import AddTenantAdminForm, { AdminModuleFields } from './AddTenantAdminForm'
+import { ADMIN_MODULES } from '../../routes/adminModules'
 import SuperAdminPageHeader from './components/SuperAdminPageHeader'
 import StatusActionButtons from './components/StatusActionButtons'
 import ProvisionSuccessBanner from './components/ProvisionSuccessBanner'
 import { buildTenantWorkspaceUrl } from './utils/tenantWorkspaceUrl'
+
+function AdminModulesEditor({ tenantId, admin, onSaved }) {
+  const { t } = useTranslation()
+  const [selected, setSelected] = useState(admin.enabled_modules ?? ADMIN_MODULES.map((module) => module.id))
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function save() {
+    setSaving(true)
+    setMessage('')
+    try {
+      await superAdminApi.updateTenantAdminModules(tenantId, admin.id, selected)
+      setMessage(t('superAdmin.modules.saved'))
+      await onSaved()
+    } catch (err) {
+      setMessage(extractErrorMessage(err, t('superAdmin.modules.error')))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      <AdminModuleFields selected={selected} onChange={setSelected} />
+      <button
+        type="button"
+        className="mt-2 border border-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-200 hover:bg-white/5"
+        disabled={saving}
+        onClick={save}
+      >
+        {saving ? t('common.saving') : t('superAdmin.modules.save')}
+      </button>
+      {message ? <p className="mt-1 text-xs text-slate-400">{message}</p> : null}
+    </div>
+  )
+}
 
 const STATUS_FILTERS = [
   { value: '', labelKey: 'superAdmin.filters.all' },
@@ -152,7 +190,11 @@ export default function SuperAdminEntitiesPage() {
       <section className="card p-6">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-white">{t('superAdmin.existingEntities')}</h2>
-          <div className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/80 p-1">
+          <div
+            role="tablist"
+            aria-label={t('superAdmin.existingEntities')}
+            className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-800 bg-slate-900/80 p-1"
+          >
             {STATUS_FILTERS.map((filter) => {
               const active = statusFilter === filter.value
 
@@ -160,11 +202,13 @@ export default function SuperAdminEntitiesPage() {
                 <button
                   key={filter.value || 'all'}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   className={[
-                    'rounded-md px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200',
+                    'rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200',
                     active
-                      ? 'border border-green-500/30 bg-green-500/10 text-green-400 shadow-sm shadow-green-500/10'
-                      : 'border border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-white',
+                      ? 'border border-emerald-500/30 bg-emerald-500/20 text-emerald-400 shadow-sm'
+                      : 'border border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200',
                   ].join(' ')}
                   onClick={() => setStatusFilter(filter.value)}
                 >
@@ -211,19 +255,20 @@ export default function SuperAdminEntitiesPage() {
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-3 sm:items-end">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]"
+                          className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
                           onClick={() => setEditingTenant(tenant)}
                         >
+                          <Pencil size={13} strokeWidth={2} aria-hidden />
                           {t('superAdmin.edit.open')}
                         </button>
                         <a
                           href={workspaceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="border border-[rgba(34,197,94,0.35)] bg-[var(--pg-accent-dim)] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--pg-accent)] transition hover:bg-[rgba(34,197,94,0.2)]"
+                          className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-500"
                         >
                           {t('superAdmin.quickAccess')}
                         </a>
@@ -289,6 +334,11 @@ export default function SuperAdminEntitiesPage() {
                                           tenantId={tenant.id}
                                           admin={admin}
                                           onCredentialsUpdated={loadTenants}
+                                        />
+                                        <AdminModulesEditor
+                                          tenantId={tenant.id}
+                                          admin={admin}
+                                          onSaved={loadTenants}
                                         />
                                       </div>
                                     </td>

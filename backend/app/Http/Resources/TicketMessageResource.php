@@ -14,6 +14,7 @@ class TicketMessageResource extends JsonResource
             'id' => $this->id,
             'ticket_id' => $this->ticket_id,
             'body' => $this->body,
+            'sender_role' => $this->sender_role,
             'created_at' => $this->created_at?->toIso8601String(),
             'sender' => $this->whenLoaded('sender', function () {
                 $displayName = $this->sender->full_name ?? 'Utilisateur';
@@ -27,6 +28,7 @@ class TicketMessageResource extends JsonResource
                     'id' => $this->sender->id,
                     'full_name' => $displayName,
                     'is_client' => $this->sender->client_id !== null,
+                    'is_super_admin' => $this->sender->isSuperAdmin(),
                     'job_title' => $this->sender->job_title,
                     'initials' => mb_strtoupper($initials !== '' ? $initials : 'U'),
                 ];

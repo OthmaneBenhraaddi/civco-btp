@@ -50,7 +50,13 @@ export default function ProtectedRoute() {
   }
 
   if (!canAccessRoute(location.pathname, routeContext)) {
-    return <Navigate to={getHomePathForRole(user?.role, user, roles, permissions)} replace />
+    return (
+      <Navigate
+        to={getHomePathForRole(user?.role, user, roles, permissions)}
+        replace
+        state={{ unauthorized: true }}
+      />
+    )
   }
 
   if (!isSuperAdmin && isSuperAdminOnlyPath(location.pathname)) {

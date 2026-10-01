@@ -153,6 +153,9 @@ export default function TicketDetailPage() {
             <h1 className="font-[family-name:var(--pg-font-display)] text-[clamp(1.45rem,2.6vw,2rem)] font-extrabold leading-tight tracking-tight text-white">
               {ticket.title}
             </h1>
+            {ticket.isCmsTicket ? (
+              <span className="mt-2 inline-flex bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-xs font-bold">CMS SUPPORT / SUPERADMIN</span>
+            ) : null}
             <p className="mt-2 text-sm text-[var(--pg-text-muted)]">
               <span className="font-mono text-[var(--pg-text-dim)]">#{ticket.id}</span>
               <span className="mx-2 text-white/15">·</span>

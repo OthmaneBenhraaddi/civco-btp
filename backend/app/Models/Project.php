@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\ContractAmendmentStatus;
 use App\Enums\ProjectStatus;
-use App\Models\Concerns\AppliesStealthClientFilter;
+use App\Models\Concerns\AppliesStealthProjectFilter;
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -15,12 +15,13 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Project extends Model
 {
-    use AppliesStealthClientFilter, BelongsToCompany, BelongsToTenant;
+    use AppliesStealthProjectFilter, BelongsToCompany, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',
         'company_id',
         'client_id',
+        'is_official',
         'reference',
         'title',
         'description',
@@ -48,6 +49,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
+            'is_official' => 'boolean',
             'status' => ProjectStatus::class,
             'description_meta' => 'array',
             'start_date' => 'date',

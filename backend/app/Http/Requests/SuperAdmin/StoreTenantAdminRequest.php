@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\SuperAdmin;
 
+use App\Support\AdminModules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +19,8 @@ class StoreTenantAdminRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:100', 'regex:/\S/'],
             'last_name' => ['required', 'string', 'max:100', 'regex:/\S/'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'enabled_modules' => ['sometimes', 'array'],
+            'enabled_modules.*' => ['string', Rule::in(AdminModules::keys())],
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,7 @@ class DocumentResource extends JsonResource
             'company_id' => $this->company_id,
             'documentable_type' => $this->documentable_type,
             'documentable_id' => $this->documentable_id,
+            'project' => $this->linkedProjectPayload(),
             'original_filename' => $this->original_filename,
             'mime_type' => $this->mime_type,
             'file_size' => $this->file_size,
@@ -34,6 +36,30 @@ class DocumentResource extends JsonResource
                 'full_name' => $this->uploadedBy->full_name,
             ]),
             'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return array{id: int, title: string, reference: string|null}|null */
+    private function linkedProjectPayload(): ?array
+    {
+        if ($this->documentable_type !== (new Project)->getMorphClass()) {
+            return null;
+        }
+
+        $project = $this->relationLoaded('documentable') ? $this->documentable : null;
+
+        if (! $project instanceof Project) {
+            return [
+                'id' => (int) $this->documentable_id,
+                'title' => '',
+                'reference' => null,
+            ];
+        }
+
+        return [
+            'id' => (int) $project->id,
+            'title' => (string) $project->title,
+            'reference' => $project->reference,
         ];
     }
 }

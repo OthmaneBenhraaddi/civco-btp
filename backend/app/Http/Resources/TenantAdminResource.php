@@ -16,6 +16,7 @@ class TenantAdminResource extends JsonResource
             'email' => $this->email,
             'status' => $this->status?->value ?? $this->status,
             'role' => $this->role,
+            'enabled_modules' => $this->enabled_modules,
             'is_active' => $this->is_active,
             'has_stored_credentials' => filled($this->provisioned_password),
         ];

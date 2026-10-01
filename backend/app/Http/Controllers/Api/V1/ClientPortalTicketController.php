@@ -34,6 +34,7 @@ class ClientPortalTicketController extends Controller
         $client = $this->resolveClientForUser($request);
 
         $query = Ticket::query()
+            ->where('is_cms_ticket', false)
             ->where('client_id', $client->id)
             ->with(['project', 'client', 'createdBy'])
             ->withCount('messages')
@@ -76,6 +77,7 @@ class ClientPortalTicketController extends Controller
                 ...$this->tenantAttributesForCreate($request),
                 'ticket_id' => $ticket->id,
                 'sender_id' => $request->user()->id,
+                'sender_role' => TicketMessage::roleFor($request->user()),
                 'body' => $request->string('body')->toString(),
             ]);
 
@@ -109,6 +111,7 @@ class ClientPortalTicketController extends Controller
             ...$this->tenantAttributesForCreate($request),
             'ticket_id' => $ticket->id,
             'sender_id' => $request->user()->id,
+            'sender_role' => TicketMessage::roleFor($request->user()),
             'body' => $request->string('body')->toString(),
         ]);
 
@@ -126,7 +129,7 @@ class ClientPortalTicketController extends Controller
     {
         $client = $this->resolveClientForUser($request);
 
-        if ((int) $ticket->client_id !== (int) $client->id) {
+        if ($ticket->is_cms_ticket || (int) $ticket->client_id !== (int) $client->id) {
             abort(404);
         }
     }

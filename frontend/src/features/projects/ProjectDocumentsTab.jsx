@@ -144,6 +144,44 @@ export default function ProjectDocumentsTab({ projectId }) {
     }
   }
 
+  async function handlePreview(documentId) {
+    try {
+      await documentsApi.previewDocument(documentId)
+    } catch (err) {
+      setError(extractErrorMessage(err, t('documents.previewError')))
+    }
+  }
+
+  async function handleDetach(documentId) {
+    if (!window.confirm(t('documents.detachConfirm'))) {
+      return
+    }
+
+    setError('')
+
+    try {
+      await documentsApi.detachDocument(documentId)
+      await loadDocuments()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('documents.detachError')))
+    }
+  }
+
+  async function handleDelete(documentId) {
+    if (!window.confirm(t('documents.deleteConfirm'))) {
+      return
+    }
+
+    setError('')
+
+    try {
+      await documentsApi.deleteDocument(documentId)
+      await loadDocuments()
+    } catch (err) {
+      setError(extractErrorMessage(err, t('documents.deleteError')))
+    }
+  }
+
   async function handleArchive(documentId) {
     if (!window.confirm(t('documents.archiveConfirm'))) {
       return
@@ -333,9 +371,22 @@ export default function ProjectDocumentsTab({ projectId }) {
                     <td>{document.uploaded_by?.full_name ?? '—'}</td>
                     <td>{new Date(document.created_at).toLocaleString()}</td>
                     <td className="actions">
+                      <button type="button" className="ghost" onClick={() => handlePreview(document.id)}>
+                        {t('documents.view')}
+                      </button>
                       <button type="button" className="ghost" onClick={() => handleDownload(document)}>
                         {t('documents.download')}
                       </button>
+                      {canArchive && document.status === 'active' ? (
+                        <button type="button" className="ghost" onClick={() => handleDetach(document.id)}>
+                          {t('documents.detach')}
+                        </button>
+                      ) : null}
+                      {canArchive ? (
+                        <button type="button" className="ghost danger" onClick={() => handleDelete(document.id)}>
+                          {t('documents.delete')}
+                        </button>
+                      ) : null}
                       {canArchive && document.status === 'active' ? (
                         <button type="button" className="ghost danger" onClick={() => handleArchive(document.id)}>
                           {t('documents.archive')}

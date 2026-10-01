@@ -465,6 +465,16 @@ export default function ProjectDetailPage() {
             <StatusBadge status={project.status} />
             <span>{t('projects.complete', { percent: project.progress_percent })}</span>
             <span>{project.client?.name}</span>
+            {canUpdate ? (
+              <label className="checkbox text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={project.is_official !== false}
+                  onChange={(event) => handleProjectUpdate('is_official', event.target.checked)}
+                />
+                {t('projects.isOfficial')}
+              </label>
+            ) : null}
             {refreshing ? <span className="hint">{t('common.saving')}</span> : null}
           </div>
         </div>

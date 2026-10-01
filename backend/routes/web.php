@@ -15,3 +15,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [TenantEntryController::class, 'login'])->name('login');
 Route::get('/', [TenantEntryController::class, 'home'])->name('home');
+
+// FREEMIUM FEATURE: Chantier Map temporarily disabled.
+// No web or tenant map route is registered. /map is a SPA path and redirects away.

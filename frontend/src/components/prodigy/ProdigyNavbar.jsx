@@ -6,6 +6,7 @@ import GlobalSearch from '../GlobalSearch'
 import NotificationDropdown from '../NotificationDropdown'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/LanguageContext'
+import { ADMIN_MODULES, adminModuleAllows } from '../../routes/adminModules'
 import { getDashboardNavPath, navItemVisible, resolveNavPath } from '../../routes/routeAccess'
 
 const APP_NAV_ITEMS = [
@@ -14,19 +15,22 @@ const APP_NAV_ITEMS = [
   { to: '/portal/calendar', labelKey: 'nav.clientCalendar', audience: 'client' },
   { to: '/portal/quotes', labelKey: 'nav.clientQuotes', audience: 'client' },
   { to: '/dashboard', end: true, labelKey: 'nav.dashboard', audience: 'erp', permission: 'dashboard.view' },
-  { to: '/projects', labelKey: 'nav.projects', audience: 'erp', permission: 'project.view' },
-  { to: '/clients', labelKey: 'nav.clients', audience: 'erp', permission: 'client.view' },
+  { to: '/projects', labelKey: 'nav.projects', audience: 'erp', permission: 'project.view', module: 'chantier' },
+  { to: '/documents', labelKey: 'nav.documents', audience: 'erp', permission: 'document.view', module: 'chantier' },
+  { to: '/clients', labelKey: 'nav.clients', audience: 'erp', permission: 'client.view', module: 'commercial' },
   {
     to: '/tasks',
     labelKey: 'nav.tasks',
     audience: 'erp',
     anyPermissions: ['project.view', 'task.view_all', 'task.view_own', 'manage_tasks'],
+    module: 'chantier',
   },
-  { to: '/quotes', labelKey: 'nav.quotes', audience: 'erp', permission: 'quote.view' },
-  { to: '/tickets', labelKey: 'nav.tickets', audience: 'erp', permission: 'ticket.view' },
-  { to: '/map', labelKey: 'nav.map', audience: 'erp', permission: 'project.view' },
-  { to: '/delivery-forms', labelKey: 'nav.deliveryForms', audience: 'erp', permission: 'delivery_form.view' },
-  { to: '/invoices', labelKey: 'nav.invoices', audience: 'erp', permission: 'invoice.view' },
+  { to: '/quotes', labelKey: 'nav.quotes', audience: 'erp', permission: 'quote.view', module: 'commercial' },
+  { to: '/tickets', labelKey: 'nav.tickets', audience: 'erp', permission: 'ticket.view', module: 'support' },
+  // FREEMIUM FEATURE: Chantier Map temporarily disabled
+  // { to: '/map', labelKey: 'nav.map', audience: 'erp', permission: 'project.view' },
+  { to: '/delivery-forms', labelKey: 'nav.deliveryForms', audience: 'erp', permission: 'delivery_form.view', module: 'commercial' },
+  { to: '/invoices', labelKey: 'nav.invoices', audience: 'erp', permission: 'invoice.view', module: 'commercial' },
   { to: '/history', labelKey: 'nav.history', audience: 'erp', adminOnly: true },
   { to: '/team', labelKey: 'nav.team', audience: 'erp', adminOnly: true, tenantAdminOnly: true },
   { to: '/profile', labelKey: 'nav.profile', audience: 'erp' },
@@ -40,11 +44,12 @@ const SUPER_ADMIN_NAV_ITEMS = [
   { to: '/super-admin/demo-codes', labelKey: 'nav.superAdminDemoCodes' },
   { to: '/super-admin/demo-requests', labelKey: 'nav.superAdminDemoRequests' },
   { to: '/super-admin/homepage', labelKey: 'nav.superAdminHomepage' },
+  { to: '/super-admin/tickets', labelKey: 'nav.superAdminTickets' },
   { to: '/super-admin/members', labelKey: 'nav.superAdminMembers' },
   { to: '/super-admin/logs', labelKey: 'nav.superAdminLogs' },
 ]
 
-const ERP_PRIMARY_KEYS = ['nav.dashboard', 'nav.projects', 'nav.clients', 'nav.tasks', 'nav.quotes', 'nav.tickets']
+const ERP_PRIMARY_KEYS = ['nav.dashboard']
 const SUPER_ADMIN_PRIMARY_KEYS = [
   'nav.superAdminOverview',
   'nav.superAdminEntities',
@@ -73,8 +78,19 @@ export default function ProdigyNavbar() {
       ? visibleItems.map((item) => item.labelKey)
       : ERP_PRIMARY_KEYS
 
+  const useModuleNav = !isSuperAdmin && !isClientPortalUser
   const primaryItems = visibleItems.filter((item) => primaryKeys.includes(item.labelKey))
-  const moreItems = visibleItems.filter((item) => !primaryKeys.includes(item.labelKey))
+  const moduleMenus = useModuleNav
+    ? ADMIN_MODULES.map((module) => ({
+      ...module,
+      items: visibleItems.filter((item) => item.module === module.id),
+    })).filter((module) => module.items.length > 0)
+    : []
+  const moreItems = visibleItems.filter((item) => {
+    if (primaryKeys.includes(item.labelKey)) return false
+    if (useModuleNav && item.module) return false
+    return true
+  })
 
   useEffect(() => {
     function onPointerDown(event) {
@@ -102,7 +118,7 @@ export default function ProdigyNavbar() {
 
   const cta = isSuperAdmin
     ? { to: '/super-admin/create', label: t('nav.superAdminCreate') }
-    : isAdmin && !isClientPortalUser
+    : isAdmin && !isClientPortalUser && adminModuleAllows(user, 'chantier')
       ? { to: resolveNavPath('/projects', user), label: t('layout.viewProjects') }
       : null
 
@@ -121,6 +137,16 @@ export default function ProdigyNavbar() {
             >
               {t(item.labelKey)}
             </NavLink>
+          ))}
+
+          {moduleMenus.map((module) => (
+            <NavModuleMenu
+              key={module.id}
+              label={t(module.labelKey)}
+              items={module.items}
+              resolveItemPath={resolveItemPath}
+              t={t}
+            />
           ))}
 
           {moreItems.length > 0 ? (
@@ -177,7 +203,7 @@ export default function ProdigyNavbar() {
         className="flex gap-5 overflow-x-auto border-t border-white/[0.04] px-4 py-2.5 lg:hidden"
         aria-label={t('layout.mainNavigation')}
       >
-        {visibleItems.map((item) => (
+        {primaryItems.map((item) => (
           <NavLink
             key={`mobile-${item.labelKey}-${item.to}`}
             to={resolveItemPath(item)}
@@ -187,8 +213,84 @@ export default function ProdigyNavbar() {
             {t(item.labelKey)}
           </NavLink>
         ))}
+        {moduleMenus.map((module) => (
+          <NavModuleMenu
+            key={`mobile-${module.id}`}
+            label={t(module.labelKey)}
+            items={module.items}
+            resolveItemPath={resolveItemPath}
+            t={t}
+          />
+        ))}
+        {moreItems.map((item) => (
+          <NavLink
+            key={`mobile-more-${item.labelKey}-${item.to}`}
+            to={resolveItemPath(item)}
+            className={({ isActive }) => `pg-nav-link whitespace-nowrap ${isActive ? 'is-active' : ''}`}
+          >
+            {t(item.labelKey)}
+          </NavLink>
+        ))}
       </nav>
     </header>
+  )
+}
+
+function NavModuleMenu({ label, items, resolveItemPath, t }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function onPointerDown(event) {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        className={`pg-nav-link whitespace-nowrap ${open ? 'is-active text-white' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
+      >
+        {label}
+        <IconChevron className={`h-3 w-3 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open ? (
+        <div className="pg-cut-shell pg-cut-shell--sm absolute left-1/2 top-[calc(100%+0.35rem)] z-50 w-56 -translate-x-1/2 shadow-2xl shadow-black/50" role="menu">
+          <div className="pg-cut-shell__inner overflow-hidden py-1.5">
+            {items.map((item) => (
+              <NavLink
+                key={`${item.labelKey}-${item.to}`}
+                to={resolveItemPath(item)}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  [
+                    'block px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.12em] transition',
+                    isActive
+                      ? 'bg-[var(--pg-accent-dim)] text-[var(--pg-accent)]'
+                      : 'text-slate-300 hover:bg-white/[0.04] hover:text-white',
+                  ].join(' ')
+                }
+              >
+                {t(item.labelKey)}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

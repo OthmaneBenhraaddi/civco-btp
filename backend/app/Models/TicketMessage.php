@@ -14,8 +14,26 @@ class TicketMessage extends Model
         'tenant_id',
         'ticket_id',
         'sender_id',
+        'sender_role',
         'body',
     ];
+
+    public static function roleFor(User $user): string
+    {
+        if ($user->isSuperAdmin()) {
+            return 'superadmin';
+        }
+
+        if ($user->isClientPortalUser()) {
+            return 'client';
+        }
+
+        if ($user->isAdmin()) {
+            return 'entity_admin';
+        }
+
+        return 'staff';
+    }
 
     public function ticket(): BelongsTo
     {

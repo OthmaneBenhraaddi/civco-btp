@@ -4,6 +4,8 @@ namespace App\Support;
 
 final class StealthModeManager
 {
+    public const SESSION_KEY = 'stealth_mode_enabled';
+
     private static bool $active = false;
 
     public static function enable(): void

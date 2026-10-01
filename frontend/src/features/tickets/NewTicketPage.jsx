@@ -23,10 +23,11 @@ export default function NewTicketPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const basePath = useTicketsBasePath()
-  const { isClientPortalUser, hasPermission } = useAuth()
+  const { isAdmin, isClientPortalUser, hasPermission } = useAuth()
   const { toastSuccess, toastError } = useActionToast()
 
   const [title, setTitle] = useState('')
+  const [recipient, setRecipient] = useState('client')
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [priority, setPriority] = useState('medium')
@@ -121,8 +122,9 @@ export default function NewTicketPage() {
     const base = Boolean(title.trim() && priority && category && description.trim())
     if (!base) return false
     if (isClientPortalUser) return Boolean(projectId)
+    if (recipient === 'cms') return true
     return Boolean(clientId)
-  }, [title, projectId, clientId, priority, category, description, isClientPortalUser])
+  }, [title, projectId, clientId, priority, category, description, isClientPortalUser, recipient])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -141,7 +143,7 @@ export default function NewTicketPage() {
         setError(t('tickets.invalidProject'))
         return
       }
-    } else {
+    } else if (recipient !== 'cms') {
       const selectedClient = clients.find((client) => String(client.id) === String(clientId))
       if (!selectedClient) {
         setError(t('tickets.invalidClient'))
@@ -167,14 +169,23 @@ export default function NewTicketPage() {
           priority,
           body: description.trim(),
         }
-      : {
-          title: title.trim(),
-          client_id: Number(clientId),
-          ...(projectId ? { project_id: Number(projectId) } : {}),
-          category,
-          priority,
-          body: description.trim(),
-        }
+      : recipient === 'cms'
+        ? {
+            recipient: 'cms',
+            title: title.trim(),
+            category,
+            priority,
+            body: description.trim(),
+          }
+        : {
+            recipient: 'client',
+            title: title.trim(),
+            client_id: Number(clientId),
+            ...(projectId ? { project_id: Number(projectId) } : {}),
+            category,
+            priority,
+            body: description.trim(),
+          }
 
     try {
       const ticket = isClientPortalUser
@@ -206,7 +217,7 @@ export default function NewTicketPage() {
   const submitBlocked =
     submitting ||
     !canSubmit ||
-    (isClientPortalUser ? projects.length === 0 : clients.length === 0)
+    (isClientPortalUser ? projects.length === 0 : recipient !== 'cms' && clients.length === 0)
 
   return (
     <div className="min-h-full pb-12">
@@ -245,7 +256,22 @@ export default function NewTicketPage() {
               />
             </label>
 
-            {!isClientPortalUser ? (
+            {!isClientPortalUser && isAdmin ? (
+              <label className="pg-field mt-5">
+                <span className="pg-field-label">{t('tickets.fields.recipient')}</span>
+                <CutSelect
+                  className="w-full"
+                  value={recipient}
+                  onChange={setRecipient}
+                  options={[
+                    { value: 'client', label: t('tickets.fields.clientRecipient') },
+                    { value: 'cms', label: t('tickets.fields.cmsSupport') },
+                  ]}
+                />
+              </label>
+            ) : null}
+
+            {!isClientPortalUser && recipient !== 'cms' ? (
               <label className="pg-field mt-5">
                 <span className="pg-field-label">{t('tickets.fields.client')}</span>
                 <CutSelect
@@ -272,6 +298,7 @@ export default function NewTicketPage() {
             ) : null}
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {isClientPortalUser || recipient !== 'cms' ? (
               <label className="pg-field">
                 <span className="pg-field-label">
                   {t('tickets.fields.project')}
@@ -316,6 +343,7 @@ export default function NewTicketPage() {
                   ]}
                 />
               </label>
+              ) : null}
 
               <label className="pg-field">
                 <span className="pg-field-label">{t('tickets.fields.priority')}</span>

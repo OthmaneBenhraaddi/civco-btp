@@ -3,7 +3,7 @@ import * as projectsApi from '../api/projects'
 import { useStealthMode, useStealthModeRefresh } from '../context/StealthModeContext'
 import { mapPhasesResponseToTasks } from '../features/tasks/utils/taskApiMappers'
 import { unwrapResource } from '../utils/apiHelpers'
-import { filterOfficialLinkedRecords, isOfficialLinkedRecord } from '../utils/stealthVisibility'
+import { filterOfficialProjects, isOfficialLinkedRecord } from '../utils/stealthVisibility'
 
 export function useProjectTasks() {
   const { stealthMode } = useStealthMode()
@@ -82,7 +82,7 @@ export function useProjectTasks() {
   })
 
   const visibleProjects = useMemo(
-    () => (stealthMode ? filterOfficialLinkedRecords(projects) : projects),
+    () => (stealthMode ? filterOfficialProjects(projects) : projects),
     [projects, stealthMode],
   )
 
@@ -97,8 +97,8 @@ export function useProjectTasks() {
     }
 
     return tasks.filter((task) => {
-      if (task.projectId != null && visibleProjectIds.has(String(task.projectId))) {
-        return true
+      if (task.projectId != null) {
+        return visibleProjectIds.has(String(task.projectId))
       }
 
       return isOfficialLinkedRecord(task)

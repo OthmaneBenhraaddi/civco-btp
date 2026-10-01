@@ -24,6 +24,11 @@ export async function updateProfile(payload) {
   return data
 }
 
+export async function updateStealthMode(enabled) {
+  const { data } = await api.put('/api/v1/me/stealth-mode', { enabled: Boolean(enabled) })
+  return data
+}
+
 export async function uploadAvatar(file) {
   const formData = new FormData()
   formData.append('avatar', file)

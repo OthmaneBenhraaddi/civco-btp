@@ -46,6 +46,7 @@ class AuthContextService
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role ?? 'user',
+                'enabled_modules' => $user->enabled_modules,
                 'job_title' => $user->job_title,
                 'avatar_url' => UserAvatarStorage::url($user->avatar_path),
                 'client_id' => $user->client_id,

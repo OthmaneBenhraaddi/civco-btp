@@ -18,6 +18,7 @@ class UpdateProjectRequest extends FormRequest
         $companyId = $this->attributes->get('company_id');
 
         return [
+            'is_official' => ['sometimes', 'boolean'],
             'client_id' => [
                 'sometimes',
                 'integer',

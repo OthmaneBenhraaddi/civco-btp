@@ -54,10 +54,10 @@ class ClientController extends Controller
                 'clients.status',
             ]);
         } else {
-            $query
-                ->with(['badges', 'portalUser'])
-                ->withCount('projects');
+            $query->with(['badges', 'portalUser']);
         }
+
+        $this->withProjectCounts($query);
 
         if ($actor->isSuperAdmin()) {
             if ($tenantScope !== null) {
@@ -137,7 +137,12 @@ class ClientController extends Controller
         $this->ensureClientBelongsToCompany($request, $client);
 
         return new ClientResource(
-            $client->loadCount('projects')->load(['badges', 'contacts', 'portalUser'])
+            $client->loadCount([
+                'projects',
+                'projects as public_projects_count' => function ($builder): void {
+                    $builder->where('projects.is_official', true);
+                },
+            ])->load(['badges', 'contacts', 'portalUser'])
         );
     }
 
@@ -166,7 +171,12 @@ class ClientController extends Controller
         }
 
         return new ClientResource(
-            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+            $client->fresh()->loadCount([
+                'projects',
+                'projects as public_projects_count' => function ($builder): void {
+                    $builder->where('projects.is_official', true);
+                },
+            ])->load(['badges', 'portalUser'])
         );
     }
 
@@ -199,7 +209,12 @@ class ClientController extends Controller
         $this->activityLogService->logClientArchived($client->fresh(), $request->user());
 
         return new ClientResource(
-            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+            $client->fresh()->loadCount([
+                'projects',
+                'projects as public_projects_count' => function ($builder): void {
+                    $builder->where('projects.is_official', true);
+                },
+            ])->load(['badges', 'portalUser'])
         );
     }
 
@@ -252,8 +267,23 @@ class ClientController extends Controller
         }
 
         return new ClientResource(
-            $client->fresh()->loadCount('projects')->load(['badges', 'portalUser'])
+            $client->fresh()->loadCount([
+                'projects',
+                'projects as public_projects_count' => function ($builder): void {
+                    $builder->where('projects.is_official', true);
+                },
+            ])->load(['badges', 'portalUser'])
         );
+    }
+
+    private function withProjectCounts($query)
+    {
+        return $query->withCount([
+            'projects',
+            'projects as public_projects_count' => function ($builder): void {
+                $builder->where('projects.is_official', true);
+            },
+        ]);
     }
 
     private function ensureClientBelongsToCompany(Request $request, Client $client): void

@@ -1,3 +1,4 @@
+import { adminModuleAllows, moduleForPath } from './adminModules'
 import { appendTenantQuery } from '../utils/tenantDevContext'
 import { isPlatformSuperAdmin } from '../utils/authIdentity'
 import { userHasAnyPermission, userHasPermission } from '../utils/permissionResolver'
@@ -10,7 +11,9 @@ const ERP_ROUTE_RULES = [
   { prefix: '/delivery-forms', permission: 'delivery_form.view' },
   { prefix: '/invoices', permission: 'invoice.view' },
   { prefix: '/projects', permission: 'project.view' },
-  { prefix: '/map', permission: 'project.view' },
+  { prefix: '/documents', permission: 'document.view' },
+  // FREEMIUM FEATURE: Chantier Map temporarily disabled
+  // { prefix: '/map', permission: 'project.view' },
   { prefix: '/tasks', anyPermissions: TASK_ROUTE_PERMISSIONS },
   { prefix: '/roles', permission: 'role.view' },
   { prefix: '/tickets', permission: 'ticket.view' },
@@ -45,6 +48,11 @@ function findRouteRule(pathname) {
 /** @param {string} pathname @param {object} ctx */
 export function canAccessRoute(pathname, ctx) {
   const { user, roles = [], permissions = [], isAdmin, isSuperAdmin } = ctx
+
+  const moduleId = moduleForPath(pathname)
+  if (moduleId && !adminModuleAllows(user, moduleId)) {
+    return false
+  }
 
   if (pathname.startsWith('/portal')) {
     return roles.some((role) => role.slug === 'client_extern') || Boolean(user?.client_id)
@@ -136,6 +144,10 @@ export function getDashboardNavPath(user, roles = []) {
 
 export function navItemVisible(item, ctx) {
   const { isClientPortalUser, isAdmin, user, hasPermission } = ctx
+
+  if (item.module && !adminModuleAllows(user, item.module)) {
+    return false
+  }
 
   if (item.platformSuperAdminOnly) {
     return canViewPlatformSuperAdminNav(user)
